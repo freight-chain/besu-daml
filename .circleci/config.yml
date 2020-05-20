@@ -17,10 +17,6 @@ executors:
     environment:
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4
 
-notify:
-  webhooks:
-    - url: https://hyperledger-rocket-chat-hubot.herokuapp.com/hubot/circleci
-
 commands:
   prepare:
     description: "Prepare"
@@ -61,10 +57,6 @@ jobs:
     executor: besu_executor_xl
     steps:
       - prepare
-      - run:
-          name: DCO check
-          command: |
-            ./scripts/dco_check.sh
       - run:
           name: Assemble
           command: |
@@ -153,53 +145,6 @@ jobs:
             ./gradlew --no-daemon --parallel acceptanceTest $GRADLE_ARGS
       - capture_test_results
 
-  buildDocker:
-    executor: besu_executor_med
-    steps:
-      - prepare
-      - attach_workspace:
-          at: ~/project
-      - setup_remote_docker
-      - run:
-          name: hadoLint
-          command: |
-            docker run --rm -i hadolint/hadolint < docker/Dockerfile
-      - run:
-          name: build image
-          command: |
-            ./gradlew --no-daemon distDocker
-      - run:
-          name: test image
-          command: |
-            mkdir -p docker/reports
-            curl -L https://github.com/aelsabbahy/goss/releases/download/v0.3.9/goss-linux-amd64 -o ./docker/tests/goss-linux-amd64
-            ./gradlew --no-daemon testDocker
-
-  publish:
-    executor: besu_executor_med
-    steps:
-      - prepare
-      - attach_workspace:
-          at: ~/project
-      - run:
-          name: Publish
-          command: |
-            ./gradlew --no-daemon --parallel bintrayUpload
-
-  publishDocker:
-    executor: besu_executor_med
-    steps:
-      - prepare
-      - attach_workspace:
-          at: ~/project
-      - setup_remote_docker
-      - run:
-          name: Publish Docker
-          command: |
-            docker login --username "${DOCKER_USER}" --password "${DOCKER_PASSWORD}"
-            docker login "${ACR_REPO}" --username "${ACR_DOCKER_USER}" --password "${ACR_DOCKER_PASSWORD}"
-            ./gradlew --no-daemon --parallel "-Pbranch=${CIRCLE_BRANCH}" dockerUpload
-
 workflows:
   version: 2
   default:
@@ -217,31 +162,3 @@ workflows:
       - acceptanceTests:
           requires:
             - assemble
-      - buildDocker:
-          requires:
-            - unitTests
-      - publish:
-          filters:
-            branches:
-              only:
-                - master
-                - /^release-.*/
-          requires:
-            - integrationTests
-            - unitTests
-            - acceptanceTests
-            - referenceTests
-            - buildDocker
-      - publishDocker:
-          filters:
-            branches:
-              only:
-                - master
-                - /^release-.*/
-          requires:
-            - integrationTests
-            - unitTests
-            - acceptanceTests
-            - referenceTests
-            - buildDocker
-
