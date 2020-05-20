@@ -1,11 +1,13 @@
 {
-"request": {
+  "request": {
     "id": 415,
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
     "params": [
       "earliest",
-      ["trace"]
+      [
+        "trace"
+      ]
     ]
   },
   "response": {

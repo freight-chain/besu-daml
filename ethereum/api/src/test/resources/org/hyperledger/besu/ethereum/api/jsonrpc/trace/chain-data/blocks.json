@@ -418,7 +418,7 @@
     },
     {
       "number": "0x17",
-      "transactions" : [
+      "transactions": [
         {
           "comment": "Proxy call to another contract. Using STATICCALL.",
           "secretKey": "0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
@@ -431,7 +431,7 @@
     },
     {
       "number": "0x18",
-      "transactions" : [
+      "transactions": [
         {
           "comment": "Proxy call to another contract - several levels deep. Using CALL and STATICCALL.",
           "secretKey": "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
@@ -464,7 +464,7 @@
     },
     {
       "number": "0x1A",
-      "transactions" : [
+      "transactions": [
         {
           "comment": "Proxy call to another contract - 1 level deep with gas refund.",
           "secretKey": "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
@@ -477,7 +477,7 @@
     },
     {
       "number": "0x1B",
-      "transactions" : [
+      "transactions": [
         {
           "comment": "Self destruct and send contract balance to the same address provided in the to field.",
           "secretKey": "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",

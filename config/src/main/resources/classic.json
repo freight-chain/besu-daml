@@ -10,9 +10,7 @@
     "atlantisBlock": 8772000,
     "aghartaBlock": 9573000,
     "phoenixBlock": 10500839,
-    "ethash": {
-
-    }
+    "ethash": {}
   },
   "nonce": "0x42",
   "timestamp": "0x0",
