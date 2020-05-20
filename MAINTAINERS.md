@@ -12,7 +12,7 @@
 | Byron Gravenorst | bgravenorst      | bgravenorst      |
 | Chris Hare       | CjHare           | cjhare           |
 | Edward Evans     | EdJoJob          | EdJoJob          |
-| Edward Mack      | edwardmack       | mackcom          | 
+| Edward Mack      | edwardmack       | mackcom          |
 | Ivaylo Kirilov   | iikirilov        | iikirilov        |
 | Jason Frame      | jframe           | jframe           |
 | Joshua Fernandes | joshuafernandes  | joshuafernandes  |
@@ -34,6 +34,7 @@
 ## Emeritus Maintainers
 
 None.
+
 <!--
 | Name | Github | LFID |
 |------|--------|------|
