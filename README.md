@@ -45,7 +45,7 @@ Users wanting to install Besu should install the Besu binary by following
 
 Instructions for how to get started with developing on the Besu codebase. Please
 also read the [wiki](https://wiki.hyperledger.org/display/BESU/Pull+Requests)
-for more details on how to submit a pull request (PR).  
+for more details on how to submit a pull request (PR).
 Also feel free to
 [contact our Developer Advocate](https://chat.hyperledger.org/direct/faraggi)
 with any questions about contributing to the project.
