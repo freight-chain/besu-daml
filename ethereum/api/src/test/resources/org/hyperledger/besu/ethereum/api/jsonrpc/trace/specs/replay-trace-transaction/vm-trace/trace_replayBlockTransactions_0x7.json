@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x7",
-      [
-        "vmTrace"
-      ]
-    ],
+    "params": ["0x7", ["vmTrace"]],
     "id": 415
   },
   "response": {
@@ -25,9 +20,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756047
               },
@@ -51,9 +44,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16756041
               },
@@ -77,9 +68,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756035
               },
@@ -104,9 +93,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x20"
-                ],
+                "push": ["0x20"],
                 "store": null,
                 "used": 16756026
               },
@@ -117,9 +104,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756023
               },

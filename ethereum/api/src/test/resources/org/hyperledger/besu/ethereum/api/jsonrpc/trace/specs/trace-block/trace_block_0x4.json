@@ -2,9 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_block",
-    "params": [
-      "0x4"
-    ],
+    "params": ["0x4"],
     "id": 415
   },
   "response": {

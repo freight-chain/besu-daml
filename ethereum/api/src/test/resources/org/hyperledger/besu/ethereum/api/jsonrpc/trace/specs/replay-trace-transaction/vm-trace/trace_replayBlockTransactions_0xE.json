@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0xE",
-      [
-        "vmTrace"
-      ]
-    ],
+    "params": ["0xE", ["vmTrace"]],
     "id": 415
   },
   "response": {
@@ -25,9 +20,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756199
               },
@@ -38,9 +31,7 @@
               "cost": 800,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755399
               },
@@ -51,9 +42,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16755396
               },
@@ -64,9 +53,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16755393
               },
@@ -77,10 +64,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1",
-                  "0x1"
-                ],
+                "push": ["0x1", "0x1"],
                 "store": null,
                 "used": 16755390
               },
@@ -91,9 +75,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755387
               },
@@ -118,9 +100,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755378
               },
@@ -145,9 +125,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16735375
               },
@@ -158,9 +136,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16735372
               },
@@ -193,9 +169,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756199
               },
@@ -206,9 +180,7 @@
               "cost": 800,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16755399
               },
@@ -219,9 +191,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16755396
               },
@@ -232,9 +202,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x2"
-                ],
+                "push": ["0x2"],
                 "store": null,
                 "used": 16755393
               },
@@ -245,10 +213,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x2",
-                  "0x2"
-                ],
+                "push": ["0x2", "0x2"],
                 "store": null,
                 "used": 16755390
               },
@@ -259,9 +224,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755387
               },
@@ -286,9 +249,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755378
               },
@@ -313,9 +274,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16750375
               },
@@ -326,9 +285,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16750372
               },
@@ -361,9 +318,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756199
               },
@@ -374,9 +329,7 @@
               "cost": 800,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x2"
-                ],
+                "push": ["0x2"],
                 "store": null,
                 "used": 16755399
               },
@@ -387,9 +340,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16755396
               },
@@ -400,9 +351,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x3"
-                ],
+                "push": ["0x3"],
                 "store": null,
                 "used": 16755393
               },
@@ -413,10 +362,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x3",
-                  "0x3"
-                ],
+                "push": ["0x3", "0x3"],
                 "store": null,
                 "used": 16755390
               },
@@ -427,9 +373,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755387
               },
@@ -454,9 +398,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16755378
               },
@@ -481,9 +423,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16750375
               },
@@ -494,9 +434,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16750372
               },

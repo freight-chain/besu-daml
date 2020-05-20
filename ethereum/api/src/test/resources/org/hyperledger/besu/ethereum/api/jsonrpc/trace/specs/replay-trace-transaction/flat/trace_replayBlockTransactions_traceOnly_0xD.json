@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0xD",
-      [
-        "trace"
-      ]
-    ],
+    "params": ["0xD", ["trace"]],
     "id": 415
   },
   "response": {

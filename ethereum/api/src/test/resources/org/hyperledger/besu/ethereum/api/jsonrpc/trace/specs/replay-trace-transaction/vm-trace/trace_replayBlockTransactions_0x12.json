@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x12",
-      [
-        "vmTrace"
-      ]
-    ],
+    "params": ["0x12", ["vmTrace"]],
     "id": 415
   },
   "response": {
@@ -38,9 +33,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756196
               },
@@ -78,9 +71,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x10"
-                ],
+                "push": ["0x10"],
                 "store": null,
                 "used": 16756184
               },
@@ -105,9 +96,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x8"
-                ],
+                "push": ["0x8"],
                 "store": null,
                 "used": 16756175
               },
@@ -158,9 +147,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x0"
-                ],
+                "push": ["0x0"],
                 "store": null,
                 "used": 16756196
               },
@@ -198,9 +185,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x10"
-                ],
+                "push": ["0x10"],
                 "store": null,
                 "used": 16756184
               },
@@ -225,9 +210,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x8"
-                ],
+                "push": ["0x8"],
                 "store": null,
                 "used": 16756175
               },
@@ -238,9 +221,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x8"
-                ],
+                "push": ["0x8"],
                 "store": null,
                 "used": 16756172
               },

@@ -58,9 +58,7 @@
             "gasUsed": "0xa10e"
           },
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xd32c538fd1b3ef854c04ae39925dc9e849b568b92ea388f778b794851ab37f7c",
           "transactionPosition": 0,
           "type": "create"
@@ -108,9 +106,7 @@
             "gasUsed": "0xa046"
           },
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xaf151fc10eb21e76efb0bc74da179a674083e420280fb2985f76b0326682864a",
           "transactionPosition": 1,
           "type": "create"

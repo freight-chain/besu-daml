@@ -3,12 +3,7 @@
     "id": 415,
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "earliest",
-      [
-        "trace"
-      ]
-    ]
+    "params": ["earliest", ["trace"]]
   },
   "response": {
     "jsonrpc": "2.0",
