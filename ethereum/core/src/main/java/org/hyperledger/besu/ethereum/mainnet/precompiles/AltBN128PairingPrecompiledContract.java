@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,14 @@ package org.hyperledger.besu.ethereum.mainnet.precompiles;
 
 import static org.hyperledger.besu.nativelib.altbn128.LibAltbn128.altbn128_pairing_precompiled;
 
+import com.sun.jna.ptr.IntByReference;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.altbn128.AltBn128Fq12Pairer;
 import org.hyperledger.besu.crypto.altbn128.AltBn128Fq2Point;
 import org.hyperledger.besu.crypto.altbn128.AltBn128Point;
@@ -28,17 +39,8 @@ import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.nativelib.altbn128.LibAltbn128;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import com.sun.jna.ptr.IntByReference;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-
-public class AltBN128PairingPrecompiledContract extends AbstractPrecompiledContract {
+public class AltBN128PairingPrecompiledContract
+    extends AbstractPrecompiledContract {
 
   static boolean useNative = true;
 
@@ -46,33 +48,39 @@ public class AltBN128PairingPrecompiledContract extends AbstractPrecompiledContr
 
   public static void enableNative() {
     useNative = LibAltbn128.ENABLED;
-    LOG.info(useNative ? "Using native alt bn128" : "Native alt bn128 requested but not available");
+    LOG.info(useNative ? "Using native alt bn128"
+                       : "Native alt bn128 requested but not available");
   }
 
   private static final int FIELD_LENGTH = 32;
   private static final int PARAMETER_LENGTH = 192;
 
-  static final Bytes FALSE =
-      Bytes.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000");
-  static final Bytes TRUE =
-      Bytes.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
+  static final Bytes FALSE = Bytes.fromHexString(
+      "0x0000000000000000000000000000000000000000000000000000000000000000");
+  static final Bytes TRUE = Bytes.fromHexString(
+      "0x0000000000000000000000000000000000000000000000000000000000000001");
 
   private final Gas pairingGasCost;
   private final Gas baseGasCost;
 
-  private AltBN128PairingPrecompiledContract(
-      final GasCalculator gasCalculator, final Gas pairingGasCost, final Gas baseGasCost) {
+  private AltBN128PairingPrecompiledContract(final GasCalculator gasCalculator,
+                                             final Gas pairingGasCost,
+                                             final Gas baseGasCost) {
     super("AltBN128Pairing", gasCalculator);
     this.pairingGasCost = pairingGasCost;
     this.baseGasCost = baseGasCost;
   }
 
-  public static AltBN128PairingPrecompiledContract byzantium(final GasCalculator gasCalculator) {
-    return new AltBN128PairingPrecompiledContract(gasCalculator, Gas.of(80_000), Gas.of(100_000));
+  public static AltBN128PairingPrecompiledContract
+  byzantium(final GasCalculator gasCalculator) {
+    return new AltBN128PairingPrecompiledContract(gasCalculator, Gas.of(80_000),
+                                                  Gas.of(100_000));
   }
 
-  public static AltBN128PairingPrecompiledContract istanbul(final GasCalculator gasCalculator) {
-    return new AltBN128PairingPrecompiledContract(gasCalculator, Gas.of(34_000), Gas.of(45_000));
+  public static AltBN128PairingPrecompiledContract
+  istanbul(final GasCalculator gasCalculator) {
+    return new AltBN128PairingPrecompiledContract(gasCalculator, Gas.of(34_000),
+                                                  Gas.of(45_000));
   }
 
   @Override
@@ -101,18 +109,25 @@ public class AltBN128PairingPrecompiledContract extends AbstractPrecompiledContr
     final List<AltBn128Point> a = new ArrayList<>();
     final List<AltBn128Fq2Point> b = new ArrayList<>();
     for (int i = 0; i < parameters; ++i) {
-      final BigInteger p1_x = extractParameter(input, i * PARAMETER_LENGTH, FIELD_LENGTH);
-      final BigInteger p1_y = extractParameter(input, i * PARAMETER_LENGTH + 32, FIELD_LENGTH);
-      final AltBn128Point p1 = new AltBn128Point(Fq.create(p1_x), Fq.create(p1_y));
+      final BigInteger p1_x =
+          extractParameter(input, i * PARAMETER_LENGTH, FIELD_LENGTH);
+      final BigInteger p1_y =
+          extractParameter(input, i * PARAMETER_LENGTH + 32, FIELD_LENGTH);
+      final AltBn128Point p1 =
+          new AltBn128Point(Fq.create(p1_x), Fq.create(p1_y));
       if (!p1.isOnCurve()) {
         return null;
       }
       a.add(p1);
 
-      final BigInteger p2_xImag = extractParameter(input, i * PARAMETER_LENGTH + 64, FIELD_LENGTH);
-      final BigInteger p2_xReal = extractParameter(input, i * PARAMETER_LENGTH + 96, FIELD_LENGTH);
-      final BigInteger p2_yImag = extractParameter(input, i * PARAMETER_LENGTH + 128, FIELD_LENGTH);
-      final BigInteger p2_yReal = extractParameter(input, i * PARAMETER_LENGTH + 160, FIELD_LENGTH);
+      final BigInteger p2_xImag =
+          extractParameter(input, i * PARAMETER_LENGTH + 64, FIELD_LENGTH);
+      final BigInteger p2_xReal =
+          extractParameter(input, i * PARAMETER_LENGTH + 96, FIELD_LENGTH);
+      final BigInteger p2_yImag =
+          extractParameter(input, i * PARAMETER_LENGTH + 128, FIELD_LENGTH);
+      final BigInteger p2_yReal =
+          extractParameter(input, i * PARAMETER_LENGTH + 160, FIELD_LENGTH);
       final Fq2 p2_x = Fq2.create(p2_xReal, p2_xImag);
       final Fq2 p2_y = Fq2.create(p2_yReal, p2_yImag);
       final AltBn128Fq2Point p2 = new AltBn128Fq2Point(p2_x, p2_y);
@@ -137,20 +152,21 @@ public class AltBN128PairingPrecompiledContract extends AbstractPrecompiledContr
   private static Bytes computeNative(final Bytes input) {
     final byte[] output = new byte[32];
     final IntByReference outputSize = new IntByReference(32);
-    if (altbn128_pairing_precompiled(input.toArrayUnsafe(), input.size(), output, outputSize)
-        == 0) {
+    if (altbn128_pairing_precompiled(input.toArrayUnsafe(), input.size(),
+                                     output, outputSize) == 0) {
       return Bytes.wrap(output, 0, outputSize.getValue());
     } else {
       return null;
     }
   }
 
-  private static BigInteger extractParameter(
-      final Bytes input, final int offset, final int length) {
+  private static BigInteger
+  extractParameter(final Bytes input, final int offset, final int length) {
     if (offset > input.size() || length == 0) {
       return BigInteger.ZERO;
     }
-    final byte[] raw = Arrays.copyOfRange(input.toArray(), offset, offset + length);
+    final byte[] raw =
+        Arrays.copyOfRange(input.toArray(), offset, offset + length);
     return new BigInteger(1, raw);
   }
 }

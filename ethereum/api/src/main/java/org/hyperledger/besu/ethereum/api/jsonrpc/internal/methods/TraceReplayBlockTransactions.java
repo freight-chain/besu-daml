@@ -1,19 +1,33 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Suppliers;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.BlockParameter;
@@ -34,19 +48,6 @@ import org.hyperledger.besu.ethereum.debug.TraceOptions;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor.Result;
 import org.hyperledger.besu.ethereum.vm.DebugOperationTracer;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.base.Suppliers;
 
 public class TraceReplayBlockTransactions extends AbstractBlockParameterMethod {
   private final Supplier<BlockTracer> blockTracerSupplier;
@@ -74,8 +75,8 @@ public class TraceReplayBlockTransactions extends AbstractBlockParameterMethod {
   }
 
   @Override
-  protected Object resultByBlockNumber(
-      final JsonRpcRequestContext request, final long blockNumber) {
+  protected Object resultByBlockNumber(final JsonRpcRequestContext request,
+                                       final long blockNumber) {
     final TraceTypeParameter traceTypeParameter =
         request.getRequiredParameter(1, TraceTypeParameter.class);
 
@@ -91,78 +92,76 @@ public class TraceReplayBlockTransactions extends AbstractBlockParameterMethod {
         .orElse(null);
   }
 
-  private Object traceBlock(final Block block, final TraceTypeParameter traceTypeParameter) {
+  private Object traceBlock(final Block block,
+                            final TraceTypeParameter traceTypeParameter) {
     if (block == null || block.getBody().getTransactions().isEmpty()) {
       return emptyResult();
     }
     // TODO: generate options based on traceTypeParameter
     final TraceOptions traceOptions = TraceOptions.DEFAULT;
 
-    return blockTracerSupplier
-        .get()
+    return blockTracerSupplier.get()
         .trace(block, new DebugOperationTracer(traceOptions))
         .map(BlockTrace::getTransactionTraces)
-        .map((traces) -> generateTracesFromTransactionTrace(traces, block, traceTypeParameter))
+        .map((traces)
+                 -> generateTracesFromTransactionTrace(traces, block,
+                                                       traceTypeParameter))
         .orElse(null);
   }
 
   private JsonNode generateTracesFromTransactionTrace(
-      final List<TransactionTrace> transactionTraces,
-      final Block block,
+      final List<TransactionTrace> transactionTraces, final Block block,
       final TraceTypeParameter traceTypeParameter) {
-    final Set<TraceTypeParameter.TraceType> traceTypes = traceTypeParameter.getTraceTypes();
+    final Set<TraceTypeParameter.TraceType> traceTypes =
+        traceTypeParameter.getTraceTypes();
     final ObjectMapper mapper = new ObjectMapper();
     final ArrayNode resultArrayNode = mapper.createArrayNode();
     final AtomicInteger traceCounter = new AtomicInteger(0);
     transactionTraces.forEach(
-        transactionTrace ->
-            handleTransactionTrace(
-                transactionTrace, block, traceTypes, mapper, resultArrayNode, traceCounter));
+        transactionTrace
+        -> handleTransactionTrace(transactionTrace, block, traceTypes, mapper,
+                                  resultArrayNode, traceCounter));
     return resultArrayNode;
   }
 
   private void handleTransactionTrace(
-      final TransactionTrace transactionTrace,
-      final Block block,
+      final TransactionTrace transactionTrace, final Block block,
       final Set<TraceTypeParameter.TraceType> traceTypes,
-      final ObjectMapper mapper,
-      final ArrayNode resultArrayNode,
+      final ObjectMapper mapper, final ArrayNode resultArrayNode,
       final AtomicInteger traceCounter) {
     final ObjectNode resultNode = mapper.createObjectNode();
 
     Result result = transactionTrace.getResult();
-    resultNode.put("output", result.getRevertReason().orElse(result.getOutput()).toString());
+    resultNode.put(
+        "output",
+        result.getRevertReason().orElse(result.getOutput()).toString());
 
     if (traceTypes.contains(TraceType.STATE_DIFF)) {
       generateTracesFromTransactionTrace(
-          trace -> resultNode.putPOJO("stateDiff", trace),
-          protocolSchedule,
-          transactionTrace,
-          block,
-          (__, txTrace, currentBlock, ignored) ->
-              stateDiffGenerator.get().generateStateDiff(txTrace),
+          trace
+          -> resultNode.putPOJO("stateDiff", trace),
+          protocolSchedule, transactionTrace, block,
+          (__, txTrace, currentBlock, ignored)
+              -> stateDiffGenerator.get().generateStateDiff(txTrace),
           traceCounter);
     }
     setNullNodesIfNotPresent(resultNode, "stateDiff");
     if (traceTypes.contains(TraceTypeParameter.TraceType.TRACE)) {
       generateTracesFromTransactionTrace(
-          resultNode.putArray("trace")::addPOJO,
-          protocolSchedule,
-          transactionTrace,
-          block,
-          FlatTraceGenerator::generateFromTransactionTrace,
-          traceCounter);
+          resultNode.putArray("trace")::addPOJO, protocolSchedule,
+          transactionTrace, block,
+          FlatTraceGenerator::generateFromTransactionTrace, traceCounter);
     }
     setEmptyArrayIfNotPresent(resultNode, "trace");
-    resultNode.put("transactionHash", transactionTrace.getTransaction().getHash().toHexString());
+    resultNode.put("transactionHash",
+                   transactionTrace.getTransaction().getHash().toHexString());
     if (traceTypes.contains(TraceTypeParameter.TraceType.VM_TRACE)) {
       generateTracesFromTransactionTrace(
-          trace -> resultNode.putPOJO("vmTrace", trace),
-          protocolSchedule,
-          transactionTrace,
-          block,
-          (protocolSchedule, txTrace, currentBlock, ignored) ->
-              new VmTraceGenerator(transactionTrace).generateTraceStream(),
+          trace
+          -> resultNode.putPOJO("vmTrace", trace),
+          protocolSchedule, transactionTrace, block,
+          (protocolSchedule, txTrace, currentBlock, ignored)
+              -> new VmTraceGenerator(transactionTrace).generateTraceStream(),
           traceCounter);
     }
     setNullNodesIfNotPresent(resultNode, "vmTrace");
@@ -170,31 +169,28 @@ public class TraceReplayBlockTransactions extends AbstractBlockParameterMethod {
   }
 
   private void generateTracesFromTransactionTrace(
-      final TraceWriter writer,
-      final ProtocolSchedule<?> protocolSchedule,
-      final TransactionTrace transactionTrace,
-      final Block block,
-      final TraceFormatter formatter,
-      final AtomicInteger traceCounter) {
-    formatter
-        .format(protocolSchedule, transactionTrace, block, traceCounter)
+      final TraceWriter writer, final ProtocolSchedule<?> protocolSchedule,
+      final TransactionTrace transactionTrace, final Block block,
+      final TraceFormatter formatter, final AtomicInteger traceCounter) {
+    formatter.format(protocolSchedule, transactionTrace, block, traceCounter)
         .forEachOrdered(writer::write);
   }
 
-  private void setNullNodesIfNotPresent(final ObjectNode parentNode, final String... keys) {
-    Arrays.asList(keys)
-        .forEach(
-            key ->
-                Optional.ofNullable(parentNode.get(key))
-                    .ifPresentOrElse(ignored -> {}, () -> parentNode.put(key, (String) null)));
+  private void setNullNodesIfNotPresent(final ObjectNode parentNode,
+                                        final String... keys) {
+    Arrays.asList(keys).forEach(
+        key
+        -> Optional.ofNullable(parentNode.get(key))
+               .ifPresentOrElse(
+                   ignored -> {}, () -> parentNode.put(key, (String)null)));
   }
 
-  private void setEmptyArrayIfNotPresent(final ObjectNode parentNode, final String... keys) {
-    Arrays.asList(keys)
-        .forEach(
-            key ->
-                Optional.ofNullable(parentNode.get(key))
-                    .ifPresentOrElse(ignored -> {}, () -> parentNode.putArray(key)));
+  private void setEmptyArrayIfNotPresent(final ObjectNode parentNode,
+                                         final String... keys) {
+    Arrays.asList(keys).forEach(
+        key
+        -> Optional.ofNullable(parentNode.get(key))
+               .ifPresentOrElse(ignored -> {}, () -> parentNode.putArray(key)));
   }
 
   private Object emptyResult() {

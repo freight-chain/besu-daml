@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
 import static org.mockito.Mockito.mock;
 
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.OptionalLong;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.ChainHead;
@@ -37,110 +43,83 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
 
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.OptionalLong;
-
 public class EthProtocolManagerTestUtil {
 
-  public static EthProtocolManager create(
-      final Blockchain blockchain,
-      final TimeoutPolicy timeoutPolicy,
-      final WorldStateArchive worldStateArchive,
-      final TransactionPool transactionPool,
-      final EthProtocolConfiguration ethereumWireProtocolConfiguration) {
-    return create(
-        blockchain,
-        new DeterministicEthScheduler(timeoutPolicy),
-        worldStateArchive,
-        transactionPool,
-        ethereumWireProtocolConfiguration);
+  public static EthProtocolManager
+  create(final Blockchain blockchain, final TimeoutPolicy timeoutPolicy,
+         final WorldStateArchive worldStateArchive,
+         final TransactionPool transactionPool,
+         final EthProtocolConfiguration ethereumWireProtocolConfiguration) {
+    return create(blockchain, new DeterministicEthScheduler(timeoutPolicy),
+                  worldStateArchive, transactionPool,
+                  ethereumWireProtocolConfiguration);
   }
 
-  public static EthProtocolManager create(
-      final Blockchain blockchain,
-      final EthScheduler ethScheduler,
-      final WorldStateArchive worldStateArchive,
-      final TransactionPool transactionPool,
-      final EthProtocolConfiguration ethereumWireProtocolConfiguration,
-      final EthPeers ethPeers,
-      final EthMessages ethMessages,
-      final EthContext ethContext) {
+  public static EthProtocolManager
+  create(final Blockchain blockchain, final EthScheduler ethScheduler,
+         final WorldStateArchive worldStateArchive,
+         final TransactionPool transactionPool,
+         final EthProtocolConfiguration ethereumWireProtocolConfiguration,
+         final EthPeers ethPeers, final EthMessages ethMessages,
+         final EthContext ethContext) {
     final BigInteger networkId = BigInteger.ONE;
     return new EthProtocolManager(
-        blockchain,
-        networkId,
-        worldStateArchive,
-        transactionPool,
-        ethereumWireProtocolConfiguration,
-        ethPeers,
-        ethMessages,
-        ethContext,
-        Collections.emptyList(),
-        false,
-        ethScheduler,
+        blockchain, networkId, worldStateArchive, transactionPool,
+        ethereumWireProtocolConfiguration, ethPeers, ethMessages, ethContext,
+        Collections.emptyList(), false, ethScheduler,
         new ForkIdManager(blockchain, Collections.emptyList()));
   }
 
   public static EthProtocolManager create(final Blockchain blockchain) {
-    return create(blockchain, new DeterministicEthScheduler(TimeoutPolicy.NEVER_TIMEOUT));
+    return create(blockchain,
+                  new DeterministicEthScheduler(TimeoutPolicy.NEVER_TIMEOUT));
   }
 
-  public static EthProtocolManager create(
-      final Blockchain blockchain,
-      final WorldStateArchive worldStateArchive,
-      final TransactionPool transactionPool,
-      final EthProtocolConfiguration ethProtocolConfiguration) {
-    return create(
-        blockchain,
-        new DeterministicEthScheduler(TimeoutPolicy.NEVER_TIMEOUT),
-        worldStateArchive,
-        transactionPool,
-        ethProtocolConfiguration);
+  public static EthProtocolManager
+  create(final Blockchain blockchain, final WorldStateArchive worldStateArchive,
+         final TransactionPool transactionPool,
+         final EthProtocolConfiguration ethProtocolConfiguration) {
+    return create(blockchain,
+                  new DeterministicEthScheduler(TimeoutPolicy.NEVER_TIMEOUT),
+                  worldStateArchive, transactionPool, ethProtocolConfiguration);
   }
 
   public static EthProtocolManager create(final EthScheduler ethScheduler) {
-    final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
+    final ProtocolSchedule<Void> protocolSchedule =
+        MainnetProtocolSchedule.create();
     final GenesisConfigFile config = GenesisConfigFile.mainnet();
-    final GenesisState genesisState = GenesisState.fromConfig(config, protocolSchedule);
-    final Blockchain blockchain = createInMemoryBlockchain(genesisState.getBlock());
+    final GenesisState genesisState =
+        GenesisState.fromConfig(config, protocolSchedule);
+    final Blockchain blockchain =
+        createInMemoryBlockchain(genesisState.getBlock());
     return create(blockchain, ethScheduler);
   }
 
-  public static EthProtocolManager create(
-      final Blockchain blockchain,
-      final EthScheduler ethScheduler,
-      final WorldStateArchive worldStateArchive,
-      final TransactionPool transactionPool,
-      final EthProtocolConfiguration configuration) {
-    EthPeers peers = new EthPeers(EthProtocol.NAME, TestClock.fixed(), new NoOpMetricsSystem());
+  public static EthProtocolManager
+  create(final Blockchain blockchain, final EthScheduler ethScheduler,
+         final WorldStateArchive worldStateArchive,
+         final TransactionPool transactionPool,
+         final EthProtocolConfiguration configuration) {
+    EthPeers peers = new EthPeers(EthProtocol.NAME, TestClock.fixed(),
+                                  new NoOpMetricsSystem());
     EthMessages messages = new EthMessages();
 
-    return create(
-        blockchain,
-        ethScheduler,
-        worldStateArchive,
-        transactionPool,
-        configuration,
-        peers,
-        messages,
-        new EthContext(peers, messages, ethScheduler));
+    return create(blockchain, ethScheduler, worldStateArchive, transactionPool,
+                  configuration, peers, messages,
+                  new EthContext(peers, messages, ethScheduler));
   }
 
-  public static EthProtocolManager create(
-      final Blockchain blockchain, final EthScheduler ethScheduler) {
-    EthPeers peers = new EthPeers(EthProtocol.NAME, TestClock.fixed(), new NoOpMetricsSystem());
+  public static EthProtocolManager create(final Blockchain blockchain,
+                                          final EthScheduler ethScheduler) {
+    EthPeers peers = new EthPeers(EthProtocol.NAME, TestClock.fixed(),
+                                  new NoOpMetricsSystem());
     EthMessages messages = new EthMessages();
 
-    return create(
-        blockchain,
-        ethScheduler,
-        BlockchainSetupUtil.forTesting().getWorldArchive(),
-        mock(TransactionPool.class),
-        EthProtocolConfiguration.defaultConfig(),
-        peers,
-        messages,
-        new EthContext(peers, messages, ethScheduler));
+    return create(blockchain, ethScheduler,
+                  BlockchainSetupUtil.forTesting().getWorldArchive(),
+                  mock(TransactionPool.class),
+                  EthProtocolConfiguration.defaultConfig(), peers, messages,
+                  new EthContext(peers, messages, ethScheduler));
   }
 
   public static EthProtocolManager create() {
@@ -152,96 +131,88 @@ public class EthProtocolManagerTestUtil {
   }
 
   // Utility to prevent scheduler from automatically running submitted tasks
-  public static void disableEthSchedulerAutoRun(final EthProtocolManager ethProtocolManager) {
-    final EthScheduler scheduler = ethProtocolManager.ethContext().getScheduler();
-    checkArgument(
-        scheduler instanceof DeterministicEthScheduler,
-        "EthProtocolManager must be set up with "
-            + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to disable auto run.");
-    ((DeterministicEthScheduler) scheduler).disableAutoRun();
+  public static void
+  disableEthSchedulerAutoRun(final EthProtocolManager ethProtocolManager) {
+    final EthScheduler scheduler =
+        ethProtocolManager.ethContext().getScheduler();
+    checkArgument(scheduler instanceof DeterministicEthScheduler,
+                  "EthProtocolManager must be set up with " +
+                      DeterministicEthScheduler.class.getSimpleName() +
+                      " in order to disable auto run.");
+    ((DeterministicEthScheduler)scheduler).disableAutoRun();
   }
 
   // Manually runs any pending tasks submitted to the EthScheduler
-  // Works with {@code disableEthSchedulerAutoRun} - tasks will only be pending if
-  // autoRun has been disabled.
-  public static void runPendingFutures(final EthProtocolManager ethProtocolManager) {
-    final EthScheduler scheduler = ethProtocolManager.ethContext().getScheduler();
-    checkArgument(
-        scheduler instanceof DeterministicEthScheduler,
-        "EthProtocolManager must be set up with "
-            + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to manually run pending futures.");
-    ((DeterministicEthScheduler) scheduler).runPendingFutures();
+  // Works with {@code disableEthSchedulerAutoRun} - tasks will only be pending
+  // if autoRun has been disabled.
+  public static void
+  runPendingFutures(final EthProtocolManager ethProtocolManager) {
+    final EthScheduler scheduler =
+        ethProtocolManager.ethContext().getScheduler();
+    checkArgument(scheduler instanceof DeterministicEthScheduler,
+                  "EthProtocolManager must be set up with " +
+                      DeterministicEthScheduler.class.getSimpleName() +
+                      " in order to manually run pending futures.");
+    ((DeterministicEthScheduler)scheduler).runPendingFutures();
   }
 
   /**
    * Expires any pending timeouts tracked by {@code DeterministicEthScheduler}
    *
-   * @param ethProtocolManager The {@code EthProtocolManager} managing the scheduler holding the
-   *     timeouts to be expired.
+   * @param ethProtocolManager The {@code EthProtocolManager} managing the
+   *     scheduler holding the timeouts to be expired.
    */
-  public static void expirePendingTimeouts(final EthProtocolManager ethProtocolManager) {
-    final EthScheduler scheduler = ethProtocolManager.ethContext().getScheduler();
-    checkArgument(
-        scheduler instanceof DeterministicEthScheduler,
-        "EthProtocolManager must be set up with "
-            + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to manually expire pending timeouts.");
-    ((DeterministicEthScheduler) scheduler).expirePendingTimeouts();
+  public static void
+  expirePendingTimeouts(final EthProtocolManager ethProtocolManager) {
+    final EthScheduler scheduler =
+        ethProtocolManager.ethContext().getScheduler();
+    checkArgument(scheduler instanceof DeterministicEthScheduler,
+                  "EthProtocolManager must be set up with " +
+                      DeterministicEthScheduler.class.getSimpleName() +
+                      " in order to manually expire pending timeouts.");
+    ((DeterministicEthScheduler)scheduler).expirePendingTimeouts();
   }
 
   /**
    * Gets the number of pending tasks submitted to the EthScheduler.
    *
-   * <p>Works with {@code disableEthSchedulerAutoRun} - tasks will only be pending if autoRun has
-   * been disabled.
+   * <p>Works with {@code disableEthSchedulerAutoRun} - tasks will only be
+   * pending if autoRun has been disabled.
    */
-  public static long getPendingFuturesCount(final EthProtocolManager ethProtocolManager) {
-    final EthScheduler scheduler = ethProtocolManager.ethContext().getScheduler();
-    checkArgument(
-        scheduler instanceof DeterministicEthScheduler,
-        "EthProtocolManager must be set up with "
-            + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to manually run pending futures.");
-    return ((DeterministicEthScheduler) scheduler).getPendingFuturesCount();
+  public static long
+  getPendingFuturesCount(final EthProtocolManager ethProtocolManager) {
+    final EthScheduler scheduler =
+        ethProtocolManager.ethContext().getScheduler();
+    checkArgument(scheduler instanceof DeterministicEthScheduler,
+                  "EthProtocolManager must be set up with " +
+                      DeterministicEthScheduler.class.getSimpleName() +
+                      " in order to manually run pending futures.");
+    return ((DeterministicEthScheduler)scheduler).getPendingFuturesCount();
   }
 
-  public static void broadcastMessage(
-      final EthProtocolManager ethProtocolManager,
-      final RespondingEthPeer peer,
-      final MessageData message) {
+  public static void
+  broadcastMessage(final EthProtocolManager ethProtocolManager,
+                   final RespondingEthPeer peer, final MessageData message) {
     ethProtocolManager.processMessage(
-        EthProtocol.ETH63, new DefaultMessage(peer.getPeerConnection(), message));
+        EthProtocol.ETH63,
+        new DefaultMessage(peer.getPeerConnection(), message));
   }
 
   public static RespondingEthPeer.Builder peerBuilder() {
     return RespondingEthPeer.builder();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager, final Difficulty td) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager, final Difficulty td) {
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)
         .totalDifficulty(td)
         .build();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager,
-      final Difficulty td,
-      final long estimatedHeight) {
-    return RespondingEthPeer.builder()
-        .ethProtocolManager(ethProtocolManager)
-        .totalDifficulty(td)
-        .estimatedHeight(estimatedHeight)
-        .build();
-  }
-
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager,
-      final Difficulty td,
-      final OptionalLong estimatedHeight) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager, final Difficulty td,
+             final long estimatedHeight) {
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)
         .totalDifficulty(td)
@@ -249,11 +220,20 @@ public class EthProtocolManagerTestUtil {
         .build();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager,
-      final Difficulty td,
-      final OptionalLong estimatedHeight,
-      final PeerValidator... validators) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager, final Difficulty td,
+             final OptionalLong estimatedHeight) {
+    return RespondingEthPeer.builder()
+        .ethProtocolManager(ethProtocolManager)
+        .totalDifficulty(td)
+        .estimatedHeight(estimatedHeight)
+        .build();
+  }
+
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager, final Difficulty td,
+             final OptionalLong estimatedHeight,
+             final PeerValidator... validators) {
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)
         .totalDifficulty(td)
@@ -262,22 +242,25 @@ public class EthProtocolManagerTestUtil {
         .build();
   }
 
-  public static RespondingEthPeer createPeer(final EthProtocolManager ethProtocolManager) {
-    return RespondingEthPeer.builder().ethProtocolManager(ethProtocolManager).build();
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager) {
+    return RespondingEthPeer.builder()
+        .ethProtocolManager(ethProtocolManager)
+        .build();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager, final long estimatedHeight) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager,
+             final long estimatedHeight) {
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)
         .estimatedHeight(estimatedHeight)
         .build();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager,
-      final long estimatedHeight,
-      final PeerValidator... validators) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager,
+             final long estimatedHeight, final PeerValidator... validators) {
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)
         .estimatedHeight(estimatedHeight)
@@ -285,8 +268,9 @@ public class EthProtocolManagerTestUtil {
         .build();
   }
 
-  public static RespondingEthPeer createPeer(
-      final EthProtocolManager ethProtocolManager, final Blockchain blockchain) {
+  public static RespondingEthPeer
+  createPeer(final EthProtocolManager ethProtocolManager,
+             final Blockchain blockchain) {
     final ChainHead head = blockchain.getChainHead();
     return RespondingEthPeer.builder()
         .ethProtocolManager(ethProtocolManager)

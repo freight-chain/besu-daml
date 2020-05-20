@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,11 @@ package org.hyperledger.besu.ethereum.chain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
+import org.bouncycastle.util.encoders.Hex;
 import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -25,12 +33,6 @@ import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
-import org.bouncycastle.util.encoders.Hex;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -55,31 +57,32 @@ public final class GenesisStateTest {
 
   @AfterClass
   public static void reset() {
-    ExperimentalEIPs.eip1559Enabled = ExperimentalEIPs.EIP1559_ENABLED_DEFAULT_VALUE;
+    ExperimentalEIPs.eip1559Enabled =
+        ExperimentalEIPs.EIP1559_ENABLED_DEFAULT_VALUE;
   }
 
   @Test
   public void createFromJsonWithAllocs() throws Exception {
-    final GenesisState genesisState =
-        GenesisState.fromJson(
-            Resources.toString(GenesisStateTest.class.getResource("genesis1.json"), Charsets.UTF_8),
-            MainnetProtocolSchedule.create());
+    final GenesisState genesisState = GenesisState.fromJson(
+        Resources.toString(GenesisStateTest.class.getResource("genesis1.json"),
+                           Charsets.UTF_8),
+        MainnetProtocolSchedule.create());
     final BlockHeader header = genesisState.getBlock().getHeader();
     assertThat(header.getStateRoot())
-        .isEqualTo(
-            Hash.fromHexString(
-                "0x92683e6af0f8a932e5fe08c870f2ae9d287e39d4518ec544b0be451f1035fd39"));
+        .isEqualTo(Hash.fromHexString(
+            "0x92683e6af0f8a932e5fe08c870f2ae9d287e39d4518ec544b0be451f1035fd39"));
     assertThat(header.getTransactionsRoot()).isEqualTo(Hash.EMPTY_TRIE_HASH);
     assertThat(header.getReceiptsRoot()).isEqualTo(Hash.EMPTY_TRIE_HASH);
     assertThat(header.getOmmersHash()).isEqualTo(Hash.EMPTY_LIST_HASH);
     assertThat(header.getExtraData()).isEqualTo(Bytes.EMPTY);
     assertThat(header.getParentHash()).isEqualTo(Hash.ZERO);
-    final MutableWorldState worldState = InMemoryStorageProvider.createInMemoryWorldState();
+    final MutableWorldState worldState =
+        InMemoryStorageProvider.createInMemoryWorldState();
     genesisState.writeStateTo(worldState);
-    final Account first =
-        worldState.get(Address.fromHexString("0x0000000000000000000000000000000000000001"));
-    final Account second =
-        worldState.get(Address.fromHexString("0x0000000000000000000000000000000000000002"));
+    final Account first = worldState.get(
+        Address.fromHexString("0x0000000000000000000000000000000000000001"));
+    final Account second = worldState.get(
+        Address.fromHexString("0x0000000000000000000000000000000000000002"));
     assertThat(first).isNotNull();
     assertThat(first.getBalance().toLong()).isEqualTo(111111111);
     assertThat(second).isNotNull();
@@ -88,10 +91,10 @@ public final class GenesisStateTest {
 
   @Test
   public void createFromJsonNoAllocs() throws Exception {
-    final GenesisState genesisState =
-        GenesisState.fromJson(
-            Resources.toString(GenesisStateTest.class.getResource("genesis2.json"), Charsets.UTF_8),
-            MainnetProtocolSchedule.create());
+    final GenesisState genesisState = GenesisState.fromJson(
+        Resources.toString(GenesisStateTest.class.getResource("genesis2.json"),
+                           Charsets.UTF_8),
+        MainnetProtocolSchedule.create());
     final BlockHeader header = genesisState.getBlock().getHeader();
     assertThat(header.getStateRoot()).isEqualTo(Hash.EMPTY_TRIE_HASH);
     assertThat(header.getTransactionsRoot()).isEqualTo(Hash.EMPTY_TRIE_HASH);
@@ -101,20 +104,23 @@ public final class GenesisStateTest {
     assertThat(header.getParentHash()).isEqualTo(Hash.ZERO);
   }
 
-  private void assertContractInvariants(
-      final String sourceFile, final String blockHash, final int version) throws Exception {
-    final GenesisState genesisState =
-        GenesisState.fromJson(
-            Resources.toString(GenesisStateTest.class.getResource(sourceFile), Charsets.UTF_8),
-            MainnetProtocolSchedule.create());
+  private void assertContractInvariants(final String sourceFile,
+                                        final String blockHash,
+                                        final int version) throws Exception {
+    final GenesisState genesisState = GenesisState.fromJson(
+        Resources.toString(GenesisStateTest.class.getResource(sourceFile),
+                           Charsets.UTF_8),
+        MainnetProtocolSchedule.create());
     final BlockHeader header = genesisState.getBlock().getHeader();
     assertThat(header.getHash()).isEqualTo(Hash.fromHexString(blockHash));
 
-    final MutableWorldState worldState = InMemoryStorageProvider.createInMemoryWorldState();
+    final MutableWorldState worldState =
+        InMemoryStorageProvider.createInMemoryWorldState();
     genesisState.writeStateTo(worldState);
-    final Account contract =
-        worldState.get(Address.fromHexString("0x3850000000000000000000000000000000000000"));
-    assertThat(contract.getCode()).isEqualTo(Bytes.fromHexString(EXPECTED_CODE));
+    final Account contract = worldState.get(
+        Address.fromHexString("0x3850000000000000000000000000000000000000"));
+    assertThat(contract.getCode())
+        .isEqualTo(Bytes.fromHexString(EXPECTED_CODE));
     assertThat(contract.getVersion()).isEqualTo(version);
     assertStorageValue(
         contract,
@@ -129,44 +135,49 @@ public final class GenesisStateTest {
   @Test
   public void createFromJsonWithContract() throws Exception {
     assertContractInvariants(
-        "genesis3.json", "0xe7fd8db206dcaf066b7c97b8a42a0abc18653613560748557ab44868652a78b6", 0);
+        "genesis3.json",
+        "0xe7fd8db206dcaf066b7c97b8a42a0abc18653613560748557ab44868652a78b6",
+        0);
   }
 
   @Test
   public void createFromJsonWithVersion() throws Exception {
     assertContractInvariants(
-        "genesis4.json", "0x3224ddae856381f5fb67492b4561ecbc0cb1e9e50e6cf3238f6e049fe95a8604", 1);
+        "genesis4.json",
+        "0x3224ddae856381f5fb67492b4561ecbc0cb1e9e50e6cf3238f6e049fe95a8604",
+        1);
   }
 
   @Test
   public void createFromJsonWithNonce() throws Exception {
-    final GenesisState genesisState =
-        GenesisState.fromJson(
-            Resources.toString(
-                GenesisStateTest.class.getResource("genesisNonce.json"), Charsets.UTF_8),
-            MainnetProtocolSchedule.create());
+    final GenesisState genesisState = GenesisState.fromJson(
+        Resources.toString(
+            GenesisStateTest.class.getResource("genesisNonce.json"),
+            Charsets.UTF_8),
+        MainnetProtocolSchedule.create());
     final BlockHeader header = genesisState.getBlock().getHeader();
     assertThat(header.getHash())
-        .isEqualTo(
-            Hash.fromHexString(
-                "0x36750291f1a8429aeb553a790dc2d149d04dbba0ca4cfc7fd5eb12d478117c9f"));
+        .isEqualTo(Hash.fromHexString(
+            "0x36750291f1a8429aeb553a790dc2d149d04dbba0ca4cfc7fd5eb12d478117c9f"));
   }
 
   @Test
   public void encodeOlympicBlock() throws Exception {
-    final GenesisState genesisState =
-        GenesisState.fromJson(
-            Resources.toString(
-                GenesisStateTest.class.getResource("genesis-olympic.json"), Charsets.UTF_8),
-            MainnetProtocolSchedule.create());
+    final GenesisState genesisState = GenesisState.fromJson(
+        Resources.toString(
+            GenesisStateTest.class.getResource("genesis-olympic.json"),
+            Charsets.UTF_8),
+        MainnetProtocolSchedule.create());
     final BytesValueRLPOutput tmp = new BytesValueRLPOutput();
     genesisState.getBlock().writeTo(tmp);
-    assertThat(Hex.toHexString(genesisState.getBlock().getHeader().getHash().toArray()))
+    assertThat(Hex.toHexString(
+                   genesisState.getBlock().getHeader().getHash().toArray()))
         .isEqualTo(OLYMPIC_HASH);
     assertThat(Hex.toHexString(tmp.encoded().toArray())).isEqualTo(OLYMPIC_RLP);
   }
 
-  private void assertStorageValue(final Account contract, final String key, final String value) {
+  private void assertStorageValue(final Account contract, final String key,
+                                  final String value) {
     assertThat(contract.getStorageValue(UInt256.fromHexString(key)))
         .isEqualTo(UInt256.fromHexString(value));
   }

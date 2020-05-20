@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,24 @@ package org.hyperledger.besu.ethereum.p2p.discovery;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Vertx;
+import io.vertx.core.datagram.DatagramPacket;
+import io.vertx.core.datagram.DatagramSocket;
+import io.vertx.core.datagram.DatagramSocketOptions;
+import java.io.IOException;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.util.OptionalInt;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+import java.util.stream.StreamSupport;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.Packet;
@@ -29,26 +50,6 @@ import org.hyperledger.besu.nat.NatService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.util.NetworkUtility;
 
-import java.io.IOException;
-import java.net.BindException;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.util.OptionalInt;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.IntSupplier;
-import java.util.function.Supplier;
-import java.util.stream.StreamSupport;
-
-import io.netty.channel.EventLoopGroup;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Vertx;
-import io.vertx.core.datagram.DatagramPacket;
-import io.vertx.core.datagram.DatagramSocket;
-import io.vertx.core.datagram.DatagramSocketOptions;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
   private static final Logger LOG = LogManager.getLogger();
 
@@ -56,30 +57,31 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
   /* The vert.x UDP socket. */
   private DatagramSocket socket;
 
-  public VertxPeerDiscoveryAgent(
-      final Vertx vertx,
-      final NodeKey nodeKey,
-      final DiscoveryConfiguration config,
-      final PeerPermissions peerPermissions,
-      final NatService natService,
-      final MetricsSystem metricsSystem) {
+  public VertxPeerDiscoveryAgent(final Vertx vertx, final NodeKey nodeKey,
+                                 final DiscoveryConfiguration config,
+                                 final PeerPermissions peerPermissions,
+                                 final NatService natService,
+                                 final MetricsSystem metricsSystem) {
     super(nodeKey, config, peerPermissions, natService, metricsSystem);
     checkArgument(vertx != null, "vertx instance cannot be null");
     this.vertx = vertx;
 
     metricsSystem.createIntegerGauge(
-        BesuMetricCategory.NETWORK,
-        "vertx_eventloop_pending_tasks",
+        BesuMetricCategory.NETWORK, "vertx_eventloop_pending_tasks",
         "The number of pending tasks in the Vertx event loop",
         pendingTaskCounter(vertx.nettyEventLoopGroup()));
   }
 
   private IntSupplier pendingTaskCounter(final EventLoopGroup eventLoopGroup) {
-    return () ->
-        StreamSupport.stream(eventLoopGroup.spliterator(), false)
-            .filter(eventExecutor -> eventExecutor instanceof SingleThreadEventExecutor)
-            .mapToInt(eventExecutor -> ((SingleThreadEventExecutor) eventExecutor).pendingTasks())
-            .sum();
+    return ()
+               -> StreamSupport.stream(eventLoopGroup.spliterator(), false)
+                      .filter(eventExecutor
+                              -> eventExecutor instanceof
+                                     SingleThreadEventExecutor)
+                      .mapToInt(eventExecutor
+                                -> ((SingleThreadEventExecutor)eventExecutor)
+                                       .pendingTasks())
+                      .sum();
   }
 
   @Override
@@ -96,9 +98,10 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
   protected CompletableFuture<InetSocketAddress> listenForConnections() {
     CompletableFuture<InetSocketAddress> future = new CompletableFuture<>();
     vertx
-        .createDatagramSocket(new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
-        .listen(
-            config.getBindPort(), config.getBindHost(), res -> handleListenerSetup(res, future));
+        .createDatagramSocket(new DatagramSocketOptions().setIpV6(
+            NetworkUtility.isIPv6Available()))
+        .listen(config.getBindPort(), config.getBindHost(),
+                res -> handleListenerSetup(res, future));
     return future;
   }
 
@@ -107,14 +110,13 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
       final CompletableFuture<InetSocketAddress> addressFuture) {
     if (listenResult.failed()) {
       Throwable cause = listenResult.cause();
-      LOG.error("An exception occurred when starting the peer discovery agent", cause);
+      LOG.error("An exception occurred when starting the peer discovery agent",
+                cause);
 
       if (cause instanceof BindException || cause instanceof SocketException) {
-        cause =
-            new PeerDiscoveryServiceException(
-                String.format(
-                    "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
-                    config.getBindHost(), config.getBindPort(), cause.getMessage()));
+        cause = new PeerDiscoveryServiceException(String.format(
+            "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
+            config.getBindHost(), config.getBindPort(), cause.getMessage()));
       }
       addressFuture.completeExceptionally(cause);
       return;
@@ -122,40 +124,35 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
 
     this.socket = listenResult.result();
 
-    // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by
-    // selecting
-    // the correct 'announce' address.
+    // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple
+    // addresses by selecting the correct 'announce' address.
     final String effectiveHost = socket.localAddress().host();
     final int effectivePort = socket.localAddress().port();
 
     LOG.info(
         "Started peer discovery agent successfully, on effective host={} and port={}",
-        effectiveHost,
-        effectivePort);
+        effectiveHost, effectivePort);
 
     socket.exceptionHandler(this::handleException);
     socket.handler(this::handlePacket);
 
-    InetSocketAddress address =
-        new InetSocketAddress(socket.localAddress().host(), socket.localAddress().port());
+    InetSocketAddress address = new InetSocketAddress(
+        socket.localAddress().host(), socket.localAddress().port());
     addressFuture.complete(address);
   }
 
   @Override
-  protected CompletableFuture<Void> sendOutgoingPacket(
-      final DiscoveryPeer peer, final Packet packet) {
+  protected CompletableFuture<Void> sendOutgoingPacket(final DiscoveryPeer peer,
+                                                       final Packet packet) {
     CompletableFuture<Void> result = new CompletableFuture<>();
-    socket.send(
-        packet.encode(),
-        peer.getEndpoint().getUdpPort(),
-        peer.getEnodeURL().getIpAsString(),
-        ar -> {
-          if (ar.failed()) {
-            result.completeExceptionally(ar.cause());
-          } else {
-            result.complete(null);
-          }
-        });
+    socket.send(packet.encode(), peer.getEndpoint().getUdpPort(),
+                peer.getEnodeURL().getIpAsString(), ar -> {
+                  if (ar.failed()) {
+                    result.completeExceptionally(ar.cause());
+                  } else {
+                    result.complete(null);
+                  }
+                });
     return result;
   }
 
@@ -166,16 +163,15 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
     }
 
     final CompletableFuture<?> completion = new CompletableFuture<>();
-    socket.close(
-        ar -> {
-          if (ar.succeeded()) {
-            controller.ifPresent(PeerDiscoveryController::stop);
-            socket = null;
-            completion.complete(null);
-          } else {
-            completion.completeExceptionally(ar.cause());
-          }
-        });
+    socket.close(ar -> {
+      if (ar.succeeded()) {
+        controller.ifPresent(PeerDiscoveryController::stop);
+        socket = null;
+        completion.complete(null);
+      } else {
+        completion.completeExceptionally(ar.cause());
+      }
+    });
     return completion;
   }
 
@@ -204,7 +200,8 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
       return;
     }
     vertx.<Packet>executeBlocking(
-        future -> {
+        future
+        -> {
           try {
             future.complete(Packet.decode(datagram.data()));
           } catch (final Throwable t) {
@@ -213,16 +210,20 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
         },
         event -> {
           if (event.succeeded()) {
-            // Acquire the senders coordinates to build a Peer representation from them.
+            // Acquire the senders coordinates to build a Peer representation
+            // from them.
             final String host = datagram.sender().host();
             final int port = datagram.sender().port();
-            final Endpoint endpoint = new Endpoint(host, port, OptionalInt.empty());
+            final Endpoint endpoint =
+                new Endpoint(host, port, OptionalInt.empty());
             handleIncomingPacket(endpoint, event.result());
           } else {
             if (event.cause() instanceof PeerDiscoveryPacketDecodingException) {
-              LOG.debug("Discarding invalid peer discovery packet: {}", event.cause().getMessage());
+              LOG.debug("Discarding invalid peer discovery packet: {}",
+                        event.cause().getMessage());
             } else {
-              LOG.error("Encountered error while handling packet", event.cause());
+              LOG.error("Encountered error while handling packet",
+                        event.cause());
             }
           }
         });
@@ -234,7 +235,8 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
     public <T> CompletableFuture<T> execute(final Supplier<T> action) {
       final CompletableFuture<T> result = new CompletableFuture<>();
       vertx.<T>executeBlocking(
-          future -> {
+          future
+          -> {
             try {
               future.complete(action.get());
             } catch (final Throwable t) {

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import java.math.BigInteger;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
+import org.apache.tuweni.bytes.Bytes;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -51,17 +63,6 @@ import org.hyperledger.besu.ethereum.vm.TestBlockchain;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
-
-import java.math.BigInteger;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
-
-import com.google.common.collect.Lists;
-import org.apache.tuweni.bytes.Bytes;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class BlockTransactionSelectorTest {
@@ -71,15 +72,14 @@ public class BlockTransactionSelectorTest {
 
   private final PendingTransactions pendingTransactions =
       new PendingTransactions(
-          TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS,
-          5,
-          5,
-          TestClock.fixed(),
-          metricsSystem);
+          TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS, 5, 5,
+          TestClock.fixed(), metricsSystem);
   private final Blockchain blockchain = new TestBlockchain();
-  private final MutableWorldState worldState = InMemoryStorageProvider.createInMemoryWorldState();
+  private final MutableWorldState worldState =
+      InMemoryStorageProvider.createInMemoryWorldState();
   private final Supplier<Boolean> isCancelled = () -> false;
-  private final TransactionProcessor transactionProcessor = mock(TransactionProcessor.class);
+  private final TransactionProcessor transactionProcessor =
+      mock(TransactionProcessor.class);
 
   private ProcessableBlockHeader createBlockWithGasLimit(final long gasLimit) {
     return BlockHeaderBuilder.create()
@@ -95,7 +95,8 @@ public class BlockTransactionSelectorTest {
   @Test
   public void emptyPendingTransactionsResultsInEmptyVettingResult() {
     final ProtocolSchedule<Void> protocolSchedule =
-        FixedDifficultyProtocolSchedule.create(GenesisConfigFile.development().getConfigOptions());
+        FixedDifficultyProtocolSchedule.create(
+            GenesisConfigFile.development().getConfigOptions());
     final TransactionProcessor mainnetTransactionProcessor =
         protocolSchedule.getByBlockNumber(0).getTransactionProcessor();
 
@@ -104,19 +105,11 @@ public class BlockTransactionSelectorTest {
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
 
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            mainnetTransactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        mainnetTransactionProcessor, blockchain, worldState,
+        pendingTransactions, blockHeader, this::createReceipt, Wei.ZERO,
+        isCancelled, miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final BlockTransactionSelector.TransactionSelectionResults results =
         selector.buildTransactionListForBlock();
@@ -131,30 +124,22 @@ public class BlockTransactionSelectorTest {
     final Transaction transaction = createTransaction(1);
     pendingTransactions.addRemoteTransaction(transaction);
 
-    when(transactionProcessor.processTransaction(
-            any(), any(), any(), eq(transaction), any(), any(), anyBoolean(), any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.failed(
-                5, ValidationResult.valid(), Optional.empty()));
+    when(transactionProcessor.processTransaction(any(), any(), any(),
+                                                 eq(transaction), any(), any(),
+                                                 anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.failed(
+            5, ValidationResult.valid(), Optional.empty()));
 
     // The block should fit 3 transactions only
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(5000);
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
 
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final BlockTransactionSelector.TransactionSelectionResults results =
         selector.buildTransactionListForBlock();
@@ -166,7 +151,8 @@ public class BlockTransactionSelectorTest {
   }
 
   @Test
-  public void invalidTransactionsTransactionProcessingAreSkippedButBlockStillFills() {
+  public void
+  invalidTransactionsTransactionProcessingAreSkippedButBlockStillFills() {
     final List<Transaction> transactionsToInject = Lists.newArrayList();
     for (int i = 0; i < 5; i++) {
       final Transaction tx = createTransaction(i);
@@ -175,48 +161,33 @@ public class BlockTransactionSelectorTest {
     }
 
     when(transactionProcessor.processTransaction(
-            any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.successful(
-                new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
+             any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.successful(
+            new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
     when(transactionProcessor.processTransaction(
-            any(),
-            any(),
-            any(),
-            eq(transactionsToInject.get(1)),
-            any(),
-            any(),
-            anyBoolean(),
-            any()))
+             any(), any(), any(), eq(transactionsToInject.get(1)), any(), any(),
+             anyBoolean(), any()))
         .thenReturn(
-            MainnetTransactionProcessor.Result.invalid(
-                ValidationResult.invalid(
-                    TransactionValidator.TransactionInvalidReason.NONCE_TOO_LOW)));
+            MainnetTransactionProcessor.Result.invalid(ValidationResult.invalid(
+                TransactionValidator.TransactionInvalidReason.NONCE_TOO_LOW)));
 
     // The block should fit 3 transactions only
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(5000);
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
 
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final BlockTransactionSelector.TransactionSelectionResults results =
         selector.buildTransactionListForBlock();
 
     assertThat(results.getTransactions().size()).isEqualTo(4);
-    assertThat(results.getTransactions().contains(transactionsToInject.get(1))).isFalse();
+    assertThat(results.getTransactions().contains(transactionsToInject.get(1)))
+        .isFalse();
     assertThat(results.getReceipts().size()).isEqualTo(4);
     assertThat(results.getCumulativeGasUsed()).isEqualTo(400);
   }
@@ -232,62 +203,51 @@ public class BlockTransactionSelectorTest {
     }
 
     when(transactionProcessor.processTransaction(
-            any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.successful(
-                new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
+             any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.successful(
+            new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
 
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(301);
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
 
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final BlockTransactionSelector.TransactionSelectionResults results =
         selector.buildTransactionListForBlock();
 
     assertThat(results.getTransactions().size()).isEqualTo(3);
 
-    assertThat(results.getTransactions().containsAll(transactionsToInject.subList(0, 3))).isTrue();
+    assertThat(results.getTransactions().containsAll(
+                   transactionsToInject.subList(0, 3)))
+        .isTrue();
     assertThat(results.getReceipts().size()).isEqualTo(3);
     assertThat(results.getCumulativeGasUsed()).isEqualTo(300);
 
     // Ensure receipts have the correct cumulative gas
-    Assertions.assertThat(results.getReceipts().get(0).getCumulativeGasUsed()).isEqualTo(100);
-    Assertions.assertThat(results.getReceipts().get(1).getCumulativeGasUsed()).isEqualTo(200);
-    Assertions.assertThat(results.getReceipts().get(2).getCumulativeGasUsed()).isEqualTo(300);
+    Assertions.assertThat(results.getReceipts().get(0).getCumulativeGasUsed())
+        .isEqualTo(100);
+    Assertions.assertThat(results.getReceipts().get(1).getCumulativeGasUsed())
+        .isEqualTo(200);
+    Assertions.assertThat(results.getReceipts().get(2).getCumulativeGasUsed())
+        .isEqualTo(300);
   }
 
   @Test
-  public void transactionOfferingGasPriceLessThanMinimumIsIdentifiedAndRemovedFromPending() {
+  public void
+  transactionOfferingGasPriceLessThanMinimumIsIdentifiedAndRemovedFromPending() {
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(301);
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.of(6),
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.of(6), isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final Transaction tx = createTransaction(1);
     pendingTransactions.addRemoteTransaction(tx);
@@ -300,45 +260,36 @@ public class BlockTransactionSelectorTest {
   }
 
   @Test
-  public void transactionTooLargeForBlockDoesNotPreventMoreBeingAddedIfBlockOccupancyNotReached() {
+  public void
+  transactionTooLargeForBlockDoesNotPreventMoreBeingAddedIfBlockOccupancyNotReached() {
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(300);
 
     when(transactionProcessor.processTransaction(
-            any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.successful(
-                new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
+             any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.successful(
+            new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final TransactionTestFixture txTestFixture = new TransactionTestFixture();
-    // Add 3 transactions to the Pending Transactions, 79% of block, 100% of block and 10% of block
-    // should end up selecting the first and third only.
+    // Add 3 transactions to the Pending Transactions, 79% of block, 100% of
+    // block and 10% of block should end up selecting the first and third only.
     // NOTE - PendingTransactions outputs these in nonce order
     final List<Transaction> transactionsToInject = Lists.newArrayList();
     transactionsToInject.add(
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.79))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.79))
             .nonce(1)
             .createTransaction(keyPair));
+    transactionsToInject.add(txTestFixture.gasLimit(blockHeader.getGasLimit())
+                                 .nonce(2)
+                                 .createTransaction(keyPair));
     transactionsToInject.add(
-        txTestFixture.gasLimit(blockHeader.getGasLimit()).nonce(2).createTransaction(keyPair));
-    transactionsToInject.add(
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.1))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.1))
             .nonce(3)
             .createTransaction(keyPair));
 
@@ -350,59 +301,49 @@ public class BlockTransactionSelectorTest {
         selector.buildTransactionListForBlock();
 
     assertThat(results.getTransactions().size()).isEqualTo(2);
-    Assertions.assertThat(results.getTransactions().get(0)).isEqualTo(transactionsToInject.get(0));
-    Assertions.assertThat(results.getTransactions().get(1)).isEqualTo(transactionsToInject.get(2));
+    Assertions.assertThat(results.getTransactions().get(0))
+        .isEqualTo(transactionsToInject.get(0));
+    Assertions.assertThat(results.getTransactions().get(1))
+        .isEqualTo(transactionsToInject.get(2));
   }
 
   @Test
   public void transactionSelectionStopsWhenSufficientBlockOccupancyIsReached() {
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(300);
 
-    // TransactionProcessor mock assumes all gas in the transaction was used (i.e. gasLimit).
+    // TransactionProcessor mock assumes all gas in the transaction was used
+    // (i.e. gasLimit).
     when(transactionProcessor.processTransaction(
-            any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.successful(
-                new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
+             any(), any(), any(), any(), any(), any(), anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.successful(
+            new ArrayList<>(), 0, Bytes.EMPTY, ValidationResult.valid()));
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final TransactionTestFixture txTestFixture = new TransactionTestFixture();
-    // Add 4 transactions to the Pending Transactions 15% (ok), 79% (ok), 25% (too large), 10%
-    // (not included, it would fit, however previous transaction was too large and block was
-    // suitably populated).
-    // NOTE - PendingTransactions will output these in nonce order.
+    // Add 4 transactions to the Pending Transactions 15% (ok), 79% (ok), 25%
+    // (too large), 10% (not included, it would fit, however previous
+    // transaction was too large and block was suitably populated). NOTE -
+    // PendingTransactions will output these in nonce order.
     final Transaction transaction1 =
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.15))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.15))
             .nonce(1)
             .createTransaction(keyPair);
     final Transaction transaction2 =
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.79))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.79))
             .nonce(2)
             .createTransaction(keyPair);
     final Transaction transaction3 =
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.25))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.25))
             .nonce(3)
             .createTransaction(keyPair);
     final Transaction transaction4 =
-        txTestFixture
-            .gasLimit((long) (blockHeader.getGasLimit() * 0.1))
+        txTestFixture.gasLimit((long)(blockHeader.getGasLimit() * 0.1))
             .nonce(4)
             .createTransaction(keyPair);
 
@@ -415,8 +356,10 @@ public class BlockTransactionSelectorTest {
         selector.buildTransactionListForBlock();
 
     assertThat(results.getTransactions().size()).isEqualTo(2);
-    Assertions.assertThat(results.getTransactions().get(0)).isEqualTo(transaction1);
-    Assertions.assertThat(results.getTransactions().get(1)).isEqualTo(transaction2);
+    Assertions.assertThat(results.getTransactions().get(0))
+        .isEqualTo(transaction1);
+    Assertions.assertThat(results.getTransactions().get(1))
+        .isEqualTo(transaction2);
     assertThat(results.getTransactions().contains(transaction4)).isFalse();
     assertThat(results.getTransactions().contains(transaction3)).isFalse();
   }
@@ -426,19 +369,11 @@ public class BlockTransactionSelectorTest {
     final ProcessableBlockHeader blockHeader = createBlockWithGasLimit(300);
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final TransactionTestFixture txTestFixture = new TransactionTestFixture();
     final Transaction validTransaction =
@@ -450,36 +385,27 @@ public class BlockTransactionSelectorTest {
     pendingTransactions.addRemoteTransaction(invalidTransaction);
 
     when(transactionProcessor.processTransaction(
-            eq(blockchain),
-            any(WorldUpdater.class),
-            eq(blockHeader),
-            eq(validTransaction),
-            any(),
-            any(),
-            anyBoolean(),
-            any()))
-        .thenReturn(
-            MainnetTransactionProcessor.Result.successful(
-                new ArrayList<>(), 10000, Bytes.EMPTY, ValidationResult.valid()));
+             eq(blockchain), any(WorldUpdater.class), eq(blockHeader),
+             eq(validTransaction), any(), any(), anyBoolean(), any()))
+        .thenReturn(MainnetTransactionProcessor.Result.successful(
+            new ArrayList<>(), 10000, Bytes.EMPTY, ValidationResult.valid()));
     when(transactionProcessor.processTransaction(
-            eq(blockchain),
-            any(WorldUpdater.class),
-            eq(blockHeader),
-            eq(invalidTransaction),
-            any(),
-            any(),
-            anyBoolean(),
-            any()))
+             eq(blockchain), any(WorldUpdater.class), eq(blockHeader),
+             eq(invalidTransaction), any(), any(), anyBoolean(), any()))
         .thenReturn(
-            MainnetTransactionProcessor.Result.invalid(
-                ValidationResult.invalid(
-                    TransactionValidator.TransactionInvalidReason.EXCEEDS_BLOCK_GAS_LIMIT)));
+            MainnetTransactionProcessor.Result.invalid(ValidationResult.invalid(
+                TransactionValidator.TransactionInvalidReason
+                    .EXCEEDS_BLOCK_GAS_LIMIT)));
 
     selector.buildTransactionListForBlock();
 
-    Assertions.assertThat(pendingTransactions.getTransactionByHash(validTransaction.getHash()))
+    Assertions
+        .assertThat(pendingTransactions.getTransactionByHash(
+            validTransaction.getHash()))
         .isPresent();
-    Assertions.assertThat(pendingTransactions.getTransactionByHash(invalidTransaction.getHash()))
+    Assertions
+        .assertThat(pendingTransactions.getTransactionByHash(
+            invalidTransaction.getHash()))
         .isNotPresent();
   }
 
@@ -494,38 +420,26 @@ public class BlockTransactionSelectorTest {
     pendingTransactions.addRemoteTransaction(futureTransaction);
 
     when(transactionProcessor.processTransaction(
-            eq(blockchain),
-            any(WorldUpdater.class),
-            eq(blockHeader),
-            eq(futureTransaction),
-            any(),
-            any(),
-            anyBoolean(),
-            any()))
+             eq(blockchain), any(WorldUpdater.class), eq(blockHeader),
+             eq(futureTransaction), any(), any(), anyBoolean(), any()))
         .thenReturn(
-            MainnetTransactionProcessor.Result.invalid(
-                ValidationResult.invalid(
-                    TransactionValidator.TransactionInvalidReason.INCORRECT_NONCE)));
+            MainnetTransactionProcessor.Result.invalid(ValidationResult.invalid(
+                TransactionValidator.TransactionInvalidReason
+                    .INCORRECT_NONCE)));
 
     final Address miningBeneficiary = AddressHelpers.ofValue(1);
-    final BlockTransactionSelector selector =
-        new BlockTransactionSelector(
-            transactionProcessor,
-            blockchain,
-            worldState,
-            pendingTransactions,
-            blockHeader,
-            this::createReceipt,
-            Wei.ZERO,
-            isCancelled,
-            miningBeneficiary,
-            TransactionPriceCalculator.frontier(),
-            blockHeader::getBaseFee);
+    final BlockTransactionSelector selector = new BlockTransactionSelector(
+        transactionProcessor, blockchain, worldState, pendingTransactions,
+        blockHeader, this::createReceipt, Wei.ZERO, isCancelled,
+        miningBeneficiary, TransactionPriceCalculator.frontier(),
+        blockHeader::getBaseFee);
 
     final BlockTransactionSelector.TransactionSelectionResults results =
         selector.buildTransactionListForBlock();
 
-    Assertions.assertThat(pendingTransactions.getTransactionByHash(futureTransaction.getHash()))
+    Assertions
+        .assertThat(pendingTransactions.getTransactionByHash(
+            futureTransaction.getHash()))
         .isPresent();
     assertThat(results.getTransactions().size()).isEqualTo(0);
   }
@@ -543,10 +457,12 @@ public class BlockTransactionSelectorTest {
         .signAndBuild(keyPair);
   }
 
-  // This is a duplicate of the MainnetProtocolSpec::frontierTransactionReceiptFactory
-  private TransactionReceipt createReceipt(
-      final TransactionProcessor.Result result, final WorldState worldState, final long gasUsed) {
-    return new TransactionReceipt(
-        worldState.rootHash(), gasUsed, Lists.newArrayList(), Optional.empty());
+  // This is a duplicate of the
+  // MainnetProtocolSpec::frontierTransactionReceiptFactory
+  private TransactionReceipt
+  createReceipt(final TransactionProcessor.Result result,
+                final WorldState worldState, final long gasUsed) {
+    return new TransactionReceipt(worldState.rootHash(), gasUsed,
+                                  Lists.newArrayList(), Optional.empty());
   }
 }

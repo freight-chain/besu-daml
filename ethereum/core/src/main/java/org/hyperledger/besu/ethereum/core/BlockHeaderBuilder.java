@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,7 +23,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.time.Instant;
 import java.util.OptionalLong;
-
 import org.apache.tuweni.bytes.Bytes;
 
 /** A utility class for building block headers. */
@@ -62,9 +64,7 @@ public class BlockHeaderBuilder {
   // instead of an invalid identifier such as -1.
   private OptionalLong nonce = OptionalLong.empty();
 
-  public static BlockHeaderBuilder create() {
-    return new BlockHeaderBuilder();
-  }
+  public static BlockHeaderBuilder create() { return new BlockHeaderBuilder(); }
 
   public static BlockHeaderBuilder fromHeader(final BlockHeader header) {
     return create()
@@ -86,7 +86,8 @@ public class BlockHeaderBuilder {
         .nonce(header.getNonce());
   }
 
-  public static BlockHeaderBuilder fromBuilder(final BlockHeaderBuilder fromBuilder) {
+  public static BlockHeaderBuilder
+  fromBuilder(final BlockHeaderBuilder fromBuilder) {
     BlockHeaderBuilder toBuilder =
         create()
             .parentHash(fromBuilder.parentHash)
@@ -112,57 +113,34 @@ public class BlockHeaderBuilder {
     validateBlockHeader();
 
     return new BlockHeader(
-        parentHash,
-        ommersHash,
-        coinbase,
-        stateRoot,
-        transactionsRoot,
-        receiptsRoot,
-        logsBloom,
-        difficulty,
-        number,
-        gasLimit,
-        gasUsed,
-        timestamp < 0 ? Instant.now().getEpochSecond() : timestamp,
-        extraData,
-        baseFee,
-        mixHash,
-        nonce.getAsLong(),
-        blockHeaderFunctions);
+        parentHash, ommersHash, coinbase, stateRoot, transactionsRoot,
+        receiptsRoot, logsBloom, difficulty, number, gasLimit, gasUsed,
+        timestamp < 0 ? Instant.now().getEpochSecond() : timestamp, extraData,
+        baseFee, mixHash, nonce.getAsLong(), blockHeaderFunctions);
   }
 
   public ProcessableBlockHeader buildProcessableBlockHeader() {
     validateProcessableBlockHeader();
 
-    return new ProcessableBlockHeader(
-        parentHash, coinbase, difficulty, number, gasLimit, timestamp, baseFee);
+    return new ProcessableBlockHeader(parentHash, coinbase, difficulty, number,
+                                      gasLimit, timestamp, baseFee);
   }
 
   public SealableBlockHeader buildSealableBlockHeader() {
     validateSealableBlockHeader();
 
-    return new SealableBlockHeader(
-        parentHash,
-        ommersHash,
-        coinbase,
-        stateRoot,
-        transactionsRoot,
-        receiptsRoot,
-        logsBloom,
-        difficulty,
-        number,
-        gasLimit,
-        gasUsed,
-        timestamp,
-        extraData,
-        baseFee);
+    return new SealableBlockHeader(parentHash, ommersHash, coinbase, stateRoot,
+                                   transactionsRoot, receiptsRoot, logsBloom,
+                                   difficulty, number, gasLimit, gasUsed,
+                                   timestamp, extraData, baseFee);
   }
 
   private void validateBlockHeader() {
     validateSealableBlockHeader();
     checkState(this.mixHash != null, "Missing mixHash");
     checkState(this.nonce.isPresent(), "Missing nonce");
-    checkState(this.blockHeaderFunctions != null, "Missing blockHeaderFunctions");
+    checkState(this.blockHeaderFunctions != null,
+               "Missing blockHeaderFunctions");
   }
 
   private void validateProcessableBlockHeader() {
@@ -185,7 +163,8 @@ public class BlockHeaderBuilder {
     checkState(this.extraData != null, "Missing extra data field");
   }
 
-  public BlockHeaderBuilder populateFrom(final ProcessableBlockHeader processableBlockHeader) {
+  public BlockHeaderBuilder
+  populateFrom(final ProcessableBlockHeader processableBlockHeader) {
     checkNotNull(processableBlockHeader);
     parentHash(processableBlockHeader.getParentHash());
     coinbase(processableBlockHeader.getCoinbase());
@@ -196,7 +175,8 @@ public class BlockHeaderBuilder {
     return this;
   }
 
-  public BlockHeaderBuilder populateFrom(final SealableBlockHeader sealableBlockHeader) {
+  public BlockHeaderBuilder
+  populateFrom(final SealableBlockHeader sealableBlockHeader) {
     checkNotNull(sealableBlockHeader);
     parentHash(sealableBlockHeader.getParentHash());
     ommersHash(sealableBlockHeader.getOmmersHash());
@@ -304,7 +284,8 @@ public class BlockHeaderBuilder {
     return this;
   }
 
-  public BlockHeaderBuilder blockHeaderFunctions(final BlockHeaderFunctions blockHeaderFunctions) {
+  public BlockHeaderBuilder
+  blockHeaderFunctions(final BlockHeaderFunctions blockHeaderFunctions) {
     this.blockHeaderFunctions = blockHeaderFunctions;
     return this;
   }

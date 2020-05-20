@@ -1,19 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.tests.acceptance.dsl.node.configuration;
 
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
 import org.hyperledger.besu.ethereum.core.MiningParameters;
@@ -22,10 +28,6 @@ import org.hyperledger.besu.ethereum.p2p.config.NetworkingConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationProvider;
-
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Optional;
 
 public class BesuNodeConfiguration {
 
@@ -51,24 +53,19 @@ public class BesuNodeConfiguration {
   private final Optional<String> runCommand;
 
   BesuNodeConfiguration(
-      final String name,
-      final Optional<Path> dataPath,
+      final String name, final Optional<Path> dataPath,
       final MiningParameters miningParameters,
       final JsonRpcConfiguration jsonRpcConfiguration,
       final WebSocketConfiguration webSocketConfiguration,
       final MetricsConfiguration metricsConfiguration,
       final Optional<PermissioningConfiguration> permissioningConfiguration,
-      final Optional<String> keyFilePath,
-      final boolean devMode,
+      final Optional<String> keyFilePath, final boolean devMode,
       final GenesisConfigurationProvider genesisConfigProvider,
       final boolean p2pEnabled,
       final NetworkingConfiguration networkingConfiguration,
-      final boolean discoveryEnabled,
-      final boolean bootnodeEligible,
-      final boolean revertReasonEnabled,
-      final List<String> plugins,
-      final List<String> extraCLIOptions,
-      final List<String> staticNodes,
+      final boolean discoveryEnabled, final boolean bootnodeEligible,
+      final boolean revertReasonEnabled, final List<String> plugins,
+      final List<String> extraCLIOptions, final List<String> staticNodes,
       final Optional<PrivacyParameters> privacyParameters,
       final Optional<String> runCommand) {
     this.name = name;
@@ -93,13 +90,9 @@ public class BesuNodeConfiguration {
     this.runCommand = runCommand;
   }
 
-  public String getName() {
-    return name;
-  }
+  public String getName() { return name; }
 
-  public MiningParameters getMiningParameters() {
-    return miningParameters;
-  }
+  public MiningParameters getMiningParameters() { return miningParameters; }
 
   public JsonRpcConfiguration getJsonRpcConfiguration() {
     return jsonRpcConfiguration;
@@ -117,59 +110,37 @@ public class BesuNodeConfiguration {
     return permissioningConfiguration;
   }
 
-  public Optional<String> getKeyFilePath() {
-    return keyFilePath;
-  }
+  public Optional<String> getKeyFilePath() { return keyFilePath; }
 
-  public Optional<Path> getDataPath() {
-    return dataPath;
-  }
+  public Optional<Path> getDataPath() { return dataPath; }
 
-  public boolean isDevMode() {
-    return devMode;
-  }
+  public boolean isDevMode() { return devMode; }
 
-  public boolean isDiscoveryEnabled() {
-    return discoveryEnabled;
-  }
+  public boolean isDiscoveryEnabled() { return discoveryEnabled; }
 
   public GenesisConfigurationProvider getGenesisConfigProvider() {
     return genesisConfigProvider;
   }
 
-  public boolean isP2pEnabled() {
-    return p2pEnabled;
-  }
+  public boolean isP2pEnabled() { return p2pEnabled; }
 
   public NetworkingConfiguration getNetworkingConfiguration() {
     return networkingConfiguration;
   }
 
-  public boolean isBootnodeEligible() {
-    return bootnodeEligible;
-  }
+  public boolean isBootnodeEligible() { return bootnodeEligible; }
 
-  public List<String> getPlugins() {
-    return plugins;
-  }
+  public List<String> getPlugins() { return plugins; }
 
-  public List<String> getExtraCLIOptions() {
-    return extraCLIOptions;
-  }
+  public List<String> getExtraCLIOptions() { return extraCLIOptions; }
 
-  public boolean isRevertReasonEnabled() {
-    return revertReasonEnabled;
-  }
+  public boolean isRevertReasonEnabled() { return revertReasonEnabled; }
 
-  public List<String> getStaticNodes() {
-    return staticNodes;
-  }
+  public List<String> getStaticNodes() { return staticNodes; }
 
   public Optional<PrivacyParameters> getPrivacyParameters() {
     return privacyParameters;
   }
 
-  public Optional<String> getRunCommand() {
-    return runCommand;
-  }
+  public Optional<String> getRunCommand() { return runCommand; }
 }

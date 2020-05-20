@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +25,18 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Vertx;
+import java.io.Closeable;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
@@ -58,20 +73,6 @@ import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-
 public class TestNode implements Closeable {
 
   private static final Logger LOG = LogManager.getLogger();
@@ -80,39 +81,40 @@ public class TestNode implements Closeable {
   protected final NodeKey nodeKey;
   protected final P2PNetwork network;
   protected final Peer selfPeer;
-  protected final Map<PeerConnection, DisconnectReason> disconnections = new HashMap<>();
+  protected final Map<PeerConnection, DisconnectReason> disconnections =
+      new HashMap<>();
   private final TransactionPool transactionPool;
 
-  public TestNode(
-      final Vertx vertx,
-      final Integer port,
-      final SECP256K1.KeyPair kp,
-      final DiscoveryConfiguration discoveryCfg) {
+  public TestNode(final Vertx vertx, final Integer port,
+                  final SECP256K1.KeyPair kp,
+                  final DiscoveryConfiguration discoveryCfg) {
     checkNotNull(vertx);
     checkNotNull(discoveryCfg);
 
     final int listenPort = port != null ? port : 0;
-    this.nodeKey = kp != null ? NodeKeyUtils.createFrom(kp) : NodeKeyUtils.generate();
+    this.nodeKey =
+        kp != null ? NodeKeyUtils.createFrom(kp) : NodeKeyUtils.generate();
 
     final NetworkingConfiguration networkingConfiguration =
         NetworkingConfiguration.create()
             .setDiscovery(discoveryCfg)
-            .setRlpx(
-                RlpxConfiguration.create()
-                    .setBindPort(listenPort)
-                    .setSupportedProtocols(EthProtocol.get()));
+            .setRlpx(RlpxConfiguration.create()
+                         .setBindPort(listenPort)
+                         .setSupportedProtocols(EthProtocol.get()));
 
     final GenesisConfigFile genesisConfigFile = GenesisConfigFile.development();
     final ProtocolSchedule<Void> protocolSchedule =
         FixedDifficultyProtocolSchedule.create(
             GenesisConfigFile.development().getConfigOptions(), false);
 
-    final GenesisState genesisState = GenesisState.fromConfig(genesisConfigFile, protocolSchedule);
+    final GenesisState genesisState =
+        GenesisState.fromConfig(genesisConfigFile, protocolSchedule);
     final BlockHeaderFunctions blockHeaderFunctions =
         ScheduleBasedBlockHeaderFunctions.create(protocolSchedule);
     final MutableBlockchain blockchain =
         createInMemoryBlockchain(genesisState.getBlock(), blockHeaderFunctions);
-    final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
+    final WorldStateArchive worldStateArchive =
+        createInMemoryWorldStateArchive();
     genesisState.writeStateTo(worldStateArchive.getMutable());
     final ProtocolContext<Void> protocolContext =
         new ProtocolContext<>(blockchain, worldStateArchive, null);
@@ -122,76 +124,55 @@ public class TestNode implements Closeable {
 
     final EthMessages ethMessages = new EthMessages();
 
-    final EthPeers ethPeers = new EthPeers(EthProtocol.NAME, TestClock.fixed(), metricsSystem);
+    final EthPeers ethPeers =
+        new EthPeers(EthProtocol.NAME, TestClock.fixed(), metricsSystem);
 
     final EthScheduler scheduler = new EthScheduler(1, 1, 1, metricsSystem);
-    final EthContext ethContext = new EthContext(ethPeers, ethMessages, scheduler);
+    final EthContext ethContext =
+        new EthContext(ethPeers, ethMessages, scheduler);
 
-    transactionPool =
-        TransactionPoolFactory.createTransactionPool(
-            protocolSchedule,
-            protocolContext,
-            ethContext,
-            TestClock.fixed(),
-            metricsSystem,
-            syncState,
-            Wei.ZERO,
-            TransactionPoolConfiguration.builder().build(),
-            true,
-            Optional.empty());
+    transactionPool = TransactionPoolFactory.createTransactionPool(
+        protocolSchedule, protocolContext, ethContext, TestClock.fixed(),
+        metricsSystem, syncState, Wei.ZERO,
+        TransactionPoolConfiguration.builder().build(), true, Optional.empty());
 
-    final EthProtocolManager ethProtocolManager =
-        new EthProtocolManager(
-            blockchain,
-            BigInteger.ONE,
-            worldStateArchive,
-            transactionPool,
-            EthProtocolConfiguration.defaultConfig(),
-            ethPeers,
-            ethMessages,
-            ethContext,
-            Collections.emptyList(),
-            false,
-            scheduler);
+    final EthProtocolManager ethProtocolManager = new EthProtocolManager(
+        blockchain, BigInteger.ONE, worldStateArchive, transactionPool,
+        EthProtocolConfiguration.defaultConfig(), ethPeers, ethMessages,
+        ethContext, Collections.emptyList(), false, scheduler);
 
     final NetworkRunner networkRunner =
         NetworkRunner.builder()
             .subProtocols(EthProtocol.get())
             .protocolManagers(singletonList(ethProtocolManager))
-            .network(
-                capabilities ->
-                    DefaultP2PNetwork.builder()
-                        .vertx(vertx)
-                        .nodeKey(nodeKey)
-                        .config(networkingConfiguration)
-                        .metricsSystem(new NoOpMetricsSystem())
-                        .supportedCapabilities(capabilities)
-                        .build())
+            .network(capabilities
+                     -> DefaultP2PNetwork.builder()
+                            .vertx(vertx)
+                            .nodeKey(nodeKey)
+                            .config(networkingConfiguration)
+                            .metricsSystem(new NoOpMetricsSystem())
+                            .supportedCapabilities(capabilities)
+                            .build())
             .metricsSystem(new NoOpMetricsSystem())
             .build();
     network = networkRunner.getNetwork();
     network.subscribeDisconnect(
-        (connection, reason, initiatedByPeer) -> disconnections.put(connection, reason));
+        (connection, reason,
+         initiatedByPeer) -> disconnections.put(connection, reason));
 
     networkRunner.start();
     selfPeer = DefaultPeer.fromEnodeURL(network.getLocalEnode().get());
   }
 
-  public Bytes id() {
-    return nodeKey.getPublicKey().getEncodedBytes();
-  }
+  public Bytes id() { return nodeKey.getPublicKey().getEncodedBytes(); }
 
   public static String shortId(final Bytes id) {
     return id.slice(62).toString().substring(2);
   }
 
-  public String shortId() {
-    return shortId(id());
-  }
+  public String shortId() { return shortId(id()); }
 
-  public Peer selfPeer() {
-    return selfPeer;
-  }
+  public Peer selfPeer() { return selfPeer; }
 
   public CompletableFuture<PeerConnection> connect(final TestNode remoteNode) {
     return network.connect(remoteNode.selfPeer());
@@ -211,17 +192,15 @@ public class TestNode implements Closeable {
     }
 
     if (firstEx != null) {
-      throw new IOException("Unable to close successfully.  Wrapping first exception.", firstEx);
+      throw new IOException(
+          "Unable to close successfully.  Wrapping first exception.", firstEx);
     }
   }
 
   @Override
   public String toString() {
-    return shortId()
-        + "@"
-        + selfPeer.getEnodeURL().getIpAsString()
-        + ':'
-        + selfPeer.getEnodeURL().getListeningPortOrZero();
+    return shortId() + "@" + selfPeer.getEnodeURL().getIpAsString() + ':' +
+        selfPeer.getEnodeURL().getListeningPortOrZero();
   }
 
   public void receiveRemoteTransaction(final Transaction transaction) {

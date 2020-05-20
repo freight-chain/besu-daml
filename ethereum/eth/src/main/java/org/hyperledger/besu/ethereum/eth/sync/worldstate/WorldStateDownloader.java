@@ -1,26 +1,21 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth.sync.worldstate;
-
-import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.core.Hash;
-import org.hyperledger.besu.ethereum.eth.manager.EthContext;
-import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.services.tasks.CachingTaskCollection;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -28,9 +23,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.Hash;
+import org.hyperledger.besu.ethereum.eth.manager.EthContext;
+import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.services.tasks.CachingTaskCollection;
 
 public class WorldStateDownloader implements WorldStateDownloadStatus {
   private static final Logger LOG = LogManager.getLogger();
@@ -46,19 +47,17 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
   private final int maxNodeRequestsWithoutProgress;
   private final WorldStateStorage worldStateStorage;
 
-  private final AtomicReference<WorldDownloadState> downloadState = new AtomicReference<>();
+  private final AtomicReference<WorldDownloadState> downloadState =
+      new AtomicReference<>();
 
   private Optional<CompleteTaskStep> maybeCompleteTask = Optional.empty();
 
   public WorldStateDownloader(
-      final EthContext ethContext,
-      final WorldStateStorage worldStateStorage,
+      final EthContext ethContext, final WorldStateStorage worldStateStorage,
       final CachingTaskCollection<NodeDataRequest> taskCollection,
-      final int hashCountPerRequest,
-      final int maxOutstandingRequests,
+      final int hashCountPerRequest, final int maxOutstandingRequests,
       final int maxNodeRequestsWithoutProgress,
-      final long minMillisBeforeStalling,
-      final Clock clock,
+      final long minMillisBeforeStalling, final Clock clock,
       final MetricsSystem metricsSystem) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
@@ -83,7 +82,8 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
         downloadStateValue(WorldDownloadState::getOutstandingTaskCount));
   }
 
-  private IntSupplier downloadStateValue(final Function<WorldDownloadState, Integer> getter) {
+  private IntSupplier
+  downloadStateValue(final Function<WorldDownloadState, Integer> getter) {
     return () -> {
       final WorldDownloadState state = this.downloadState.get();
       return state != null ? getter.apply(state) : 0;
@@ -96,8 +96,8 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
       if (oldDownloadState != null && oldDownloadState.isDownloading()) {
         final CompletableFuture<Void> failed = new CompletableFuture<>();
         failed.completeExceptionally(
-            new IllegalStateException(
-                "Cannot run an already running " + this.getClass().getSimpleName()));
+            new IllegalStateException("Cannot run an already running " +
+                                      this.getClass().getSimpleName()));
         return failed;
       }
 
@@ -105,34 +105,33 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
       if (worldStateStorage.isWorldStateAvailable(stateRoot)) {
         LOG.info(
             "World state already available for block {} ({}). State root {}",
-            header.getNumber(),
-            header.getHash(),
-            stateRoot);
+            header.getNumber(), header.getHash(), stateRoot);
         return CompletableFuture.completedFuture(null);
       }
       LOG.info(
           "Begin downloading world state from peers for block {} ({}). State root {}",
-          header.getNumber(),
-          header.getHash(),
-          stateRoot);
+          header.getNumber(), header.getHash(), stateRoot);
 
       final WorldDownloadState newDownloadState =
-          new WorldDownloadState(
-              taskCollection, maxNodeRequestsWithoutProgress, minMillisBeforeStalling, clock);
+          new WorldDownloadState(taskCollection, maxNodeRequestsWithoutProgress,
+                                 minMillisBeforeStalling, clock);
       this.downloadState.set(newDownloadState);
 
       if (!newDownloadState.downloadWasResumed()) {
-        // Only queue the root node if we're starting a new download from scratch
-        newDownloadState.enqueueRequest(NodeDataRequest.createAccountDataRequest(stateRoot));
+        // Only queue the root node if we're starting a new download from
+        // scratch
+        newDownloadState.enqueueRequest(
+            NodeDataRequest.createAccountDataRequest(stateRoot));
       }
 
-      maybeCompleteTask =
-          Optional.of(new CompleteTaskStep(worldStateStorage, metricsSystem, taskCollection::size));
+      maybeCompleteTask = Optional.of(new CompleteTaskStep(
+          worldStateStorage, metricsSystem, taskCollection::size));
       final WorldStateDownloadProcess downloadProcess =
           WorldStateDownloadProcess.builder()
               .hashCountPerRequest(hashCountPerRequest)
               .maxOutstandingRequests(maxOutstandingRequests)
-              .loadLocalDataStep(new LoadLocalDataStep(worldStateStorage, metricsSystem))
+              .loadLocalDataStep(
+                  new LoadLocalDataStep(worldStateStorage, metricsSystem))
               .requestDataStep(new RequestDataStep(ethContext, metricsSystem))
               .persistDataStep(new PersistDataStep(worldStateStorage))
               .completeTaskStep(maybeCompleteTask.get())
@@ -143,7 +142,8 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
 
       newDownloadState.setWorldStateDownloadProcess(downloadProcess);
 
-      return newDownloadState.startDownload(downloadProcess, ethContext.getScheduler());
+      return newDownloadState.startDownload(downloadProcess,
+                                            ethContext.getScheduler());
     }
   }
 
@@ -163,6 +163,7 @@ public class WorldStateDownloader implements WorldStateDownloadStatus {
 
   @Override
   public Optional<Long> getKnownStates() {
-    return maybeCompleteTask.map(task -> task.getCompletedRequests() + task.getPendingRequests());
+    return maybeCompleteTask.map(
+        task -> task.getCompletedRequests() + task.getPendingRequests());
   }
 }

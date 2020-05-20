@@ -1,43 +1,48 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.core;
 
+import com.google.common.base.MoreObjects;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.mainnet.TransactionReceiptType;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
-import com.google.common.base.MoreObjects;
-import org.apache.tuweni.bytes.Bytes;
-
 /**
- * A transaction receipt, containing information pertaining a transaction execution.
+ * A transaction receipt, containing information pertaining a transaction
+ * execution.
  *
- * <p>Transaction receipts have two different formats: state root-encoded and status-encoded. The
- * difference between these two formats is that the state root-encoded transaction receipt contains
- * the state root for world state after the transaction has been processed (e.g. not invalid) and
- * the status-encoded transaction receipt instead has contains the status of the transaction (e.g. 1
- * for success and 0 for failure). The other transaction receipt fields are the same for both
- * formats: logs, logs bloom, and cumulative gas used in the block. The TransactionReceiptType
- * attribute is the best way to check which format has been used.
+ * <p>Transaction receipts have two different formats: state root-encoded and
+ * status-encoded. The difference between these two formats is that the state
+ * root-encoded transaction receipt contains the state root for world state
+ * after the transaction has been processed (e.g. not invalid) and the
+ * status-encoded transaction receipt instead has contains the status of the
+ * transaction (e.g. 1 for success and 0 for failure). The other transaction
+ * receipt fields are the same for both formats: logs, logs bloom, and
+ * cumulative gas used in the block. The TransactionReceiptType attribute is the
+ * best way to check which format has been used.
  */
-public class TransactionReceipt implements org.hyperledger.besu.plugin.data.TransactionReceipt {
+public class TransactionReceipt
+    implements org.hyperledger.besu.plugin.data.TransactionReceipt {
 
   private static final int NONEXISTENT = -1;
 
@@ -52,79 +57,65 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
   /**
    * Creates an instance of a state root-encoded transaction receipt.
    *
-   * @param stateRoot the state root for the world state after the transaction has been processed
-   * @param cumulativeGasUsed the total amount of gas consumed in the block after this transaction
+   * @param stateRoot the state root for the world state after the transaction
+   *     has been processed
+   * @param cumulativeGasUsed the total amount of gas consumed in the block
+   *     after this transaction
    * @param logs the logs generated within the transaction
-   * @param revertReason the revert reason for a failed transaction (if applicable)
+   * @param revertReason the revert reason for a failed transaction (if
+   *     applicable)
    */
-  public TransactionReceipt(
-      final Hash stateRoot,
-      final long cumulativeGasUsed,
-      final List<Log> logs,
-      final Optional<Bytes> revertReason) {
-    this(
-        stateRoot,
-        NONEXISTENT,
-        cumulativeGasUsed,
-        logs,
-        LogsBloomFilter.builder().insertLogs(logs).build(),
-        revertReason);
+  public TransactionReceipt(final Hash stateRoot, final long cumulativeGasUsed,
+                            final List<Log> logs,
+                            final Optional<Bytes> revertReason) {
+    this(stateRoot, NONEXISTENT, cumulativeGasUsed, logs,
+         LogsBloomFilter.builder().insertLogs(logs).build(), revertReason);
   }
 
-  private TransactionReceipt(
-      final Hash stateRoot,
-      final long cumulativeGasUsed,
-      final List<Log> logs,
-      final LogsBloomFilter bloomFilter,
-      final Optional<Bytes> revertReason) {
-    this(stateRoot, NONEXISTENT, cumulativeGasUsed, logs, bloomFilter, revertReason);
+  private TransactionReceipt(final Hash stateRoot, final long cumulativeGasUsed,
+                             final List<Log> logs,
+                             final LogsBloomFilter bloomFilter,
+                             final Optional<Bytes> revertReason) {
+    this(stateRoot, NONEXISTENT, cumulativeGasUsed, logs, bloomFilter,
+         revertReason);
   }
 
   /**
    * Creates an instance of a status-encoded transaction receipt.
    *
-   * @param status the status code for the transaction (1 for success and 0 for failure)
-   * @param cumulativeGasUsed the total amount of gas consumed in the block after this transaction
+   * @param status the status code for the transaction (1 for success and 0 for
+   *     failure)
+   * @param cumulativeGasUsed the total amount of gas consumed in the block
+   *     after this transaction
    * @param logs the logs generated within the transaction
-   * @param revertReason the revert reason for a failed transaction (if applicable)
+   * @param revertReason the revert reason for a failed transaction (if
+   *     applicable)
    */
-  public TransactionReceipt(
-      final int status,
-      final long cumulativeGasUsed,
-      final List<Log> logs,
-      final Optional<Bytes> revertReason) {
-    this(
-        null,
-        status,
-        cumulativeGasUsed,
-        logs,
-        LogsBloomFilter.builder().insertLogs(logs).build(),
-        revertReason);
+  public TransactionReceipt(final int status, final long cumulativeGasUsed,
+                            final List<Log> logs,
+                            final Optional<Bytes> revertReason) {
+    this(null, status, cumulativeGasUsed, logs,
+         LogsBloomFilter.builder().insertLogs(logs).build(), revertReason);
   }
 
-  private TransactionReceipt(
-      final int status,
-      final long cumulativeGasUsed,
-      final List<Log> logs,
-      final LogsBloomFilter bloomFilter,
-      final Optional<Bytes> revertReason) {
+  private TransactionReceipt(final int status, final long cumulativeGasUsed,
+                             final List<Log> logs,
+                             final LogsBloomFilter bloomFilter,
+                             final Optional<Bytes> revertReason) {
     this(null, status, cumulativeGasUsed, logs, bloomFilter, revertReason);
   }
 
-  private TransactionReceipt(
-      final Hash stateRoot,
-      final int status,
-      final long cumulativeGasUsed,
-      final List<Log> logs,
-      final LogsBloomFilter bloomFilter,
-      final Optional<Bytes> revertReason) {
+  private TransactionReceipt(final Hash stateRoot, final int status,
+                             final long cumulativeGasUsed, final List<Log> logs,
+                             final LogsBloomFilter bloomFilter,
+                             final Optional<Bytes> revertReason) {
     this.stateRoot = stateRoot;
     this.cumulativeGasUsed = cumulativeGasUsed;
     this.status = status;
     this.logs = logs;
     this.bloomFilter = bloomFilter;
-    transactionReceiptType =
-        stateRoot == null ? TransactionReceiptType.STATUS : TransactionReceiptType.ROOT;
+    transactionReceiptType = stateRoot == null ? TransactionReceiptType.STATUS
+                                               : TransactionReceiptType.ROOT;
     this.revertReason = revertReason;
   }
 
@@ -133,9 +124,7 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
    *
    * @param out The RLP output to write to
    */
-  public void writeTo(final RLPOutput out) {
-    writeTo(out, false);
-  }
+  public void writeTo(final RLPOutput out) { writeTo(out, false); }
 
   public void writeToWithRevertReason(final RLPOutput out) {
     writeTo(out, true);
@@ -174,11 +163,12 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
    * Creates a transaction receipt for the given RLP
    *
    * @param input the RLP-encoded transaction receipt
-   * @param revertReasonAllowed whether the rlp input is allowed to have a revert reason
+   * @param revertReasonAllowed whether the rlp input is allowed to have a
+   *     revert reason
    * @return the transaction receipt
    */
-  public static TransactionReceipt readFrom(
-      final RLPInput input, final boolean revertReasonAllowed) {
+  public static TransactionReceipt readFrom(final RLPInput input,
+                                            final boolean revertReasonAllowed) {
     input.enterList();
 
     try {
@@ -195,7 +185,8 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
         revertReason = Optional.empty();
       } else {
         if (!revertReasonAllowed) {
-          throw new RLPException("Unexpected value at end of TransactionReceipt");
+          throw new RLPException(
+              "Unexpected value at end of TransactionReceipt");
         }
         revertReason = Optional.of(input.readBytes());
       }
@@ -204,10 +195,12 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
       // byte for success (0x01) or failure (0x80).
       if (firstElement.raw().size() == 1) {
         final int status = firstElement.readIntScalar();
-        return new TransactionReceipt(status, cumulativeGas, logs, bloomFilter, revertReason);
+        return new TransactionReceipt(status, cumulativeGas, logs, bloomFilter,
+                                      revertReason);
       } else {
         final Hash stateRoot = Hash.wrap(firstElement.readBytes32());
-        return new TransactionReceipt(stateRoot, cumulativeGas, logs, bloomFilter, revertReason);
+        return new TransactionReceipt(stateRoot, cumulativeGas, logs,
+                                      bloomFilter, revertReason);
       }
     } finally {
       input.leaveList();
@@ -217,16 +210,17 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
   /**
    * Returns the state root for a state root-encoded transaction receipt
    *
-   * @return the state root if the transaction receipt is state root-encoded; otherwise {@code null}
+   * @return the state root if the transaction receipt is state root-encoded;
+   *     otherwise {@code null}
    */
-  public Hash getStateRoot() {
-    return stateRoot;
-  }
+  public Hash getStateRoot() { return stateRoot; }
 
   /**
-   * Returns the total amount of gas consumed in the block after the transaction has been processed.
+   * Returns the total amount of gas consumed in the block after the transaction
+   * has been processed.
    *
-   * @return the total amount of gas consumed in the block after the transaction has been processed
+   * @return the total amount of gas consumed in the block after the transaction
+   *     has been processed
    */
   @Override
   public long getCumulativeGasUsed() {
@@ -256,7 +250,8 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
   /**
    * Returns the status code for the status-encoded transaction receipt
    *
-   * @return the status code if the transaction receipt is status-encoded; otherwise {@code -1}
+   * @return the status code if the transaction receipt is status-encoded;
+   *     otherwise {@code -1}
    */
   @Override
   public int getStatus() {
@@ -280,11 +275,10 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
     if (!(obj instanceof TransactionReceipt)) {
       return false;
     }
-    final TransactionReceipt other = (TransactionReceipt) obj;
-    return logs.equals(other.getLogs())
-        && stateRoot.equals(other.stateRoot)
-        && cumulativeGasUsed == other.getCumulativeGasUsed()
-        && status == other.status;
+    final TransactionReceipt other = (TransactionReceipt)obj;
+    return logs.equals(other.getLogs()) && stateRoot.equals(other.stateRoot) &&
+        cumulativeGasUsed == other.getCumulativeGasUsed() &&
+        status == other.status;
   }
 
   @Override

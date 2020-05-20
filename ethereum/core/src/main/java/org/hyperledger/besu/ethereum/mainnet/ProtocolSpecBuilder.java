@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,9 @@ package org.hyperledger.besu.ethereum.mainnet;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.hyperledger.besu.ethereum.BlockValidator;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -31,23 +37,23 @@ import org.hyperledger.besu.ethereum.privacy.PrivateTransactionValidator;
 import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
 public class ProtocolSpecBuilder<T> {
   private Supplier<GasCalculator> gasCalculatorBuilder;
   private Wei blockReward;
   private boolean skipZeroBlockRewards;
   private BlockHeaderFunctions blockHeaderFunctions;
-  private MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private MainnetBlockProcessor
+      .TransactionReceiptFactory transactionReceiptFactory;
   private DifficultyCalculator<T> difficultyCalculator;
   private Function<GasCalculator, EVM> evmBuilder;
-  private Function<GasCalculator, TransactionValidator> transactionValidatorBuilder;
+  private Function<GasCalculator, TransactionValidator>
+      transactionValidatorBuilder;
   private BlockHeaderValidator.Builder<T> blockHeaderValidatorBuilder;
   private BlockHeaderValidator.Builder<T> ommerHeaderValidatorBuilder;
-  private Function<ProtocolSchedule<T>, BlockBodyValidator<T>> blockBodyValidatorBuilder;
-  private BiFunction<GasCalculator, EVM, AbstractMessageProcessor> contractCreationProcessorBuilder;
+  private Function<ProtocolSchedule<T>, BlockBodyValidator<T>>
+      blockBodyValidatorBuilder;
+  private BiFunction<GasCalculator, EVM, AbstractMessageProcessor>
+      contractCreationProcessorBuilder;
   private Function<PrecompiledContractConfiguration, PrecompileContractRegistry>
       precompileContractRegistryBuilder;
   private BiFunction<EVM, PrecompileContractRegistry, AbstractMessageProcessor>
@@ -64,7 +70,8 @@ public class ProtocolSpecBuilder<T> {
   private TransactionPriceCalculator transactionPriceCalculator =
       TransactionPriceCalculator.frontier();
 
-  public ProtocolSpecBuilder<T> gasCalculator(final Supplier<GasCalculator> gasCalculatorBuilder) {
+  public ProtocolSpecBuilder<T>
+  gasCalculator(final Supplier<GasCalculator> gasCalculatorBuilder) {
     this.gasCalculatorBuilder = gasCalculatorBuilder;
     return this;
   }
@@ -74,36 +81,40 @@ public class ProtocolSpecBuilder<T> {
     return this;
   }
 
-  public ProtocolSpecBuilder<T> skipZeroBlockRewards(final boolean skipZeroBlockRewards) {
+  public ProtocolSpecBuilder<T>
+  skipZeroBlockRewards(final boolean skipZeroBlockRewards) {
     this.skipZeroBlockRewards = skipZeroBlockRewards;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> blockHeaderFunctions(
-      final BlockHeaderFunctions blockHeaderFunctions) {
+  public ProtocolSpecBuilder<T>
+  blockHeaderFunctions(final BlockHeaderFunctions blockHeaderFunctions) {
     this.blockHeaderFunctions = blockHeaderFunctions;
     return this;
   }
 
   public ProtocolSpecBuilder<T> transactionReceiptFactory(
-      final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory) {
+      final MainnetBlockProcessor
+          .TransactionReceiptFactory transactionReceiptFactory) {
     this.transactionReceiptFactory = transactionReceiptFactory;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> difficultyCalculator(
-      final DifficultyCalculator<T> difficultyCalculator) {
+  public ProtocolSpecBuilder<T>
+  difficultyCalculator(final DifficultyCalculator<T> difficultyCalculator) {
     this.difficultyCalculator = difficultyCalculator;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> evmBuilder(final Function<GasCalculator, EVM> evmBuilder) {
+  public ProtocolSpecBuilder<T>
+  evmBuilder(final Function<GasCalculator, EVM> evmBuilder) {
     this.evmBuilder = evmBuilder;
     return this;
   }
 
   public ProtocolSpecBuilder<T> transactionValidatorBuilder(
-      final Function<GasCalculator, TransactionValidator> transactionValidatorBuilder) {
+      final Function<GasCalculator, TransactionValidator>
+          transactionValidatorBuilder) {
     this.transactionValidatorBuilder = transactionValidatorBuilder;
     return this;
   }
@@ -121,7 +132,8 @@ public class ProtocolSpecBuilder<T> {
   }
 
   public ProtocolSpecBuilder<T> blockBodyValidatorBuilder(
-      final Function<ProtocolSchedule<T>, BlockBodyValidator<T>> blockBodyValidatorBuilder) {
+      final Function<ProtocolSchedule<T>, BlockBodyValidator<T>>
+          blockBodyValidatorBuilder) {
     this.blockBodyValidatorBuilder = blockBodyValidatorBuilder;
     return this;
   }
@@ -134,26 +146,29 @@ public class ProtocolSpecBuilder<T> {
   }
 
   public ProtocolSpecBuilder<T> precompileContractRegistryBuilder(
-      final Function<PrecompiledContractConfiguration, PrecompileContractRegistry>
-          precompileContractRegistryBuilder) {
+      final
+          Function<PrecompiledContractConfiguration, PrecompileContractRegistry>
+              precompileContractRegistryBuilder) {
     this.precompileContractRegistryBuilder =
         (precompiledContractConfiguration) -> {
-          final PrecompileContractRegistry registry =
-              precompileContractRegistryBuilder.apply(precompiledContractConfiguration);
-          if (precompiledContractConfiguration.getPrivacyParameters().isEnabled()) {
-            MainnetPrecompiledContractRegistries.appendPrivacy(
-                registry, precompiledContractConfiguration, Account.DEFAULT_VERSION);
-            MainnetPrecompiledContractRegistries.appendPrivacy(
-                registry, precompiledContractConfiguration, 1);
-          }
-          return registry;
-        };
+      final PrecompileContractRegistry registry =
+          precompileContractRegistryBuilder.apply(
+              precompiledContractConfiguration);
+      if (precompiledContractConfiguration.getPrivacyParameters().isEnabled()) {
+        MainnetPrecompiledContractRegistries.appendPrivacy(
+            registry, precompiledContractConfiguration,
+            Account.DEFAULT_VERSION);
+        MainnetPrecompiledContractRegistries.appendPrivacy(
+            registry, precompiledContractConfiguration, 1);
+      }
+      return registry;
+    };
     return this;
   }
 
   public ProtocolSpecBuilder<T> messageCallProcessorBuilder(
-      final BiFunction<EVM, PrecompileContractRegistry, AbstractMessageProcessor>
-          messageCallProcessorBuilder) {
+      final BiFunction<EVM, PrecompileContractRegistry,
+                       AbstractMessageProcessor> messageCallProcessorBuilder) {
     this.messageCallProcessorBuilder = messageCallProcessorBuilder;
     return this;
   }
@@ -164,32 +179,36 @@ public class ProtocolSpecBuilder<T> {
     return this;
   }
 
-  public ProtocolSpecBuilder<T> privateTransactionProcessorBuilder(
-      final PrivateTransactionProcessorBuilder privateTransactionProcessorBuilder) {
-    this.privateTransactionProcessorBuilder = privateTransactionProcessorBuilder;
+  public ProtocolSpecBuilder<T>
+  privateTransactionProcessorBuilder(final PrivateTransactionProcessorBuilder
+                                         privateTransactionProcessorBuilder) {
+    this.privateTransactionProcessorBuilder =
+        privateTransactionProcessorBuilder;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> privateTransactionValidatorBuilder(
-      final PrivateTransactionValidatorBuilder privateTransactionValidatorBuilder) {
-    this.privateTransactionValidatorBuilder = privateTransactionValidatorBuilder;
+  public ProtocolSpecBuilder<T>
+  privateTransactionValidatorBuilder(final PrivateTransactionValidatorBuilder
+                                         privateTransactionValidatorBuilder) {
+    this.privateTransactionValidatorBuilder =
+        privateTransactionValidatorBuilder;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> blockProcessorBuilder(
-      final BlockProcessorBuilder blockProcessorBuilder) {
+  public ProtocolSpecBuilder<T>
+  blockProcessorBuilder(final BlockProcessorBuilder blockProcessorBuilder) {
     this.blockProcessorBuilder = blockProcessorBuilder;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> blockImporterBuilder(
-      final BlockImporterBuilder<T> blockImporterBuilder) {
+  public ProtocolSpecBuilder<T>
+  blockImporterBuilder(final BlockImporterBuilder<T> blockImporterBuilder) {
     this.blockImporterBuilder = blockImporterBuilder;
     return this;
   }
 
-  public ProtocolSpecBuilder<T> blockValidatorBuilder(
-      final BlockValidatorBuilder<T> blockValidatorBuilder) {
+  public ProtocolSpecBuilder<T>
+  blockValidatorBuilder(final BlockValidatorBuilder<T> blockValidatorBuilder) {
     this.blockValidatorBuilder = blockValidatorBuilder;
     return this;
   }
@@ -205,7 +224,8 @@ public class ProtocolSpecBuilder<T> {
     return this;
   }
 
-  public ProtocolSpecBuilder<T> privacyParameters(final PrivacyParameters privacyParameters) {
+  public ProtocolSpecBuilder<T>
+  privacyParameters(final PrivacyParameters privacyParameters) {
     this.privacyParameters = privacyParameters;
     return this;
   }
@@ -213,7 +233,8 @@ public class ProtocolSpecBuilder<T> {
   public <R> ProtocolSpecBuilder<R> changeConsensusContextType(
       final BlockHeaderValidator.Builder<R> blockHeaderValidatorBuilder,
       final BlockHeaderValidator.Builder<R> ommerHeaderValidatorBuilder,
-      final Function<ProtocolSchedule<R>, BlockBodyValidator<R>> blockBodyValidatorBuilder,
+      final Function<ProtocolSchedule<R>, BlockBodyValidator<R>>
+          blockBodyValidatorBuilder,
       final BlockValidatorBuilder<R> blockValidatorBuilder,
       final BlockImporterBuilder<R> blockImporterBuilder,
       final DifficultyCalculator<R> difficultyCalculator) {
@@ -253,12 +274,16 @@ public class ProtocolSpecBuilder<T> {
     checkNotNull(gasCalculatorBuilder, "Missing gasCalculator");
     checkNotNull(evmBuilder, "Missing operation registry");
     checkNotNull(transactionValidatorBuilder, "Missing transaction validator");
-    checkNotNull(privateTransactionValidatorBuilder, "Missing private transaction validator");
-    checkNotNull(contractCreationProcessorBuilder, "Missing contract creation processor");
-    checkNotNull(precompileContractRegistryBuilder, "Missing precompile contract registry");
+    checkNotNull(privateTransactionValidatorBuilder,
+                 "Missing private transaction validator");
+    checkNotNull(contractCreationProcessorBuilder,
+                 "Missing contract creation processor");
+    checkNotNull(precompileContractRegistryBuilder,
+                 "Missing precompile contract registry");
     checkNotNull(messageCallProcessorBuilder, "Missing message call processor");
     checkNotNull(transactionProcessorBuilder, "Missing transaction processor");
-    checkNotNull(privateTransactionProcessorBuilder, "Missing private transaction processor");
+    checkNotNull(privateTransactionProcessorBuilder,
+                 "Missing private transaction processor");
     checkNotNull(blockHeaderValidatorBuilder, "Missing block header validator");
     checkNotNull(blockBodyValidatorBuilder, "Missing block body validator");
     checkNotNull(blockProcessorBuilder, "Missing block processor");
@@ -267,12 +292,15 @@ public class ProtocolSpecBuilder<T> {
     checkNotNull(blockHeaderFunctions, "Missing block hash function");
     checkNotNull(blockReward, "Missing block reward");
     checkNotNull(difficultyCalculator, "Missing difficulty calculator");
-    checkNotNull(transactionReceiptFactory, "Missing transaction receipt factory");
+    checkNotNull(transactionReceiptFactory,
+                 "Missing transaction receipt factory");
     checkNotNull(name, "Missing name");
-    checkNotNull(miningBeneficiaryCalculator, "Missing Mining Beneficiary Calculator");
+    checkNotNull(miningBeneficiaryCalculator,
+                 "Missing Mining Beneficiary Calculator");
     checkNotNull(protocolSchedule, "Missing protocol schedule");
     checkNotNull(privacyParameters, "Missing privacy parameters");
-    checkNotNull(transactionPriceCalculator, "Missing transaction price calculator");
+    checkNotNull(transactionPriceCalculator,
+                 "Missing transaction price calculator");
 
     final GasCalculator gasCalculator = gasCalculatorBuilder.get();
     final EVM evm = evmBuilder.apply(gasCalculator);
@@ -283,100 +311,84 @@ public class ProtocolSpecBuilder<T> {
     final AbstractMessageProcessor contractCreationProcessor =
         contractCreationProcessorBuilder.apply(gasCalculator, evm);
     final PrecompileContractRegistry precompileContractRegistry =
-        precompileContractRegistryBuilder.apply(precompiledContractConfiguration);
+        precompileContractRegistryBuilder.apply(
+            precompiledContractConfiguration);
     final AbstractMessageProcessor messageCallProcessor =
         messageCallProcessorBuilder.apply(evm, precompileContractRegistry);
     final TransactionProcessor transactionProcessor =
-        transactionProcessorBuilder.apply(
-            gasCalculator, transactionValidator, contractCreationProcessor, messageCallProcessor);
+        transactionProcessorBuilder.apply(gasCalculator, transactionValidator,
+                                          contractCreationProcessor,
+                                          messageCallProcessor);
 
     final BlockHeaderValidator<T> blockHeaderValidator =
-        blockHeaderValidatorBuilder.difficultyCalculator(difficultyCalculator).build();
+        blockHeaderValidatorBuilder.difficultyCalculator(difficultyCalculator)
+            .build();
 
     final BlockHeaderValidator<T> ommerHeaderValidator =
-        ommerHeaderValidatorBuilder.difficultyCalculator(difficultyCalculator).build();
+        ommerHeaderValidatorBuilder.difficultyCalculator(difficultyCalculator)
+            .build();
     final BlockBodyValidator<T> blockBodyValidator =
         blockBodyValidatorBuilder.apply(protocolSchedule);
 
-    BlockProcessor blockProcessor =
-        blockProcessorBuilder.apply(
-            transactionProcessor,
-            transactionReceiptFactory,
-            blockReward,
-            miningBeneficiaryCalculator,
-            skipZeroBlockRewards);
+    BlockProcessor blockProcessor = blockProcessorBuilder.apply(
+        transactionProcessor, transactionReceiptFactory, blockReward,
+        miningBeneficiaryCalculator, skipZeroBlockRewards);
     // Set private Tx Processor
     PrivateTransactionProcessor privateTransactionProcessor = null;
     if (privacyParameters.isEnabled()) {
       final PrivateTransactionValidator privateTransactionValidator =
           privateTransactionValidatorBuilder.apply();
-      privateTransactionProcessor =
-          privateTransactionProcessorBuilder.apply(
-              gasCalculator,
-              transactionValidator,
-              contractCreationProcessor,
-              messageCallProcessor,
-              privateTransactionValidator);
-      final Address address = Address.privacyPrecompiled(privacyParameters.getPrivacyAddress());
+      privateTransactionProcessor = privateTransactionProcessorBuilder.apply(
+          gasCalculator, transactionValidator, contractCreationProcessor,
+          messageCallProcessor, privateTransactionValidator);
+      final Address address =
+          Address.privacyPrecompiled(privacyParameters.getPrivacyAddress());
       final PrivacyPrecompiledContract privacyPrecompiledContract =
-          (PrivacyPrecompiledContract)
-              precompileContractRegistry.get(address, Account.DEFAULT_VERSION);
-      privacyPrecompiledContract.setPrivateTransactionProcessor(privateTransactionProcessor);
-      final OnChainPrivacyPrecompiledContract onChainPrivacyPrecompiledContract =
-          (OnChainPrivacyPrecompiledContract)
-              precompileContractRegistry.get(Address.ONCHAIN_PRIVACY, Account.DEFAULT_VERSION);
-      onChainPrivacyPrecompiledContract.setPrivateTransactionProcessor(privateTransactionProcessor);
-      blockProcessor =
-          new PrivacyBlockProcessor(
-              blockProcessor,
-              protocolSchedule,
-              privacyParameters.getEnclave(),
-              privacyParameters.getPrivateStateStorage(),
-              privacyParameters.getPrivateWorldStateArchive(),
-              privacyParameters.getPrivateStateRootResolver());
+          (PrivacyPrecompiledContract)precompileContractRegistry.get(
+              address, Account.DEFAULT_VERSION);
+      privacyPrecompiledContract.setPrivateTransactionProcessor(
+          privateTransactionProcessor);
+      final OnChainPrivacyPrecompiledContract
+          onChainPrivacyPrecompiledContract =
+              (OnChainPrivacyPrecompiledContract)precompileContractRegistry.get(
+                  Address.ONCHAIN_PRIVACY, Account.DEFAULT_VERSION);
+      onChainPrivacyPrecompiledContract.setPrivateTransactionProcessor(
+          privateTransactionProcessor);
+      blockProcessor = new PrivacyBlockProcessor(
+          blockProcessor, protocolSchedule, privacyParameters.getEnclave(),
+          privacyParameters.getPrivateStateStorage(),
+          privacyParameters.getPrivateWorldStateArchive(),
+          privacyParameters.getPrivateStateRootResolver());
     }
 
-    final BlockValidator<T> blockValidator =
-        blockValidatorBuilder.apply(blockHeaderValidator, blockBodyValidator, blockProcessor);
-    final BlockImporter<T> blockImporter = blockImporterBuilder.apply(blockValidator);
+    final BlockValidator<T> blockValidator = blockValidatorBuilder.apply(
+        blockHeaderValidator, blockBodyValidator, blockProcessor);
+    final BlockImporter<T> blockImporter =
+        blockImporterBuilder.apply(blockValidator);
     return new ProtocolSpec<>(
-        name,
-        evm,
-        transactionValidator,
-        transactionProcessor,
-        privateTransactionProcessor,
-        blockHeaderValidator,
-        ommerHeaderValidator,
-        blockBodyValidator,
-        blockProcessor,
-        blockImporter,
-        blockValidator,
-        blockHeaderFunctions,
-        transactionReceiptFactory,
-        difficultyCalculator,
-        blockReward,
-        miningBeneficiaryCalculator,
-        precompileContractRegistry,
-        skipZeroBlockRewards,
-        gasCalculator,
-        transactionPriceCalculator);
+        name, evm, transactionValidator, transactionProcessor,
+        privateTransactionProcessor, blockHeaderValidator, ommerHeaderValidator,
+        blockBodyValidator, blockProcessor, blockImporter, blockValidator,
+        blockHeaderFunctions, transactionReceiptFactory, difficultyCalculator,
+        blockReward, miningBeneficiaryCalculator, precompileContractRegistry,
+        skipZeroBlockRewards, gasCalculator, transactionPriceCalculator);
   }
 
   public interface TransactionProcessorBuilder {
-    TransactionProcessor apply(
-        GasCalculator gasCalculator,
-        TransactionValidator transactionValidator,
-        AbstractMessageProcessor contractCreationProcessor,
-        AbstractMessageProcessor messageCallProcessor);
+    TransactionProcessor
+    apply(GasCalculator gasCalculator,
+          TransactionValidator transactionValidator,
+          AbstractMessageProcessor contractCreationProcessor,
+          AbstractMessageProcessor messageCallProcessor);
   }
 
   public interface PrivateTransactionProcessorBuilder {
-    PrivateTransactionProcessor apply(
-        GasCalculator gasCalculator,
-        TransactionValidator transactionValidator,
-        AbstractMessageProcessor contractCreationProcessor,
-        AbstractMessageProcessor messageCallProcessor,
-        PrivateTransactionValidator privateTransactionValidator);
+    PrivateTransactionProcessor
+    apply(GasCalculator gasCalculator,
+          TransactionValidator transactionValidator,
+          AbstractMessageProcessor contractCreationProcessor,
+          AbstractMessageProcessor messageCallProcessor,
+          PrivateTransactionValidator privateTransactionValidator);
   }
 
   public interface PrivateTransactionValidatorBuilder {
@@ -384,19 +396,19 @@ public class ProtocolSpecBuilder<T> {
   }
 
   public interface BlockProcessorBuilder {
-    BlockProcessor apply(
-        TransactionProcessor transactionProcessor,
-        MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
-        Wei blockReward,
-        MiningBeneficiaryCalculator miningBeneficiaryCalculator,
-        boolean skipZeroBlockRewards);
+    BlockProcessor
+    apply(TransactionProcessor transactionProcessor,
+          MainnetBlockProcessor
+              .TransactionReceiptFactory transactionReceiptFactory,
+          Wei blockReward,
+          MiningBeneficiaryCalculator miningBeneficiaryCalculator,
+          boolean skipZeroBlockRewards);
   }
 
   public interface BlockValidatorBuilder<T> {
-    BlockValidator<T> apply(
-        BlockHeaderValidator<T> blockHeaderValidator,
-        BlockBodyValidator<T> blockBodyValidator,
-        BlockProcessor blockProcessor);
+    BlockValidator<T> apply(BlockHeaderValidator<T> blockHeaderValidator,
+                            BlockBodyValidator<T> blockBodyValidator,
+                            BlockProcessor blockProcessor);
   }
 
   public interface BlockImporterBuilder<T> {

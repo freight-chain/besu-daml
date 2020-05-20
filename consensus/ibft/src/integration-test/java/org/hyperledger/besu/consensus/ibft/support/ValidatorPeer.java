@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,11 @@ package org.hyperledger.besu.consensus.ibft.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
 import org.hyperledger.besu.consensus.ibft.EventMultiplexer;
 import org.hyperledger.besu.consensus.ibft.ibftevent.IbftEvents;
@@ -39,14 +47,8 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.DefaultMessage;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import com.google.common.collect.Lists;
-import org.apache.tuweni.bytes.Bytes;
-
-// Each "inject" function returns the SignedPayload representation of the transmitted message.
+// Each "inject" function returns the SignedPayload representation of the
+// transmitted message.
 public class ValidatorPeer {
 
   private final Address nodeAddress;
@@ -58,10 +60,9 @@ public class ValidatorPeer {
   private final EventMultiplexer localEventMultiplexer;
   private long estimatedChainHeight = 0;
 
-  public ValidatorPeer(
-      final NodeParams nodeParams,
-      final MessageFactory messageFactory,
-      final EventMultiplexer localEventMultiplexer) {
+  public ValidatorPeer(final NodeParams nodeParams,
+                       final MessageFactory messageFactory,
+                       final EventMultiplexer localEventMultiplexer) {
     this.nodeKey = nodeParams.getNodeKey();
     this.nodeAddress = nodeParams.getAddress();
     this.messageFactory = messageFactory;
@@ -70,26 +71,23 @@ public class ValidatorPeer {
     this.localEventMultiplexer = localEventMultiplexer;
   }
 
-  public Address getNodeAddress() {
-    return nodeAddress;
-  }
+  public Address getNodeAddress() { return nodeAddress; }
 
-  public NodeKey getnodeKey() {
-    return nodeKey;
-  }
+  public NodeKey getnodeKey() { return nodeKey; }
 
-  public PeerConnection getPeerConnection() {
-    return peerConnection;
-  }
+  public PeerConnection getPeerConnection() { return peerConnection; }
 
-  public Proposal injectProposal(final ConsensusRoundIdentifier rId, final Block block) {
-    final Proposal payload = messageFactory.createProposal(rId, block, Optional.empty());
+  public Proposal injectProposal(final ConsensusRoundIdentifier rId,
+                                 final Block block) {
+    final Proposal payload =
+        messageFactory.createProposal(rId, block, Optional.empty());
 
     injectMessage(ProposalMessageData.create(payload));
     return payload;
   }
 
-  public Prepare injectPrepare(final ConsensusRoundIdentifier rId, final Hash digest) {
+  public Prepare injectPrepare(final ConsensusRoundIdentifier rId,
+                               final Hash digest) {
     final Prepare payload = messageFactory.createPrepare(rId, digest);
     injectMessage(PrepareMessageData.create(payload));
     return payload;
@@ -99,14 +97,15 @@ public class ValidatorPeer {
     return nodeKey.sign(digest);
   }
 
-  public Commit injectCommit(final ConsensusRoundIdentifier rId, final Hash digest) {
+  public Commit injectCommit(final ConsensusRoundIdentifier rId,
+                             final Hash digest) {
     final Signature commitSeal = nodeKey.sign(digest);
 
     return injectCommit(rId, digest, commitSeal);
   }
 
-  public Commit injectCommit(
-      final ConsensusRoundIdentifier rId, final Hash digest, final Signature commitSeal) {
+  public Commit injectCommit(final ConsensusRoundIdentifier rId,
+                             final Hash digest, final Signature commitSeal) {
     final Commit payload = messageFactory.createCommit(rId, digest, commitSeal);
     injectMessage(CommitMessageData.create(payload));
     return payload;
@@ -117,8 +116,8 @@ public class ValidatorPeer {
       final RoundChangeCertificate roundChangeCertificate,
       final Block blockToPropose) {
 
-    final Proposal payload =
-        messageFactory.createProposal(rId, blockToPropose, Optional.of(roundChangeCertificate));
+    final Proposal payload = messageFactory.createProposal(
+        rId, blockToPropose, Optional.of(roundChangeCertificate));
     injectMessage(ProposalMessageData.create(payload));
     return payload;
   }
@@ -126,7 +125,8 @@ public class ValidatorPeer {
   public RoundChange injectRoundChange(
       final ConsensusRoundIdentifier rId,
       final Optional<PreparedRoundArtifacts> preparedRoundArtifacts) {
-    final RoundChange payload = messageFactory.createRoundChange(rId, preparedRoundArtifacts);
+    final RoundChange payload =
+        messageFactory.createRoundChange(rId, preparedRoundArtifacts);
     injectMessage(RoundChangeMessageData.create(payload));
     return payload;
   }
@@ -139,18 +139,14 @@ public class ValidatorPeer {
     return Collections.unmodifiableList(receivedMessages);
   }
 
-  public void clearReceivedMessages() {
-    receivedMessages.clear();
-  }
+  public void clearReceivedMessages() { receivedMessages.clear(); }
 
   public void injectMessage(final MessageData msgData) {
     final DefaultMessage message = new DefaultMessage(peerConnection, msgData);
     localEventMultiplexer.handleIbftEvent(IbftEvents.fromMessage(message));
   }
 
-  public MessageFactory getMessageFactory() {
-    return messageFactory;
-  }
+  public MessageFactory getMessageFactory() { return messageFactory; }
 
   public void updateEstimatedChainHeight(final long estimatedChainHeight) {
     this.estimatedChainHeight = estimatedChainHeight;

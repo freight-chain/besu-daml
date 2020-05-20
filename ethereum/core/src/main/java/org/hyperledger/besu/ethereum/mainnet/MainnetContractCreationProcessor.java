@@ -1,19 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Gas;
@@ -24,15 +34,6 @@ import org.hyperledger.besu.ethereum.vm.ExceptionalHaltReason;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.OperationTracer;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-
-import com.google.common.collect.ImmutableSet;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
 
 /** A contract creation message processor. */
 public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
@@ -50,8 +51,7 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
   private final int accountVersion;
 
   public MainnetContractCreationProcessor(
-      final GasCalculator gasCalculator,
-      final EVM evm,
+      final GasCalculator gasCalculator, final EVM evm,
       final boolean requireCodeDepositToSucceed,
       final List<ContractValidationRule> contractValidationRules,
       final long initialContractNonce,
@@ -66,36 +66,24 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
   }
 
   public MainnetContractCreationProcessor(
-      final GasCalculator gasCalculator,
-      final EVM evm,
+      final GasCalculator gasCalculator, final EVM evm,
       final boolean requireCodeDepositToSucceed,
       final List<ContractValidationRule> contractValidationRules,
       final long initialContractNonce,
       final Collection<Address> forceCommitAddresses) {
-    this(
-        gasCalculator,
-        evm,
-        requireCodeDepositToSucceed,
-        contractValidationRules,
-        initialContractNonce,
-        forceCommitAddresses,
-        Account.DEFAULT_VERSION);
+    this(gasCalculator, evm, requireCodeDepositToSucceed,
+         contractValidationRules, initialContractNonce, forceCommitAddresses,
+         Account.DEFAULT_VERSION);
   }
 
   public MainnetContractCreationProcessor(
-      final GasCalculator gasCalculator,
-      final EVM evm,
+      final GasCalculator gasCalculator, final EVM evm,
       final boolean requireCodeDepositToSucceed,
       final List<ContractValidationRule> contractValidationRules,
       final long initialContractNonce) {
-    this(
-        gasCalculator,
-        evm,
-        requireCodeDepositToSucceed,
-        contractValidationRules,
-        initialContractNonce,
-        ImmutableSet.of(),
-        Account.DEFAULT_VERSION);
+    this(gasCalculator, evm, requireCodeDepositToSucceed,
+         contractValidationRules, initialContractNonce, ImmutableSet.of(),
+         Account.DEFAULT_VERSION);
   }
 
   private static boolean accountExists(final Account account) {
@@ -105,17 +93,21 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
   }
 
   @Override
-  public void start(final MessageFrame frame, final OperationTracer operationTracer) {
+  public void start(final MessageFrame frame,
+                    final OperationTracer operationTracer) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Executing contract-creation");
     }
     try {
-      final MutableAccount sender =
-          frame.getWorldState().getAccount(frame.getSenderAddress()).getMutable();
+      final MutableAccount sender = frame.getWorldState()
+                                        .getAccount(frame.getSenderAddress())
+                                        .getMutable();
       sender.decrementBalance(frame.getValue());
 
       final MutableAccount contract =
-          frame.getWorldState().getOrCreate(frame.getContractAddress()).getMutable();
+          frame.getWorldState()
+              .getOrCreate(frame.getContractAddress())
+              .getMutable();
       if (accountExists(contract)) {
         LOG.trace(
             "Contract creation error: account as already been created for address {}",
@@ -130,26 +122,28 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
         frame.setState(MessageFrame.State.CODE_EXECUTING);
       }
     } catch (ModificationNotAllowedException ex) {
-      LOG.trace("Contract creation error: illegal modification not allowed from private state");
+      LOG.trace(
+          "Contract creation error: illegal modification not allowed from private state");
       frame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
     }
   }
 
   @Override
-  protected void codeSuccess(final MessageFrame frame, final OperationTracer operationTracer) {
+  protected void codeSuccess(final MessageFrame frame,
+                             final OperationTracer operationTracer) {
     final Bytes contractCode = frame.getOutputData();
 
-    final Gas depositFee = gasCalculator.codeDepositGasCost(contractCode.size());
+    final Gas depositFee =
+        gasCalculator.codeDepositGasCost(contractCode.size());
 
     if (frame.getRemainingGas().compareTo(depositFee) < 0) {
-      LOG.trace(
-          "Not enough gas to pay the code deposit fee for {}: "
-              + "remaining gas = {} < {} = deposit fee",
-          frame.getContractAddress(),
-          frame.getRemainingGas(),
-          depositFee);
+      LOG.trace("Not enough gas to pay the code deposit fee for {}: "
+                    + "remaining gas = {} < {} = deposit fee",
+                frame.getContractAddress(), frame.getRemainingGas(),
+                depositFee);
       if (requireCodeDepositToSucceed) {
-        LOG.trace("Contract creation error: insufficient funds for code deposit");
+        LOG.trace(
+            "Contract creation error: insufficient funds for code deposit");
         frame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
         operationTracer.traceAccountCreationResult(
             frame, Optional.of(ExceptionalHaltReason.INSUFFICIENT_GAS));
@@ -157,18 +151,20 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       }
     } else {
-      if (contractValidationRules.stream().allMatch(rule -> rule.validate(frame))) {
+      if (contractValidationRules.stream().allMatch(
+              rule -> rule.validate(frame))) {
         frame.decrementRemainingGas(depositFee);
 
         // Finalize contract creation, setting the contract code.
         final MutableAccount contract =
-            frame.getWorldState().getOrCreate(frame.getContractAddress()).getMutable();
+            frame.getWorldState()
+                .getOrCreate(frame.getContractAddress())
+                .getMutable();
         contract.setCode(contractCode);
         contract.setVersion(accountVersion);
         LOG.trace(
             "Successful creation of contract {} with code of size {} (Gas remaining: {})",
-            frame.getContractAddress(),
-            contractCode.size(),
+            frame.getContractAddress(), contractCode.size(),
             frame.getRemainingGas());
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       } else {

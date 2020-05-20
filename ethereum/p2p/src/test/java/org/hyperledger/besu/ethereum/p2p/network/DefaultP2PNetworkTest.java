@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +27,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
 import org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration;
@@ -49,16 +60,6 @@ import org.hyperledger.besu.nat.NatMethod;
 import org.hyperledger.besu.nat.NatService;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
 import org.hyperledger.besu.nat.upnp.UpnpNatManager;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,22 +85,28 @@ public final class DefaultP2PNetworkTest {
       NetworkingConfiguration.create()
           .setDiscovery(DiscoveryConfiguration.create().setActive(false))
           .setRlpx(
-              RlpxConfiguration.create()
-                  .setBindPort(0)
-                  .setSupportedProtocols(MockSubProtocol.create()));
+              RlpxConfiguration.create().setBindPort(0).setSupportedProtocols(
+                  MockSubProtocol.create()));
 
   @Before
   public void before() {
-    lenient().when(rlpxAgent.start()).thenReturn(CompletableFuture.completedFuture(30303));
-    lenient().when(rlpxAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
+    lenient()
+        .when(rlpxAgent.start())
+        .thenReturn(CompletableFuture.completedFuture(30303));
+    lenient()
+        .when(rlpxAgent.stop())
+        .thenReturn(CompletableFuture.completedFuture(null));
     lenient()
         .when(discoveryAgent.start(anyInt()))
-        .thenAnswer(
-            invocation ->
-                CompletableFuture.completedFuture(invocation.getArgument(0, Integer.class)));
-    lenient().when(discoveryAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
+        .thenAnswer(invocation
+                    -> CompletableFuture.completedFuture(
+                        invocation.getArgument(0, Integer.class)));
     lenient()
-        .when(discoveryAgent.observePeerBondedEvents(discoverySubscriberCaptor.capture()))
+        .when(discoveryAgent.stop())
+        .thenReturn(CompletableFuture.completedFuture(null));
+    lenient()
+        .when(discoveryAgent.observePeerBondedEvents(
+            discoverySubscriberCaptor.capture()))
         .thenReturn(1L);
   }
 
@@ -138,7 +145,8 @@ public final class DefaultP2PNetworkTest {
 
     assertThat(maintainedPeers.contains(peer)).isFalse();
     verify(rlpxAgent, times(1)).connect(peer);
-    verify(rlpxAgent, times(1)).disconnect(peer.getId(), DisconnectReason.REQUESTED);
+    verify(rlpxAgent, times(1))
+        .disconnect(peer.getId(), DisconnectReason.REQUESTED);
     verify(discoveryAgent, times(1)).dropPeer(peer);
   }
 
@@ -151,7 +159,8 @@ public final class DefaultP2PNetworkTest {
     assertThat(network.removeMaintainedConnectionPeer(peer)).isFalse();
 
     assertThat(maintainedPeers.contains(peer)).isFalse();
-    verify(rlpxAgent, times(1)).disconnect(peer.getId(), DisconnectReason.REQUESTED);
+    verify(rlpxAgent, times(1))
+        .disconnect(peer.getId(), DisconnectReason.REQUESTED);
     verify(discoveryAgent, times(1)).dropPeer(peer);
   }
 
@@ -180,7 +189,8 @@ public final class DefaultP2PNetworkTest {
     // Don't connect to an already connected peer
     final CompletableFuture<PeerConnection> connectionFuture =
         CompletableFuture.completedFuture(MockPeerConnection.create(peer));
-    when(rlpxAgent.getPeerConnection(peer)).thenReturn(Optional.of(connectionFuture));
+    when(rlpxAgent.getPeerConnection(peer))
+        .thenReturn(Optional.of(connectionFuture));
     network.checkMaintainedConnectionPeers();
     verify(rlpxAgent, times(0)).connect(peer);
   }
@@ -194,8 +204,10 @@ public final class DefaultP2PNetworkTest {
     network.start();
 
     // Don't connect when connection is already pending.
-    final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-    when(rlpxAgent.getPeerConnection(peer)).thenReturn(Optional.of(connectionFuture));
+    final CompletableFuture<PeerConnection> connectionFuture =
+        new CompletableFuture<>();
+    when(rlpxAgent.getPeerConnection(peer))
+        .thenReturn(Optional.of(connectionFuture));
     network.checkMaintainedConnectionPeers();
     verify(rlpxAgent, times(0)).connect(peer);
   }
@@ -226,17 +238,20 @@ public final class DefaultP2PNetworkTest {
     when(upnpNatManager.queryExternalIPAddress())
         .thenReturn(CompletableFuture.completedFuture(externalIp));
 
-    final NatService natService = Mockito.spy(new NatService(Optional.of(upnpNatManager)));
+    final NatService natService =
+        Mockito.spy(new NatService(Optional.of(upnpNatManager)));
     final P2PNetwork network = builder().natService(natService).build();
 
     network.start();
     verify(upnpNatManager)
-        .requestPortForward(eq(config.getRlpx().getBindPort()), eq(NetworkProtocol.TCP), any());
+        .requestPortForward(eq(config.getRlpx().getBindPort()),
+                            eq(NetworkProtocol.TCP), any());
     verify(upnpNatManager)
-        .requestPortForward(
-            eq(config.getDiscovery().getBindPort()), eq(NetworkProtocol.UDP), any());
+        .requestPortForward(eq(config.getDiscovery().getBindPort()),
+                            eq(NetworkProtocol.UDP), any());
 
-    Assertions.assertThat(network.getLocalEnode().get().getIpAsString()).isEqualTo(externalIp);
+    Assertions.assertThat(network.getLocalEnode().get().getIpAsString())
+        .isEqualTo(externalIp);
   }
 
   @Test
@@ -245,7 +260,8 @@ public final class DefaultP2PNetworkTest {
     network.start();
     final DiscoveryPeer peer = DiscoveryPeer.fromEnode(PeerTestHelper.enode());
     final PeerDiscoveryEvent.PeerBondedEvent peerBondedEvent =
-        new PeerDiscoveryEvent.PeerBondedEvent(peer, System.currentTimeMillis());
+        new PeerDiscoveryEvent.PeerBondedEvent(peer,
+                                               System.currentTimeMillis());
 
     discoverySubscriberCaptor.getValue().onPeerBonded(peerBondedEvent);
     verify(rlpxAgent, times(1)).connect(peer);
@@ -255,11 +271,11 @@ public final class DefaultP2PNetworkTest {
   public void handlePeerBondedEvent_forPeerWithNoTcpPort() {
     final DefaultP2PNetwork network = network();
     network.start();
-    final DiscoveryPeer peer =
-        DiscoveryPeer.fromIdAndEndpoint(
-            Peer.randomId(), new Endpoint("127.0.0.1", 999, OptionalInt.empty()));
+    final DiscoveryPeer peer = DiscoveryPeer.fromIdAndEndpoint(
+        Peer.randomId(), new Endpoint("127.0.0.1", 999, OptionalInt.empty()));
     final PeerDiscoveryEvent.PeerBondedEvent peerBondedEvent =
-        new PeerDiscoveryEvent.PeerBondedEvent(peer, System.currentTimeMillis());
+        new PeerDiscoveryEvent.PeerBondedEvent(peer,
+                                               System.currentTimeMillis());
 
     discoverySubscriberCaptor.getValue().onPeerBonded(peerBondedEvent);
     verify(rlpxAgent, times(1)).connect(peer);
@@ -267,7 +283,8 @@ public final class DefaultP2PNetworkTest {
 
   @Test
   public void attemptPeerConnections_bondedPeers() {
-    final DiscoveryPeer discoPeer = DiscoveryPeer.fromEnode(PeerTestHelper.enode());
+    final DiscoveryPeer discoPeer =
+        DiscoveryPeer.fromEnode(PeerTestHelper.enode());
     discoPeer.setStatus(PeerDiscoveryStatus.BONDED);
     final Stream<DiscoveryPeer> peerStream = Stream.of(discoPeer);
     when(discoveryAgent.streamDiscoveredPeers()).thenReturn(peerStream);
@@ -276,14 +293,16 @@ public final class DefaultP2PNetworkTest {
     network.attemptPeerConnections();
     verify(rlpxAgent, times(1)).connect(peerStreamCaptor.capture());
 
-    List<? extends Peer> capturedPeers = peerStreamCaptor.getValue().collect(Collectors.toList());
+    List<? extends Peer> capturedPeers =
+        peerStreamCaptor.getValue().collect(Collectors.toList());
     assertThat(capturedPeers.contains(discoPeer)).isTrue();
     assertThat(capturedPeers.size()).isEqualTo(1);
   }
 
   @Test
   public void attemptPeerConnections_unbondedPeers() {
-    final DiscoveryPeer discoPeer = DiscoveryPeer.fromEnode(PeerTestHelper.enode());
+    final DiscoveryPeer discoPeer =
+        DiscoveryPeer.fromEnode(PeerTestHelper.enode());
     discoPeer.setStatus(PeerDiscoveryStatus.KNOWN);
     final Stream<DiscoveryPeer> peerStream = Stream.of(discoPeer);
     when(discoveryAgent.streamDiscoveredPeers()).thenReturn(peerStream);
@@ -292,7 +311,8 @@ public final class DefaultP2PNetworkTest {
     network.attemptPeerConnections();
     verify(rlpxAgent, times(1)).connect(peerStreamCaptor.capture());
 
-    List<? extends Peer> capturedPeers = peerStreamCaptor.getValue().collect(Collectors.toList());
+    List<? extends Peer> capturedPeers =
+        peerStreamCaptor.getValue().collect(Collectors.toList());
     assertThat(capturedPeers.contains(discoPeer)).isFalse();
     assertThat(capturedPeers.size()).isEqualTo(0);
   }
@@ -306,13 +326,15 @@ public final class DefaultP2PNetworkTest {
     discoPeers.forEach(p -> p.setStatus(PeerDiscoveryStatus.BONDED));
     discoPeers.get(0).setLastAttemptedConnection(10);
     discoPeers.get(2).setLastAttemptedConnection(15);
-    when(discoveryAgent.streamDiscoveredPeers()).thenReturn(discoPeers.stream());
+    when(discoveryAgent.streamDiscoveredPeers())
+        .thenReturn(discoPeers.stream());
 
     final DefaultP2PNetwork network = network();
     network.attemptPeerConnections();
     verify(rlpxAgent, times(1)).connect(peerStreamCaptor.capture());
 
-    List<? extends Peer> capturedPeers = peerStreamCaptor.getValue().collect(Collectors.toList());
+    List<? extends Peer> capturedPeers =
+        peerStreamCaptor.getValue().collect(Collectors.toList());
     assertThat(capturedPeers.size()).isEqualTo(3);
     assertThat(capturedPeers.get(0)).isEqualTo(discoPeers.get(1));
     assertThat(capturedPeers.get(1)).isEqualTo(discoPeers.get(0));
@@ -320,7 +342,7 @@ public final class DefaultP2PNetworkTest {
   }
 
   private DefaultP2PNetwork network() {
-    return (DefaultP2PNetwork) builder().build();
+    return (DefaultP2PNetwork)builder().build();
   }
 
   private DefaultP2PNetwork.Builder builder() {

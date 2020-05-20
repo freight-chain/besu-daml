@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +27,26 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.awaitility.Awaitility;
 import org.hyperledger.besu.Runner;
 import org.hyperledger.besu.RunnerBuilder;
 import org.hyperledger.besu.chainexport.RlpBlockExporter;
@@ -62,28 +85,6 @@ import org.hyperledger.besu.services.BesuPluginContextImpl;
 import org.hyperledger.besu.services.SecurityModuleServiceImpl;
 import org.hyperledger.besu.services.StorageServiceImpl;
 import org.hyperledger.besu.services.kvstore.InMemoryKeyValueStorage;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -103,11 +104,14 @@ public abstract class CommandTestAbstract {
 
   private final Logger TEST_LOGGER = LogManager.getLogger();
 
-  protected final ByteArrayOutputStream commandOutput = new ByteArrayOutputStream();
+  protected final ByteArrayOutputStream commandOutput =
+      new ByteArrayOutputStream();
   private final PrintStream outPrintStream = new PrintStream(commandOutput);
 
-  protected final ByteArrayOutputStream commandErrorOutput = new ByteArrayOutputStream();
-  private final PrintStream errPrintStream = new PrintStream(commandErrorOutput);
+  protected final ByteArrayOutputStream commandErrorOutput =
+      new ByteArrayOutputStream();
+  private final PrintStream errPrintStream =
+      new PrintStream(commandErrorOutput);
   private final HashMap<String, String> environment = new HashMap<>();
 
   private final List<TestBesuCommand> besuCommands = new ArrayList<>();
@@ -143,18 +147,28 @@ public abstract class CommandTestAbstract {
   @Captor protected ArgumentCaptor<String> stringArgumentCaptor;
   @Captor protected ArgumentCaptor<Integer> intArgumentCaptor;
   @Captor protected ArgumentCaptor<Float> floatCaptor;
-  @Captor protected ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
-  @Captor protected ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<StorageProvider> storageProviderArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
+  @Captor
+  protected ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
+  @Captor
+  protected ArgumentCaptor<StorageProvider> storageProviderArgumentCaptor;
 
   @Captor
-  protected ArgumentCaptor<PermissioningConfiguration> permissioningConfigurationArgumentCaptor;
+  protected ArgumentCaptor<PermissioningConfiguration>
+      permissioningConfigurationArgumentCaptor;
 
-  @Captor protected ArgumentCaptor<TransactionPoolConfiguration> transactionPoolConfigCaptor;
+  @Captor
+  protected ArgumentCaptor<TransactionPoolConfiguration>
+      transactionPoolConfigCaptor;
 
   @Rule public final TemporaryFolder temp = new TemporaryFolder();
 
@@ -170,68 +184,103 @@ public abstract class CommandTestAbstract {
     doReturn(mockControllerBuilder)
         .when(mockControllerBuilderFactory)
         .fromEthNetworkConfig(any(), any());
-    when(mockControllerBuilder.synchronizerConfiguration(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.ethProtocolConfiguration(any())).thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.synchronizerConfiguration(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.ethProtocolConfiguration(any()))
+        .thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.transactionPoolConfiguration(any()))
         .thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.dataDirectory(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.miningParameters(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.nodeKey(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.metricsSystem(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.privacyParameters(any())).thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.dataDirectory(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.miningParameters(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.nodeKey(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.metricsSystem(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.privacyParameters(any()))
+        .thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.clock(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.isRevertReasonEnabled(false)).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.storageProvider(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.isPruningEnabled(anyBoolean())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.pruningConfiguration(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.genesisConfigOverrides(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.targetGasLimit(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.requiredBlocks(any())).thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.isRevertReasonEnabled(false))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.storageProvider(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.isPruningEnabled(anyBoolean()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.pruningConfiguration(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.genesisConfigOverrides(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.targetGasLimit(any()))
+        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.requiredBlocks(any()))
+        .thenReturn(mockControllerBuilder);
 
     // doReturn used because of generic BesuController
     doReturn(mockController).when(mockControllerBuilder).build();
-    lenient().when(mockController.getProtocolManager()).thenReturn(mockEthProtocolManager);
-    lenient().when(mockController.getProtocolSchedule()).thenReturn(mockProtocolSchedule);
-    lenient().when(mockController.getProtocolContext()).thenReturn(mockProtocolContext);
+    lenient()
+        .when(mockController.getProtocolManager())
+        .thenReturn(mockEthProtocolManager);
+    lenient()
+        .when(mockController.getProtocolSchedule())
+        .thenReturn(mockProtocolSchedule);
+    lenient()
+        .when(mockController.getProtocolContext())
+        .thenReturn(mockProtocolContext);
     lenient()
         .when(mockController.getAdditionalPluginServices())
         .thenReturn(new NoopPluginServiceFactory());
     lenient().when(mockController.getNodeKey()).thenReturn(nodeKey);
 
-    when(mockEthProtocolManager.getBlockBroadcaster()).thenReturn(mockBlockBroadcaster);
+    when(mockEthProtocolManager.getBlockBroadcaster())
+        .thenReturn(mockBlockBroadcaster);
 
     when(mockRunnerBuilder.vertx(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.besuController(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.discovery(anyBoolean())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.ethNetworkConfig(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.networkingConfiguration(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.p2pAdvertisedHost(anyString())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.p2pListenPort(anyInt())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.p2pListenInterface(anyString())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.discovery(anyBoolean()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.ethNetworkConfig(any()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.networkingConfiguration(any()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.p2pAdvertisedHost(anyString()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.p2pListenPort(anyInt()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.p2pListenInterface(anyString()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.maxPeers(anyInt())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.limitRemoteWireConnectionsEnabled(anyBoolean()))
         .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.fractionRemoteConnectionsAllowed(anyFloat()))
         .thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.p2pEnabled(anyBoolean())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.p2pEnabled(anyBoolean()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.natMethod(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.jsonRpcConfiguration(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.graphQLConfiguration(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.webSocketConfiguration(any())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.jsonRpcConfiguration(any()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.graphQLConfiguration(any()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.webSocketConfiguration(any()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.dataDir(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.bannedNodeIds(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.metricsSystem(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.metricsConfiguration(any())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.metricsConfiguration(any()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.staticNodes(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.identityString(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.besuPluginContext(any())).thenReturn(mockRunnerBuilder);
-    when(mockRunnerBuilder.autoLogBloomCaching(anyBoolean())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.besuPluginContext(any()))
+        .thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.autoLogBloomCaching(anyBoolean()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.pidPath(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.build()).thenReturn(mockRunner);
 
-    final Bytes32 keyPairPrvKey =
-        Bytes32.fromHexString("0xf7a58d5e755d51fa2f6206e91dd574597c73248aaf946ec1964b8c6268d6207b");
-    keyPair = SECP256K1.KeyPair.create(SECP256K1.PrivateKey.create(keyPairPrvKey));
+    final Bytes32 keyPairPrvKey = Bytes32.fromHexString(
+        "0xf7a58d5e755d51fa2f6206e91dd574597c73248aaf946ec1964b8c6268d6207b");
+    keyPair =
+        SECP256K1.KeyPair.create(SECP256K1.PrivateKey.create(keyPairPrvKey));
 
     lenient().when(nodeKey.getPublicKey()).thenReturn(keyPair.getPublicKey());
 
@@ -267,9 +316,7 @@ public abstract class CommandTestAbstract {
     besuCommands.forEach(TestBesuCommand::close);
   }
 
-  protected NodeKey getNodeKey() {
-    return nodeKey;
-  }
+  protected NodeKey getNodeKey() { return nodeKey; }
 
   protected void setEnvironemntVariable(final String name, final String value) {
     environment.put(name, value);
@@ -280,28 +327,23 @@ public abstract class CommandTestAbstract {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> JsonBlockImporter<T> jsonBlockImporterFactory(final BesuController<T> controller) {
-    return (JsonBlockImporter<T>) jsonBlockImporter;
+  private <T> JsonBlockImporter<T>
+  jsonBlockImporterFactory(final BesuController<T> controller) {
+    return (JsonBlockImporter<T>)jsonBlockImporter;
   }
 
-  protected TestBesuCommand parseCommand(final InputStream in, final String... args) {
+  protected TestBesuCommand parseCommand(final InputStream in,
+                                         final String... args) {
     // turn off ansi usage globally in picocli
     System.setProperty("picocli.ansi", "false");
 
-    final TestBesuCommand besuCommand =
-        new TestBesuCommand(
-            mockLogger,
-            nodeKey,
-            keyPair,
-            rlpBlockImporter,
-            this::jsonBlockImporterFactory,
-            (blockchain) -> rlpBlockExporter,
-            mockRunnerBuilder,
-            mockControllerBuilderFactory,
-            mockBesuPluginContext,
-            environment,
-            storageService,
-            securityModuleService);
+    final TestBesuCommand besuCommand = new TestBesuCommand(
+        mockLogger, nodeKey, keyPair, rlpBlockImporter,
+        this::jsonBlockImporterFactory,
+        (blockchain)
+            -> rlpBlockExporter,
+        mockRunnerBuilder, mockControllerBuilderFactory, mockBesuPluginContext,
+        environment, storageService, securityModuleService);
     besuCommands.add(besuCommand);
 
     besuCommand.setBesuConfiguration(commonPluginConfiguration);
@@ -310,8 +352,7 @@ public abstract class CommandTestAbstract {
     besuCommand.parse(
         new RunLast().useOut(outPrintStream).useAnsi(Ansi.OFF),
         besuCommand.exceptionHandler().useErr(errPrintStream).useAnsi(Ansi.OFF),
-        in,
-        args);
+        in, args);
     return besuCommand;
   }
 
@@ -324,11 +365,11 @@ public abstract class CommandTestAbstract {
     private final SECP256K1.KeyPair keyPair;
 
     TestBesuCommand(
-        final Logger mockLogger,
-        final NodeKey mockNodeKey,
+        final Logger mockLogger, final NodeKey mockNodeKey,
         final SECP256K1.KeyPair keyPair,
         final RlpBlockImporter mockBlockImporter,
-        final BlocksSubCommand.JsonBlockImporterFactory jsonBlockImporterFactory,
+        final BlocksSubCommand
+            .JsonBlockImporterFactory jsonBlockImporterFactory,
         final BlocksSubCommand.RlpBlockExporterFactory rlpBlockExporterFactory,
         final RunnerBuilder mockRunnerBuilder,
         final BesuController.Builder controllerBuilderFactory,
@@ -336,24 +377,18 @@ public abstract class CommandTestAbstract {
         final Map<String, String> environment,
         final StorageServiceImpl storageService,
         final SecurityModuleServiceImpl securityModuleService) {
-      super(
-          mockLogger,
-          mockBlockImporter,
-          jsonBlockImporterFactory,
-          rlpBlockExporterFactory,
-          mockRunnerBuilder,
-          controllerBuilderFactory,
-          besuPluginContext,
-          environment,
-          storageService,
-          securityModuleService);
+      super(mockLogger, mockBlockImporter, jsonBlockImporterFactory,
+            rlpBlockExporterFactory, mockRunnerBuilder,
+            controllerBuilderFactory, besuPluginContext, environment,
+            storageService, securityModuleService);
       this.mockNodeKey = mockNodeKey;
       this.keyPair = keyPair;
     }
 
     @Override
     protected void validateP2PInterface(final String p2pInterface) {
-      // For testing, don't actually query for networking interfaces to validate this option
+      // For testing, don't actually query for networking interfaces to validate
+      // this option
     }
 
     @Override
@@ -374,9 +409,7 @@ public abstract class CommandTestAbstract {
       return keyPair;
     }
 
-    public CommandSpec getSpec() {
-      return spec;
-    }
+    public CommandSpec getSpec() { return spec; }
 
     public NetworkingOptions getNetworkingOptions() {
       return networkingOptions;

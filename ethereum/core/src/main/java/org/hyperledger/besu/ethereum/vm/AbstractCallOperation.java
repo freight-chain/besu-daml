@@ -1,52 +1,47 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.vm;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Wei;
 
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
-
 /**
  * A skeleton class for implementing call operations.
  *
- * <p>A call operation creates a child message call from the current message context, allows it to
- * execute, and then updates the current message context based on its execution.
+ * <p>A call operation creates a child message call from the current message
+ * context, allows it to execute, and then updates the current message context
+ * based on its execution.
  */
 public abstract class AbstractCallOperation extends AbstractOperation {
 
-  public AbstractCallOperation(
-      final int opcode,
-      final String name,
-      final int stackItemsConsumed,
-      final int stackItemsProduced,
-      final boolean updatesProgramCounter,
-      final int opSize,
-      final GasCalculator gasCalculator) {
-    super(
-        opcode,
-        name,
-        stackItemsConsumed,
-        stackItemsProduced,
-        updatesProgramCounter,
-        opSize,
-        gasCalculator);
+  public AbstractCallOperation(final int opcode, final String name,
+                               final int stackItemsConsumed,
+                               final int stackItemsProduced,
+                               final boolean updatesProgramCounter,
+                               final int opSize,
+                               final GasCalculator gasCalculator) {
+    super(opcode, name, stackItemsConsumed, stackItemsProduced,
+          updatesProgramCounter, opSize, gasCalculator);
   }
 
   /**
@@ -141,7 +136,8 @@ public abstract class AbstractCallOperation extends AbstractOperation {
    * Returns whether or not the child message call should be static.
    *
    * @param frame The current message frame
-   * @return {@code true} if the child message call should be static; otherwise {@code false}
+   * @return {@code true} if the child message call should be static; otherwise
+   *     {@code false}
    */
   protected abstract boolean isStatic(MessageFrame frame);
 
@@ -152,18 +148,23 @@ public abstract class AbstractCallOperation extends AbstractOperation {
     final Address to = to(frame);
     final Account contract = frame.getWorldState().get(to);
 
-    final Account account = frame.getWorldState().get(frame.getRecipientAddress());
+    final Account account =
+        frame.getWorldState().get(frame.getRecipientAddress());
     final Wei balance = account.getBalance();
-    if (value(frame).compareTo(balance) > 0 || frame.getMessageStackDepth() >= 1024) {
-      frame.expandMemory(inputDataOffset(frame).toLong(), inputDataLength(frame).intValue());
-      frame.expandMemory(outputDataOffset(frame).toLong(), outputDataLength(frame).intValue());
+    if (value(frame).compareTo(balance) > 0 ||
+        frame.getMessageStackDepth() >= 1024) {
+      frame.expandMemory(inputDataOffset(frame).toLong(),
+                         inputDataLength(frame).intValue());
+      frame.expandMemory(outputDataOffset(frame).toLong(),
+                         outputDataLength(frame).intValue());
       frame.incrementRemainingGas(gasAvailableForChildCall(frame));
       frame.popStackItems(getStackItemsConsumed());
       frame.pushStackItem(Bytes32.ZERO);
       return;
     }
 
-    final Bytes inputData = frame.readMemory(inputDataOffset(frame), inputDataLength(frame));
+    final Bytes inputData =
+        frame.readMemory(inputDataOffset(frame), inputDataLength(frame));
 
     final MessageFrame childFrame =
         MessageFrame.builder()
@@ -175,8 +176,8 @@ public abstract class AbstractCallOperation extends AbstractOperation {
             .address(address(frame))
             .originator(frame.getOriginatorAddress())
             .contract(to)
-            .contractAccountVersion(
-                contract != null ? contract.getVersion() : Account.DEFAULT_VERSION)
+            .contractAccountVersion(contract != null ? contract.getVersion()
+                                                     : Account.DEFAULT_VERSION)
             .gasPrice(frame.getGasPrice())
             .inputData(inputData)
             .sender(sender(frame))
@@ -197,7 +198,8 @@ public abstract class AbstractCallOperation extends AbstractOperation {
     frame.setState(MessageFrame.State.CODE_SUSPENDED);
   }
 
-  public void complete(final MessageFrame frame, final MessageFrame childFrame) {
+  public void complete(final MessageFrame frame,
+                       final MessageFrame childFrame) {
     frame.setState(MessageFrame.State.CODE_EXECUTING);
 
     final UInt256 outputOffset = outputDataOffset(frame);
@@ -207,7 +209,8 @@ public abstract class AbstractCallOperation extends AbstractOperation {
 
     if (outputSizeAsInt > outputData.size()) {
       frame.expandMemory(outputOffset.toLong(), outputSizeAsInt);
-      frame.writeMemory(outputOffset, UInt256.valueOf(outputData.size()), outputData, true);
+      frame.writeMemory(outputOffset, UInt256.valueOf(outputData.size()),
+                        outputData, true);
     } else {
       frame.writeMemory(outputOffset, outputSize, outputData, true);
     }

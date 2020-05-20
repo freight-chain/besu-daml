@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.consensus.ibft.messagewrappers;
 
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.consensus.ibft.IbftBlockHeaderFunctions;
 import org.hyperledger.besu.consensus.ibft.payload.ProposalPayload;
 import org.hyperledger.besu.consensus.ibft.payload.RoundChangeCertificate;
@@ -24,32 +29,23 @@ import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 
-import java.util.Optional;
-
-import org.apache.tuweni.bytes.Bytes;
-
 public class Proposal extends IbftMessage<ProposalPayload> {
 
   private final Block proposedBlock;
 
   private final Optional<RoundChangeCertificate> roundChangeCertificate;
 
-  public Proposal(
-      final SignedData<ProposalPayload> payload,
-      final Block proposedBlock,
-      final Optional<RoundChangeCertificate> certificate) {
+  public Proposal(final SignedData<ProposalPayload> payload,
+                  final Block proposedBlock,
+                  final Optional<RoundChangeCertificate> certificate) {
     super(payload);
     this.proposedBlock = proposedBlock;
     this.roundChangeCertificate = certificate;
   }
 
-  public Block getBlock() {
-    return proposedBlock;
-  }
+  public Block getBlock() { return proposedBlock; }
 
-  public Hash getDigest() {
-    return getPayload().getDigest();
-  }
+  public Hash getDigest() { return getPayload().getDigest(); }
 
   public Optional<RoundChangeCertificate> getRoundChangeCertificate() {
     return roundChangeCertificate;
@@ -73,8 +69,10 @@ public class Proposal extends IbftMessage<ProposalPayload> {
   public static Proposal decode(final Bytes data) {
     final RLPInput rlpIn = RLP.input(data);
     rlpIn.enterList();
-    final SignedData<ProposalPayload> payload = SignedData.readSignedProposalPayloadFrom(rlpIn);
-    final Block proposedBlock = Block.readFrom(rlpIn, IbftBlockHeaderFunctions.forCommittedSeal());
+    final SignedData<ProposalPayload> payload =
+        SignedData.readSignedProposalPayloadFrom(rlpIn);
+    final Block proposedBlock =
+        Block.readFrom(rlpIn, IbftBlockHeaderFunctions.forCommittedSeal());
 
     final Optional<RoundChangeCertificate> roundChangeCertificate =
         readRoundChangeCertificate(rlpIn);
@@ -83,7 +81,8 @@ public class Proposal extends IbftMessage<ProposalPayload> {
     return new Proposal(payload, proposedBlock, roundChangeCertificate);
   }
 
-  private static Optional<RoundChangeCertificate> readRoundChangeCertificate(final RLPInput rlpIn) {
+  private static Optional<RoundChangeCertificate>
+  readRoundChangeCertificate(final RLPInput rlpIn) {
     RoundChangeCertificate roundChangeCertificate = null;
     if (!rlpIn.nextIsNull()) {
       roundChangeCertificate = RoundChangeCertificate.readFrom(rlpIn);

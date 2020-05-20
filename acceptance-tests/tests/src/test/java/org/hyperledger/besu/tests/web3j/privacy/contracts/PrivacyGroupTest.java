@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,14 +19,12 @@ package org.hyperledger.besu.tests.web3j.privacy.contracts;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.hyperledger.besu.privacy.contracts.generated.PrivacyGroup;
-import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
-import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
-
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
-
+import org.hyperledger.besu.privacy.contracts.generated.PrivacyGroup;
+import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.protocol.exceptions.TransactionException;
@@ -57,42 +58,50 @@ public class PrivacyGroupTest extends AcceptanceTestBase {
   public void setUp() throws Exception {
     minerNode = besu.createMinerNode("node");
     cluster.start(minerNode);
-    privacyGroup = minerNode.execute(contractTransactions.createSmartContract(PrivacyGroup.class));
+    privacyGroup = minerNode.execute(
+        contractTransactions.createSmartContract(PrivacyGroup.class));
   }
 
   @Test
   public void rlp() throws Exception {
     final String contractAddress = "0x42699a7612a82f1d9c36148af9c77354759b210b";
     assertThat(privacyGroup.isValid()).isEqualTo(true);
-    contractVerifier.validTransactionReceipt(contractAddress).verify(privacyGroup);
+    contractVerifier.validTransactionReceipt(contractAddress)
+        .verify(privacyGroup);
     // 0x0b0235be
     assertThat(RAW_FIRST_PARTICIPANT)
-        .isEqualTo(privacyGroup.getParticipants(firstParticipant.raw()).encodeFunctionCall());
+        .isEqualTo(privacyGroup.getParticipants(firstParticipant.raw())
+                       .encodeFunctionCall());
     // 0xf744b089
     assertThat(RAW_ADD_PARTICIPANT)
-        .isEqualTo(
-            privacyGroup
-                .addParticipants(
-                    firstParticipant.raw(), Collections.singletonList(secondParticipant.raw()))
-                .encodeFunctionCall());
+        .isEqualTo(privacyGroup
+                       .addParticipants(
+                           firstParticipant.raw(),
+                           Collections.singletonList(secondParticipant.raw()))
+                       .encodeFunctionCall());
     // 0xf744b089
     assertThat(RAW_REMOVE_PARTICIPANT)
-        .isEqualTo(
-            privacyGroup
-                .removeParticipant(firstParticipant.raw(), secondParticipant.raw())
-                .encodeFunctionCall());
+        .isEqualTo(privacyGroup
+                       .removeParticipant(firstParticipant.raw(),
+                                          secondParticipant.raw())
+                       .encodeFunctionCall());
     assertThat(RAW_LOCK).isEqualTo(privacyGroup.lock().encodeFunctionCall());
-    assertThat(RAW_UNLOCK).isEqualTo(privacyGroup.unlock().encodeFunctionCall());
-    assertThat(RAW_CAN_EXECUTE).isEqualTo(privacyGroup.canExecute().encodeFunctionCall());
-    assertThat(RAW_GET_VERSION).isEqualTo(privacyGroup.getVersion().encodeFunctionCall());
+    assertThat(RAW_UNLOCK)
+        .isEqualTo(privacyGroup.unlock().encodeFunctionCall());
+    assertThat(RAW_CAN_EXECUTE)
+        .isEqualTo(privacyGroup.canExecute().encodeFunctionCall());
+    assertThat(RAW_GET_VERSION)
+        .isEqualTo(privacyGroup.getVersion().encodeFunctionCall());
   }
 
   @Test
   public void canInitiallyAddParticipants() throws Exception {
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(secondParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(secondParticipant.raw()))
         .send();
-    final List<byte[]> participants = privacyGroup.getParticipants(firstParticipant.raw()).send();
+    final List<byte[]> participants =
+        privacyGroup.getParticipants(firstParticipant.raw()).send();
     assertThat(participants.size()).isEqualTo(2);
     assertThat(firstParticipant.raw()).isEqualTo(participants.get(0));
     assertThat(secondParticipant.raw()).isEqualTo(participants.get(1));
@@ -101,27 +110,34 @@ public class PrivacyGroupTest extends AcceptanceTestBase {
   @Test
   public void canRemoveParticipant() throws Exception {
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(secondParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(secondParticipant.raw()))
         .send();
-    final List<byte[]> participants = privacyGroup.getParticipants(firstParticipant.raw()).send();
+    final List<byte[]> participants =
+        privacyGroup.getParticipants(firstParticipant.raw()).send();
     assertThat(participants.size()).isEqualTo(2);
     assertThat(firstParticipant.raw()).isEqualTo(participants.get(0));
     assertThat(secondParticipant.raw()).isEqualTo(participants.get(1));
-    privacyGroup.removeParticipant(firstParticipant.raw(), secondParticipant.raw()).send();
+    privacyGroup
+        .removeParticipant(firstParticipant.raw(), secondParticipant.raw())
+        .send();
     final List<byte[]> participantsAfterRemove =
         privacyGroup.getParticipants(firstParticipant.raw()).send();
     assertThat(participantsAfterRemove.size()).isEqualTo(1);
-    assertThat(firstParticipant.raw()).isEqualTo(participantsAfterRemove.get(0));
+    assertThat(firstParticipant.raw())
+        .isEqualTo(participantsAfterRemove.get(0));
   }
 
   @Test(expected = TransactionException.class)
   public void cannotAddToContractWhenNotLocked() throws Exception {
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(thirdParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(thirdParticipant.raw()))
         .send();
 
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(secondParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(secondParticipant.raw()))
         .send();
   }
 
@@ -134,16 +150,19 @@ public class PrivacyGroupTest extends AcceptanceTestBase {
   @Test
   public void canAddTwiceToContractWhenCallLock() throws Exception {
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(thirdParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(thirdParticipant.raw()))
         .send();
     privacyGroup.lock().send();
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(secondParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(secondParticipant.raw()))
         .send();
     final BigInteger privacyGroupVersion = privacyGroup.getVersion().send();
     assertThat(privacyGroupVersion).isEqualTo(BigInteger.TWO);
 
-    final List<byte[]> participants = privacyGroup.getParticipants(firstParticipant.raw()).send();
+    final List<byte[]> participants =
+        privacyGroup.getParticipants(firstParticipant.raw()).send();
     assertThat(participants.size()).isEqualTo(3);
     assertThat(firstParticipant.raw()).isEqualTo(participants.get(0));
     assertThat(thirdParticipant.raw()).isEqualTo(participants.get(1));
@@ -159,7 +178,8 @@ public class PrivacyGroupTest extends AcceptanceTestBase {
   @Test(expected = TransactionException.class)
   public void cannotLockTwice() throws Exception {
     privacyGroup
-        .addParticipants(firstParticipant.raw(), Collections.singletonList(thirdParticipant.raw()))
+        .addParticipants(firstParticipant.raw(),
+                         Collections.singletonList(thirdParticipant.raw()))
         .send();
     privacyGroup.lock().send();
     privacyGroup.lock().send();

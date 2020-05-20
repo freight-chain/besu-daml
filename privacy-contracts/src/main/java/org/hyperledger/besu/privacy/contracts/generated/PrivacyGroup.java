@@ -1,28 +1,30 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.privacy.contracts.generated;
 
+import io.reactivex.Flowable;
+import io.reactivex.functions.Function;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-
-import io.reactivex.Flowable;
-import io.reactivex.functions.Function;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Bool;
@@ -50,11 +52,14 @@ import org.web3j.tx.gas.ContractGasProvider;
  *
  * <p><strong>Do not modify!</strong>
  *
- * <p>Please use the <a href="https://docs.web3j.io/command_line.html">web3j command line tools</a>,
- * or the org.web3j.codegen.SolidityFunctionWrapperGenerator in the <a
- * href="https://github.com/web3j/web3j/tree/master/codegen">codegen module</a> to update.
+ * <p>Please use the <a href="https://docs.web3j.io/command_line.html">web3j
+ * command line tools</a>, or the
+ * org.web3j.codegen.SolidityFunctionWrapperGenerator in the <a
+ * href="https://github.com/web3j/web3j/tree/master/codegen">codegen module</a>
+ * to update.
  *
- * <p>Generated with web3j versionimport static org.junit.Assert.assertThat; 4.5.14.
+ * <p>Generated with web3j versionimport static
+ * org.junit.Assert.assertThat; 4.5.14.
  */
 @SuppressWarnings("rawtypes")
 public class PrivacyGroup extends Contract {
@@ -75,107 +80,106 @@ public class PrivacyGroup extends Contract {
 
   public static final String FUNC_UNLOCK = "unlock";
 
-  public static final Event PARTICIPANTADDED_EVENT =
-      new Event(
-          "ParticipantAdded",
-          Arrays.<TypeReference<?>>asList(
-              new TypeReference<Bool>() {},
-              new TypeReference<Bytes32>() {},
-              new TypeReference<Utf8String>() {}));;
+  public static final Event PARTICIPANTADDED_EVENT = new Event(
+      "ParticipantAdded",
+      Arrays.<TypeReference<?>>asList(new TypeReference<Bool>() {},
+                                      new TypeReference<Bytes32>() {},
+                                      new TypeReference<Utf8String>() {}));
+  ;
 
   @Deprecated
-  protected PrivacyGroup(
-      String contractAddress,
-      Web3j web3j,
-      Credentials credentials,
-      BigInteger gasPrice,
-      BigInteger gasLimit) {
+  protected PrivacyGroup(String contractAddress, Web3j web3j,
+                         Credentials credentials, BigInteger gasPrice,
+                         BigInteger gasLimit) {
     super(BINARY, contractAddress, web3j, credentials, gasPrice, gasLimit);
   }
 
-  protected PrivacyGroup(
-      String contractAddress,
-      Web3j web3j,
-      Credentials credentials,
-      ContractGasProvider contractGasProvider) {
+  protected PrivacyGroup(String contractAddress, Web3j web3j,
+                         Credentials credentials,
+                         ContractGasProvider contractGasProvider) {
     super(BINARY, contractAddress, web3j, credentials, contractGasProvider);
   }
 
   @Deprecated
-  protected PrivacyGroup(
-      String contractAddress,
-      Web3j web3j,
-      TransactionManager transactionManager,
-      BigInteger gasPrice,
-      BigInteger gasLimit) {
-    super(BINARY, contractAddress, web3j, transactionManager, gasPrice, gasLimit);
+  protected PrivacyGroup(String contractAddress, Web3j web3j,
+                         TransactionManager transactionManager,
+                         BigInteger gasPrice, BigInteger gasLimit) {
+    super(BINARY, contractAddress, web3j, transactionManager, gasPrice,
+          gasLimit);
   }
 
-  protected PrivacyGroup(
-      String contractAddress,
-      Web3j web3j,
-      TransactionManager transactionManager,
-      ContractGasProvider contractGasProvider) {
-    super(BINARY, contractAddress, web3j, transactionManager, contractGasProvider);
+  protected PrivacyGroup(String contractAddress, Web3j web3j,
+                         TransactionManager transactionManager,
+                         ContractGasProvider contractGasProvider) {
+    super(BINARY, contractAddress, web3j, transactionManager,
+          contractGasProvider);
   }
 
-  public List<ParticipantAddedEventResponse> getParticipantAddedEvents(
-      TransactionReceipt transactionReceipt) {
-    List<Contract.EventValuesWithLog> valueList =
-        extractEventParametersWithLog(PARTICIPANTADDED_EVENT, transactionReceipt);
+  public List<ParticipantAddedEventResponse>
+  getParticipantAddedEvents(TransactionReceipt transactionReceipt) {
+    List<Contract.EventValuesWithLog> valueList = extractEventParametersWithLog(
+        PARTICIPANTADDED_EVENT, transactionReceipt);
     ArrayList<ParticipantAddedEventResponse> responses =
         new ArrayList<ParticipantAddedEventResponse>(valueList.size());
     for (Contract.EventValuesWithLog eventValues : valueList) {
-      ParticipantAddedEventResponse typedResponse = new ParticipantAddedEventResponse();
+      ParticipantAddedEventResponse typedResponse =
+          new ParticipantAddedEventResponse();
       typedResponse.log = eventValues.getLog();
-      typedResponse.adminAdded = (Boolean) eventValues.getNonIndexedValues().get(0).getValue();
-      typedResponse.account = (byte[]) eventValues.getNonIndexedValues().get(1).getValue();
-      typedResponse.message = (String) eventValues.getNonIndexedValues().get(2).getValue();
+      typedResponse.adminAdded =
+          (Boolean)eventValues.getNonIndexedValues().get(0).getValue();
+      typedResponse.account =
+          (byte[])eventValues.getNonIndexedValues().get(1).getValue();
+      typedResponse.message =
+          (String)eventValues.getNonIndexedValues().get(2).getValue();
       responses.add(typedResponse);
     }
     return responses;
   }
 
-  public Flowable<ParticipantAddedEventResponse> participantAddedEventFlowable(EthFilter filter) {
-    return web3j
-        .ethLogFlowable(filter)
-        .map(
-            new Function<Log, ParticipantAddedEventResponse>() {
-              @Override
-              public ParticipantAddedEventResponse apply(Log log) {
-                Contract.EventValuesWithLog eventValues =
-                    extractEventParametersWithLog(PARTICIPANTADDED_EVENT, log);
-                ParticipantAddedEventResponse typedResponse = new ParticipantAddedEventResponse();
-                typedResponse.log = log;
-                typedResponse.adminAdded =
-                    (Boolean) eventValues.getNonIndexedValues().get(0).getValue();
-                typedResponse.account =
-                    (byte[]) eventValues.getNonIndexedValues().get(1).getValue();
-                typedResponse.message =
-                    (String) eventValues.getNonIndexedValues().get(2).getValue();
-                return typedResponse;
-              }
-            });
+  public Flowable<ParticipantAddedEventResponse>
+  participantAddedEventFlowable(EthFilter filter) {
+    return web3j.ethLogFlowable(filter).map(
+        new Function<Log, ParticipantAddedEventResponse>() {
+          @Override
+          public ParticipantAddedEventResponse apply(Log log) {
+            Contract.EventValuesWithLog eventValues =
+                extractEventParametersWithLog(PARTICIPANTADDED_EVENT, log);
+            ParticipantAddedEventResponse typedResponse =
+                new ParticipantAddedEventResponse();
+            typedResponse.log = log;
+            typedResponse.adminAdded =
+                (Boolean)eventValues.getNonIndexedValues().get(0).getValue();
+            typedResponse.account =
+                (byte[])eventValues.getNonIndexedValues().get(1).getValue();
+            typedResponse.message =
+                (String)eventValues.getNonIndexedValues().get(2).getValue();
+            return typedResponse;
+          }
+        });
   }
 
-  public Flowable<ParticipantAddedEventResponse> participantAddedEventFlowable(
-      DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
-    EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
+  public Flowable<ParticipantAddedEventResponse>
+  participantAddedEventFlowable(DefaultBlockParameter startBlock,
+                                DefaultBlockParameter endBlock) {
+    EthFilter filter =
+        new EthFilter(startBlock, endBlock, getContractAddress());
     filter.addSingleTopic(EventEncoder.encode(PARTICIPANTADDED_EVENT));
     return participantAddedEventFlowable(filter);
   }
 
-  public RemoteFunctionCall<TransactionReceipt> addParticipants(
-      byte[] _enclaveKey, List<byte[]> _accounts) {
+  public RemoteFunctionCall<TransactionReceipt>
+  addParticipants(byte[] _enclaveKey, List<byte[]> _accounts) {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
             FUNC_ADDPARTICIPANTS,
             Arrays.<Type>asList(
                 new org.web3j.abi.datatypes.generated.Bytes32(_enclaveKey),
-                new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Bytes32>(
-                    org.web3j.abi.datatypes.generated.Bytes32.class,
-                    org.web3j.abi.Utils.typeMap(
-                        _accounts, org.web3j.abi.datatypes.generated.Bytes32.class))),
+                new org.web3j.abi.datatypes
+                    .DynamicArray<org.web3j.abi.datatypes.generated.Bytes32>(
+                        org.web3j.abi.datatypes.generated.Bytes32.class,
+                        org.web3j.abi.Utils.typeMap(
+                            _accounts,
+                            org.web3j.abi.datatypes.generated.Bytes32.class))),
             Collections.<TypeReference<?>>emptyList());
     return executeRemoteCallTransaction(function);
   }
@@ -183,8 +187,7 @@ public class PrivacyGroup extends Contract {
   public RemoteFunctionCall<Boolean> canExecute() {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
-            FUNC_CANEXECUTE,
-            Arrays.<Type>asList(),
+            FUNC_CANEXECUTE, Arrays.<Type>asList(),
             Arrays.<TypeReference<?>>asList(new TypeReference<Bool>() {}));
     return executeRemoteCallSingleValueReturn(function, Boolean.class);
   }
@@ -193,25 +196,25 @@ public class PrivacyGroup extends Contract {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
             FUNC_GETPARTICIPANTS,
-            Arrays.<Type>asList(new org.web3j.abi.datatypes.generated.Bytes32(_enclaveKey)),
-            Arrays.<TypeReference<?>>asList(new TypeReference<DynamicArray<Bytes32>>() {}));
-    return new RemoteFunctionCall<List>(
-        function,
-        new Callable<List>() {
-          @Override
-          @SuppressWarnings("unchecked")
-          public List call() throws Exception {
-            List<Type> result = (List<Type>) executeCallSingleValueReturn(function, List.class);
-            return convertToNative(result);
-          }
-        });
+            Arrays.<Type>asList(
+                new org.web3j.abi.datatypes.generated.Bytes32(_enclaveKey)),
+            Arrays.<TypeReference<?>>asList(
+                new TypeReference<DynamicArray<Bytes32>>() {}));
+    return new RemoteFunctionCall<List>(function, new Callable<List>() {
+      @Override
+      @SuppressWarnings("unchecked")
+      public List call() throws Exception {
+        List<Type> result =
+            (List<Type>)executeCallSingleValueReturn(function, List.class);
+        return convertToNative(result);
+      }
+    });
   }
 
   public RemoteFunctionCall<BigInteger> getVersion() {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
-            FUNC_GETVERSION,
-            Arrays.<Type>asList(),
+            FUNC_GETVERSION, Arrays.<Type>asList(),
             Arrays.<TypeReference<?>>asList(new TypeReference<Int256>() {}));
     return executeRemoteCallSingleValueReturn(function, BigInteger.class);
   }
@@ -219,12 +222,13 @@ public class PrivacyGroup extends Contract {
   public RemoteFunctionCall<TransactionReceipt> lock() {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
-            FUNC_LOCK, Arrays.<Type>asList(), Collections.<TypeReference<?>>emptyList());
+            FUNC_LOCK, Arrays.<Type>asList(),
+            Collections.<TypeReference<?>>emptyList());
     return executeRemoteCallTransaction(function);
   }
 
-  public RemoteFunctionCall<TransactionReceipt> removeParticipant(
-      byte[] _enclaveKey, byte[] _account) {
+  public RemoteFunctionCall<TransactionReceipt>
+  removeParticipant(byte[] _enclaveKey, byte[] _account) {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
             FUNC_REMOVEPARTICIPANT,
@@ -238,72 +242,69 @@ public class PrivacyGroup extends Contract {
   public RemoteFunctionCall<TransactionReceipt> unlock() {
     final org.web3j.abi.datatypes.Function function =
         new org.web3j.abi.datatypes.Function(
-            FUNC_UNLOCK, Arrays.<Type>asList(), Collections.<TypeReference<?>>emptyList());
+            FUNC_UNLOCK, Arrays.<Type>asList(),
+            Collections.<TypeReference<?>>emptyList());
     return executeRemoteCallTransaction(function);
   }
 
   @Deprecated
-  public static PrivacyGroup load(
-      String contractAddress,
-      Web3j web3j,
-      Credentials credentials,
-      BigInteger gasPrice,
-      BigInteger gasLimit) {
-    return new PrivacyGroup(contractAddress, web3j, credentials, gasPrice, gasLimit);
+  public static PrivacyGroup load(String contractAddress, Web3j web3j,
+                                  Credentials credentials, BigInteger gasPrice,
+                                  BigInteger gasLimit) {
+    return new PrivacyGroup(contractAddress, web3j, credentials, gasPrice,
+                            gasLimit);
   }
 
   @Deprecated
-  public static PrivacyGroup load(
-      String contractAddress,
-      Web3j web3j,
-      TransactionManager transactionManager,
-      BigInteger gasPrice,
-      BigInteger gasLimit) {
-    return new PrivacyGroup(contractAddress, web3j, transactionManager, gasPrice, gasLimit);
+  public static PrivacyGroup load(String contractAddress, Web3j web3j,
+                                  TransactionManager transactionManager,
+                                  BigInteger gasPrice, BigInteger gasLimit) {
+    return new PrivacyGroup(contractAddress, web3j, transactionManager,
+                            gasPrice, gasLimit);
   }
 
-  public static PrivacyGroup load(
-      String contractAddress,
-      Web3j web3j,
-      Credentials credentials,
-      ContractGasProvider contractGasProvider) {
-    return new PrivacyGroup(contractAddress, web3j, credentials, contractGasProvider);
+  public static PrivacyGroup load(String contractAddress, Web3j web3j,
+                                  Credentials credentials,
+                                  ContractGasProvider contractGasProvider) {
+    return new PrivacyGroup(contractAddress, web3j, credentials,
+                            contractGasProvider);
   }
 
-  public static PrivacyGroup load(
-      String contractAddress,
-      Web3j web3j,
-      TransactionManager transactionManager,
-      ContractGasProvider contractGasProvider) {
-    return new PrivacyGroup(contractAddress, web3j, transactionManager, contractGasProvider);
+  public static PrivacyGroup load(String contractAddress, Web3j web3j,
+                                  TransactionManager transactionManager,
+                                  ContractGasProvider contractGasProvider) {
+    return new PrivacyGroup(contractAddress, web3j, transactionManager,
+                            contractGasProvider);
   }
 
-  public static RemoteCall<PrivacyGroup> deploy(
-      Web3j web3j, Credentials credentials, ContractGasProvider contractGasProvider) {
-    return deployRemoteCall(
-        PrivacyGroup.class, web3j, credentials, contractGasProvider, BINARY, "");
+  public static RemoteCall<PrivacyGroup>
+  deploy(Web3j web3j, Credentials credentials,
+         ContractGasProvider contractGasProvider) {
+    return deployRemoteCall(PrivacyGroup.class, web3j, credentials,
+                            contractGasProvider, BINARY, "");
   }
 
   @Deprecated
-  public static RemoteCall<PrivacyGroup> deploy(
-      Web3j web3j, Credentials credentials, BigInteger gasPrice, BigInteger gasLimit) {
-    return deployRemoteCall(PrivacyGroup.class, web3j, credentials, gasPrice, gasLimit, BINARY, "");
+  public static RemoteCall<PrivacyGroup>
+  deploy(Web3j web3j, Credentials credentials, BigInteger gasPrice,
+         BigInteger gasLimit) {
+    return deployRemoteCall(PrivacyGroup.class, web3j, credentials, gasPrice,
+                            gasLimit, BINARY, "");
   }
 
-  public static RemoteCall<PrivacyGroup> deploy(
-      Web3j web3j, TransactionManager transactionManager, ContractGasProvider contractGasProvider) {
-    return deployRemoteCall(
-        PrivacyGroup.class, web3j, transactionManager, contractGasProvider, BINARY, "");
+  public static RemoteCall<PrivacyGroup>
+  deploy(Web3j web3j, TransactionManager transactionManager,
+         ContractGasProvider contractGasProvider) {
+    return deployRemoteCall(PrivacyGroup.class, web3j, transactionManager,
+                            contractGasProvider, BINARY, "");
   }
 
   @Deprecated
-  public static RemoteCall<PrivacyGroup> deploy(
-      Web3j web3j,
-      TransactionManager transactionManager,
-      BigInteger gasPrice,
-      BigInteger gasLimit) {
-    return deployRemoteCall(
-        PrivacyGroup.class, web3j, transactionManager, gasPrice, gasLimit, BINARY, "");
+  public static RemoteCall<PrivacyGroup>
+  deploy(Web3j web3j, TransactionManager transactionManager,
+         BigInteger gasPrice, BigInteger gasLimit) {
+    return deployRemoteCall(PrivacyGroup.class, web3j, transactionManager,
+                            gasPrice, gasLimit, BINARY, "");
   }
 
   public static class ParticipantAddedEventResponse extends BaseEventResponse {

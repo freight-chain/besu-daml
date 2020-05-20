@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
 import org.hyperledger.besu.consensus.ibft.TestHelpers;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Proposal;
@@ -27,9 +31,6 @@ import org.hyperledger.besu.consensus.ibft.payload.MessageFactory;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
-
-import java.util.Optional;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,33 +39,38 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class FutureRoundProposalMessageValidatorTest {
 
-  private final MessageFactory messageFactoy = new MessageFactory(NodeKeyUtils.generate());
-  private final ConsensusRoundIdentifier roundIdentifier = new ConsensusRoundIdentifier(1, 1);
-  private final Block proposedBlock = TestHelpers.createProposalBlock(emptyList(), roundIdentifier);
+  private final MessageFactory messageFactoy =
+      new MessageFactory(NodeKeyUtils.generate());
+  private final ConsensusRoundIdentifier roundIdentifier =
+      new ConsensusRoundIdentifier(1, 1);
+  private final Block proposedBlock =
+      TestHelpers.createProposalBlock(emptyList(), roundIdentifier);
 
   private FutureRoundProposalMessageValidator validator;
 
   private final MessageValidatorFactory messageValidatorFactory =
       mock(MessageValidatorFactory.class);
-  private final MessageValidator messageValidator = mock(MessageValidator.class);
+  private final MessageValidator messageValidator =
+      mock(MessageValidator.class);
 
   @Before
   public void setup() {
 
-    when(messageValidatorFactory.createMessageValidator(any(), any())).thenReturn(messageValidator);
+    when(messageValidatorFactory.createMessageValidator(any(), any()))
+        .thenReturn(messageValidator);
     when(messageValidator.validateProposal(any())).thenReturn(true);
 
     final BlockHeader parentHeader = mock(BlockHeader.class);
 
-    validator =
-        new FutureRoundProposalMessageValidator(
-            messageValidatorFactory, roundIdentifier.getSequenceNumber(), parentHeader);
+    validator = new FutureRoundProposalMessageValidator(
+        messageValidatorFactory, roundIdentifier.getSequenceNumber(),
+        parentHeader);
   }
 
   @Test
   public void validProposalMatchingCurrentChainHeightPassesValidation() {
-    final Proposal proposal =
-        messageFactoy.createProposal(roundIdentifier, proposedBlock, Optional.empty());
+    final Proposal proposal = messageFactoy.createProposal(
+        roundIdentifier, proposedBlock, Optional.empty());
 
     assertThat(validator.validateProposalMessage(proposal)).isTrue();
   }
@@ -73,16 +79,16 @@ public class FutureRoundProposalMessageValidatorTest {
   public void proposalTargettingDifferentChainHeightFailsValidation() {
     final ConsensusRoundIdentifier futureChainIdentifier =
         TestHelpers.createFrom(roundIdentifier, 1, 0);
-    final Proposal proposal =
-        messageFactoy.createProposal(futureChainIdentifier, proposedBlock, Optional.empty());
+    final Proposal proposal = messageFactoy.createProposal(
+        futureChainIdentifier, proposedBlock, Optional.empty());
 
     assertThat(validator.validateProposalMessage(proposal)).isFalse();
   }
 
   @Test
   public void proposalWhichFailsMessageValidationFailsFutureRoundValidation() {
-    final Proposal proposal =
-        messageFactoy.createProposal(roundIdentifier, proposedBlock, Optional.empty());
+    final Proposal proposal = messageFactoy.createProposal(
+        roundIdentifier, proposedBlock, Optional.empty());
     when(messageValidator.validateProposal(any())).thenReturn(false);
 
     assertThat(validator.validateProposalMessage(proposal)).isFalse();

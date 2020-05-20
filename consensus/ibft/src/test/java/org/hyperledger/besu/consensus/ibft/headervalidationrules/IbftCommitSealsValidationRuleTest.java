@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.consensus.ibft.IbftContextBuilder.setupContextWithValidators;
 import static org.hyperledger.besu.consensus.ibft.headervalidationrules.HeaderValidationTestHelpers.createProposedBlockHeader;
 
+import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.hyperledger.besu.consensus.ibft.IbftContext;
 import org.hyperledger.besu.consensus.ibft.IbftExtraData;
 import org.hyperledger.besu.crypto.NodeKey;
@@ -29,13 +37,6 @@ import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Util;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import com.google.common.collect.Lists;
 import org.junit.Test;
 
 public class IbftCommitSealsValidationRuleTest {
@@ -46,7 +47,9 @@ public class IbftCommitSealsValidationRuleTest {
   @Test
   public void correctlyConstructedHeaderPassesValidation() {
     final List<NodeKey> committerNodeKeys =
-        IntStream.range(0, 2).mapToObj(i -> NodeKeyUtils.generate()).collect(Collectors.toList());
+        IntStream.range(0, 2)
+            .mapToObj(i -> NodeKeyUtils.generate())
+            .collect(Collectors.toList());
 
     final List<Address> committerAddresses =
         committerNodeKeys.stream()
@@ -54,50 +57,56 @@ public class IbftCommitSealsValidationRuleTest {
             .sorted()
             .collect(Collectors.toList());
 
-    final ProtocolContext<IbftContext> context =
-        new ProtocolContext<>(null, null, setupContextWithValidators(committerAddresses));
+    final ProtocolContext<IbftContext> context = new ProtocolContext<>(
+        null, null, setupContextWithValidators(committerAddresses));
 
-    BlockHeader header = createProposedBlockHeader(committerAddresses, committerNodeKeys, false);
+    BlockHeader header =
+        createProposedBlockHeader(committerAddresses, committerNodeKeys, false);
 
-    assertThat(commitSealsValidationRule.validate(header, null, context)).isTrue();
+    assertThat(commitSealsValidationRule.validate(header, null, context))
+        .isTrue();
   }
 
   @Test
   public void insufficientCommitSealsFailsValidation() {
     final NodeKey committerNodeKey = NodeKeyUtils.generate();
-    final Address committerAddress =
-        Address.extract(Hash.hash(committerNodeKey.getPublicKey().getEncodedBytes()));
+    final Address committerAddress = Address.extract(
+        Hash.hash(committerNodeKey.getPublicKey().getEncodedBytes()));
 
     final List<Address> validators = singletonList(committerAddress);
-    final ProtocolContext<IbftContext> context =
-        new ProtocolContext<>(null, null, setupContextWithValidators(validators));
+    final ProtocolContext<IbftContext> context = new ProtocolContext<>(
+        null, null, setupContextWithValidators(validators));
 
-    final BlockHeader header = createProposedBlockHeader(validators, emptyList(), false);
+    final BlockHeader header =
+        createProposedBlockHeader(validators, emptyList(), false);
 
     // Note that no committer seals are in the header's IBFT extra data.
     final IbftExtraData headerExtraData = IbftExtraData.decode(header);
     assertThat(headerExtraData.getSeals().size()).isEqualTo(0);
 
-    assertThat(commitSealsValidationRule.validate(header, null, context)).isFalse();
+    assertThat(commitSealsValidationRule.validate(header, null, context))
+        .isFalse();
   }
 
   @Test
   public void committerNotInValidatorListFailsValidation() {
     final NodeKey committerNodeKey = NodeKeyUtils.generate();
-    final Address committerAddress = Util.publicKeyToAddress(committerNodeKey.getPublicKey());
+    final Address committerAddress =
+        Util.publicKeyToAddress(committerNodeKey.getPublicKey());
 
     final List<Address> validators = singletonList(committerAddress);
 
     // Insert an extraData block with committer seals.
     final NodeKey nonValidatorNodeKey = NodeKeyUtils.generate();
 
-    final BlockHeader header =
-        createProposedBlockHeader(validators, singletonList(nonValidatorNodeKey), false);
+    final BlockHeader header = createProposedBlockHeader(
+        validators, singletonList(nonValidatorNodeKey), false);
 
-    final ProtocolContext<IbftContext> context =
-        new ProtocolContext<>(null, null, setupContextWithValidators(validators));
+    final ProtocolContext<IbftContext> context = new ProtocolContext<>(
+        null, null, setupContextWithValidators(validators));
 
-    assertThat(commitSealsValidationRule.validate(header, null, context)).isFalse();
+    assertThat(commitSealsValidationRule.validate(header, null, context))
+        .isFalse();
   }
 
   @Test
@@ -144,39 +153,39 @@ public class IbftCommitSealsValidationRuleTest {
     final NodeKey committerNodeKey = NodeKeyUtils.generate();
     final List<Address> validators =
         singletonList(Util.publicKeyToAddress(committerNodeKey.getPublicKey()));
-    final BlockHeader header =
-        createProposedBlockHeader(
-            validators, Lists.newArrayList(committerNodeKey, committerNodeKey), false);
+    final BlockHeader header = createProposedBlockHeader(
+        validators, Lists.newArrayList(committerNodeKey, committerNodeKey),
+        false);
 
-    final ProtocolContext<IbftContext> context =
-        new ProtocolContext<>(null, null, setupContextWithValidators(validators));
+    final ProtocolContext<IbftContext> context = new ProtocolContext<>(
+        null, null, setupContextWithValidators(validators));
 
-    assertThat(commitSealsValidationRule.validate(header, null, context)).isFalse();
+    assertThat(commitSealsValidationRule.validate(header, null, context))
+        .isFalse();
   }
 
-  private boolean subExecution(
-      final int validatorCount,
-      final int committerCount,
-      final boolean useDifferentRoundNumbersForCommittedSeals) {
+  private boolean
+  subExecution(final int validatorCount, final int committerCount,
+               final boolean useDifferentRoundNumbersForCommittedSeals) {
 
     final List<Address> validators = Lists.newArrayList();
     final List<NodeKey> committerKeys = Lists.newArrayList();
 
-    for (int i = 0; i < validatorCount; i++) { // need -1 to account for proposer
+    for (int i = 0; i < validatorCount;
+         i++) { // need -1 to account for proposer
       final NodeKey committerNodeKey = NodeKeyUtils.generate();
       committerKeys.add(committerNodeKey);
-      validators.add(Address.extract(Hash.hash(committerNodeKey.getPublicKey().getEncodedBytes())));
+      validators.add(Address.extract(
+          Hash.hash(committerNodeKey.getPublicKey().getEncodedBytes())));
     }
 
     Collections.sort(validators);
-    final BlockHeader header =
-        createProposedBlockHeader(
-            validators,
-            committerKeys.subList(0, committerCount),
-            useDifferentRoundNumbersForCommittedSeals);
+    final BlockHeader header = createProposedBlockHeader(
+        validators, committerKeys.subList(0, committerCount),
+        useDifferentRoundNumbersForCommittedSeals);
 
-    final ProtocolContext<IbftContext> context =
-        new ProtocolContext<>(null, null, setupContextWithValidators(validators));
+    final ProtocolContext<IbftContext> context = new ProtocolContext<>(
+        null, null, setupContextWithValidators(validators));
 
     return commitSealsValidationRule.validate(header, null, context);
   }

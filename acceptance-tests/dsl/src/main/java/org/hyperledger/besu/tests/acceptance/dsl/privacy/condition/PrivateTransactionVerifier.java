@@ -1,27 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.tests.acceptance.dsl.privacy.condition;
 
-import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyNode;
-import org.hyperledger.besu.tests.acceptance.dsl.privacy.transaction.PrivacyTransactions;
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy.PrivacyRequestFactory.OnChainPrivacyGroup;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyNode;
+import org.hyperledger.besu.tests.acceptance.dsl.privacy.transaction.PrivacyTransactions;
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy.PrivacyRequestFactory.OnChainPrivacyGroup;
 import org.web3j.protocol.besu.response.privacy.PrivacyGroup;
 import org.web3j.protocol.besu.response.privacy.PrivateTransactionReceipt;
 import org.web3j.utils.Base64String;
@@ -34,27 +35,32 @@ public class PrivateTransactionVerifier {
     this.transactions = transactions;
   }
 
-  public ExpectValidPrivateTransactionReceipt validPrivateTransactionReceipt(
-      final String transactionHash, final PrivateTransactionReceipt receipt) {
-    return new ExpectValidPrivateTransactionReceipt(transactions, transactionHash, receipt);
+  public ExpectValidPrivateTransactionReceipt
+  validPrivateTransactionReceipt(final String transactionHash,
+                                 final PrivateTransactionReceipt receipt) {
+    return new ExpectValidPrivateTransactionReceipt(transactions,
+                                                    transactionHash, receipt);
   }
 
-  public ExpectExistingPrivateTransactionReceipt existingPrivateTransactionReceipt(
-      final String transactionHash) {
-    return new ExpectExistingPrivateTransactionReceipt(transactions, transactionHash);
+  public ExpectExistingPrivateTransactionReceipt
+  existingPrivateTransactionReceipt(final String transactionHash) {
+    return new ExpectExistingPrivateTransactionReceipt(transactions,
+                                                       transactionHash);
   }
 
-  public ExpectNoPrivateTransactionReceipt noPrivateTransactionReceipt(
-      final String transactionHash) {
+  public ExpectNoPrivateTransactionReceipt
+  noPrivateTransactionReceipt(final String transactionHash) {
     return new ExpectNoPrivateTransactionReceipt(transactions, transactionHash);
   }
 
-  public ExpectValidPrivacyGroupCreated validPrivacyGroupCreated(final PrivacyGroup expected) {
+  public ExpectValidPrivacyGroupCreated
+  validPrivacyGroupCreated(final PrivacyGroup expected) {
     return new ExpectValidPrivacyGroupCreated(transactions, expected);
   }
 
-  public ExpectValidOnChainPrivacyGroupCreated onChainPrivacyGroupExists(
-      final String privacyGroupId, final PrivacyNode... members) {
+  public ExpectValidOnChainPrivacyGroupCreated
+  onChainPrivacyGroupExists(final String privacyGroupId,
+                            final PrivacyNode... members) {
 
     final List<Base64String> membersEnclaveKeys =
         Arrays.stream(members)
@@ -65,11 +71,13 @@ public class PrivateTransactionVerifier {
     final OnChainPrivacyGroup expectedGroup =
         new OnChainPrivacyGroup(privacyGroupId, membersEnclaveKeys);
 
-    return new ExpectValidOnChainPrivacyGroupCreated(transactions, expectedGroup);
+    return new ExpectValidOnChainPrivacyGroupCreated(transactions,
+                                                     expectedGroup);
   }
 
-  public ExpectInternalErrorPrivateTransactionReceipt internalErrorPrivateTransactionReceipt(
-      final String transactionHash) {
-    return new ExpectInternalErrorPrivateTransactionReceipt(transactions, transactionHash);
+  public ExpectInternalErrorPrivateTransactionReceipt
+  internalErrorPrivateTransactionReceipt(final String transactionHash) {
+    return new ExpectInternalErrorPrivateTransactionReceipt(transactions,
+                                                            transactionHash);
   }
 }

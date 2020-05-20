@@ -1,26 +1,21 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.network;
-
-import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
-import org.hyperledger.besu.ethereum.p2p.rlpx.wire.SubProtocol;
-import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Counter;
-import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,14 +26,21 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
+import org.hyperledger.besu.ethereum.p2p.rlpx.wire.SubProtocol;
+import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Counter;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 public class NetworkRunner implements AutoCloseable {
   private static final Logger LOG = LogManager.getLogger();
 
-  private final CountDownLatch shutdown = new CountDownLatch(1);;
+  private final CountDownLatch shutdown = new CountDownLatch(1);
+  ;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicBoolean stopped = new AtomicBoolean(false);
 
@@ -47,31 +49,22 @@ public class NetworkRunner implements AutoCloseable {
   private final List<ProtocolManager> protocolManagers;
   private final LabelledMetric<Counter> inboundMessageCounter;
 
-  private NetworkRunner(
-      final P2PNetwork network,
-      final Map<String, SubProtocol> subProtocols,
-      final List<ProtocolManager> protocolManagers,
-      final MetricsSystem metricsSystem) {
+  private NetworkRunner(final P2PNetwork network,
+                        final Map<String, SubProtocol> subProtocols,
+                        final List<ProtocolManager> protocolManagers,
+                        final MetricsSystem metricsSystem) {
     this.network = network;
     this.protocolManagers = protocolManagers;
     this.subProtocols = subProtocols;
-    inboundMessageCounter =
-        metricsSystem.createLabelledCounter(
-            BesuMetricCategory.NETWORK,
-            "p2p_messages_inbound",
-            "Count of each P2P message received inbound.",
-            "protocol",
-            "name",
-            "code");
+    inboundMessageCounter = metricsSystem.createLabelledCounter(
+        BesuMetricCategory.NETWORK, "p2p_messages_inbound",
+        "Count of each P2P message received inbound.", "protocol", "name",
+        "code");
   }
 
-  public P2PNetwork getNetwork() {
-    return network;
-  }
+  public P2PNetwork getNetwork() { return network; }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
   public void start() {
     if (started.compareAndSet(false, true)) {
@@ -108,54 +101,52 @@ public class NetworkRunner implements AutoCloseable {
   private void setupHandlers() {
     // Setup message handlers
     for (final ProtocolManager protocolManager : protocolManagers) {
-      for (final Capability supportedCapability : protocolManager.getSupportedCapabilities()) {
-        final SubProtocol protocol = subProtocols.get(supportedCapability.getName());
-        network.subscribe(
-            supportedCapability,
-            (cap, message) -> {
-              final int code = message.getData().getCode();
-              if (!protocol.isValidMessageCode(cap.getVersion(), code)) {
-                inboundMessageCounter.labels(cap.toString(), "Invalid", "").inc();
-                // Handle invalid messages by disconnecting
-                LOG.debug(
-                    "Invalid message code ({}-{}, {}) received from peer, disconnecting from: {}",
-                    cap.getName(),
-                    cap.getVersion(),
-                    code,
-                    message.getConnection().getPeerInfo().getNodeId());
-                message.getConnection().disconnect(DisconnectReason.BREACH_OF_PROTOCOL);
-                return;
-              }
-              inboundMessageCounter
-                  .labels(
-                      cap.toString(),
+      for (final Capability supportedCapability :
+           protocolManager.getSupportedCapabilities()) {
+        final SubProtocol protocol =
+            subProtocols.get(supportedCapability.getName());
+        network.subscribe(supportedCapability, (cap, message) -> {
+          final int code = message.getData().getCode();
+          if (!protocol.isValidMessageCode(cap.getVersion(), code)) {
+            inboundMessageCounter.labels(cap.toString(), "Invalid", "").inc();
+            // Handle invalid messages by disconnecting
+            LOG.debug(
+                "Invalid message code ({}-{}, {}) received from peer, disconnecting from: {}",
+                cap.getName(), cap.getVersion(), code,
+                message.getConnection().getPeerInfo().getNodeId());
+            message.getConnection().disconnect(
+                DisconnectReason.BREACH_OF_PROTOCOL);
+            return;
+          }
+          inboundMessageCounter
+              .labels(cap.toString(),
                       protocol.messageName(cap.getVersion(), code),
                       Integer.toString(code))
-                  .inc();
-              protocolManager.processMessage(cap, message);
-            });
+              .inc();
+          protocolManager.processMessage(cap, message);
+        });
       }
     }
 
     // Setup (dis)connect handlers
     for (final ProtocolManager protocolManager : protocolManagers) {
-      network.subscribeConnect(
-          (connection) -> {
-            if (Collections.disjoint(
-                connection.getAgreedCapabilities(), protocolManager.getSupportedCapabilities())) {
-              return;
-            }
-            protocolManager.handleNewConnection(connection);
-          });
+      network.subscribeConnect((connection) -> {
+        if (Collections.disjoint(connection.getAgreedCapabilities(),
+                                 protocolManager.getSupportedCapabilities())) {
+          return;
+        }
+        protocolManager.handleNewConnection(connection);
+      });
 
-      network.subscribeDisconnect(
-          (connection, disconnectReason, initiatedByPeer) -> {
-            if (Collections.disjoint(
-                connection.getAgreedCapabilities(), protocolManager.getSupportedCapabilities())) {
-              return;
-            }
-            protocolManager.handleDisconnect(connection, disconnectReason, initiatedByPeer);
-          });
+      network.subscribeDisconnect((connection, disconnectReason,
+                                   initiatedByPeer) -> {
+        if (Collections.disjoint(connection.getAgreedCapabilities(),
+                                 protocolManager.getSupportedCapabilities())) {
+          return;
+        }
+        protocolManager.handleDisconnect(connection, disconnectReason,
+                                         initiatedByPeer);
+      });
     }
   }
 
@@ -182,14 +173,17 @@ public class NetworkRunner implements AutoCloseable {
       for (final Capability cap : caps) {
         if (!subProtocolMap.containsKey(cap.getName())) {
           throw new IllegalStateException(
-              "No sub-protocol found corresponding to supported capability: " + cap);
+              "No sub-protocol found corresponding to supported capability: " +
+              cap);
         }
       }
       final P2PNetwork network = networkProvider.build(caps);
-      return new NetworkRunner(network, subProtocolMap, protocolManagers, metricsSystem);
+      return new NetworkRunner(network, subProtocolMap, protocolManagers,
+                               metricsSystem);
     }
 
-    public Builder protocolManagers(final List<ProtocolManager> protocolManagers) {
+    public Builder
+    protocolManagers(final List<ProtocolManager> protocolManagers) {
       this.protocolManagers = protocolManagers;
       return this;
     }

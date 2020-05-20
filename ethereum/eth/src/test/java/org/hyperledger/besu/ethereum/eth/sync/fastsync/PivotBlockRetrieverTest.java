@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
@@ -37,12 +44,6 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.util.ExceptionUtils;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,42 +63,34 @@ public class PivotBlockRetrieverTest {
 
   @Before
   public void setUp() {
-    final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil<Void> blockchainSetupUtil =
+        BlockchainSetupUtil.forTesting();
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     protocolSchedule = blockchainSetupUtil.getProtocolSchedule();
     protocolContext = blockchainSetupUtil.getProtocolContext();
     transactionPool = blockchainSetupUtil.getTransactionPool();
-    ethProtocolManager =
-        EthProtocolManagerTestUtil.create(
-            blockchain,
-            timeout::get,
-            blockchainSetupUtil.getWorldArchive(),
-            transactionPool,
-            EthProtocolConfiguration.defaultConfig());
+    ethProtocolManager = EthProtocolManagerTestUtil.create(
+        blockchain, timeout::get, blockchainSetupUtil.getWorldArchive(),
+        transactionPool, EthProtocolConfiguration.defaultConfig());
 
     pivotBlockRetriever = createPivotBlockRetriever(3, 1, 1);
   }
 
-  private PivotBlockRetriever<Void> createPivotBlockRetriever(
-      final int peersToQuery, final long pivotBlockDelta, final int maxRetries) {
-    return pivotBlockRetriever =
-        spy(
-            new PivotBlockRetriever<>(
-                protocolSchedule,
-                ethProtocolManager.ethContext(),
-                metricsSystem,
-                PIVOT_BLOCK_NUMBER,
-                peersToQuery,
-                pivotBlockDelta,
-                maxRetries));
+  private PivotBlockRetriever<Void>
+  createPivotBlockRetriever(final int peersToQuery, final long pivotBlockDelta,
+                            final int maxRetries) {
+    return pivotBlockRetriever = spy(new PivotBlockRetriever<>(
+               protocolSchedule, ethProtocolManager.ethContext(), metricsSystem,
+               PIVOT_BLOCK_NUMBER, peersToQuery, pivotBlockDelta, maxRetries));
   }
 
   @Test
   public void shouldSucceedWhenAllPeersAgree() {
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+            blockchain, protocolContext.getWorldStateArchive(),
+            transactionPool);
     final RespondingEthPeer respondingPeerA =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
     final RespondingEthPeer respondingPeerB =
@@ -105,14 +98,14 @@ public class PivotBlockRetrieverTest {
     final RespondingEthPeer respondingPeerC =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responder);
     respondingPeerB.respond(responder);
     respondingPeerC.respond(responder);
 
-    assertThat(future)
-        .isCompletedWithValue(
-            new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
   }
 
   @Test
@@ -120,15 +113,17 @@ public class PivotBlockRetrieverTest {
     pivotBlockRetriever = createPivotBlockRetriever(3, 1, 1);
     EthProtocolManagerTestUtil.disableEthSchedulerAutoRun(ethProtocolManager);
 
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
     final RespondingEthPeer respondingPeerA =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
-    final RespondingEthPeer badPeerA = EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1);
-    final RespondingEthPeer badPeerB = EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1);
+    final RespondingEthPeer badPeerA =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1);
+    final RespondingEthPeer badPeerB =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1);
 
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responder);
 
     // With only one peer with sufficient height, we should not be done yet
@@ -155,9 +150,8 @@ public class PivotBlockRetrieverTest {
     assertThat(badPeerA.hasOutstandingRequests()).isFalse();
     assertThat(badPeerB.hasOutstandingRequests()).isFalse();
 
-    assertThat(future)
-        .isCompletedWithValue(
-            new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
   }
 
   @Test
@@ -165,18 +159,21 @@ public class PivotBlockRetrieverTest {
     final PeerValidator peerValidator = mock(PeerValidator.class);
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+            blockchain, protocolContext.getWorldStateArchive(),
+            transactionPool);
     final RespondingEthPeer respondingPeerA =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000, peerValidator);
-    final RespondingEthPeer badPeerA =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000, peerValidator);
-    final RespondingEthPeer badPeerB =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000, peerValidator);
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000,
+                                              peerValidator);
+    final RespondingEthPeer badPeerA = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, 1000, peerValidator);
+    final RespondingEthPeer badPeerB = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, 1000, peerValidator);
 
     // Mark peerA valid
     respondingPeerA.getEthPeer().markValidated(peerValidator);
 
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responder);
 
     // With only one peer with sufficient height, we should not be done yet
@@ -188,10 +185,11 @@ public class PivotBlockRetrieverTest {
 
     // Add new peer that we can query
     final RespondingEthPeer respondingPeerB =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000, peerValidator);
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000,
+                                              peerValidator);
     respondingPeerB.getEthPeer().markValidated(peerValidator);
-    // When our new peer "connects", it is not yet valid, so we need to expire our retry timeout
-    // so that the peer will get re-processed
+    // When our new peer "connects", it is not yet valid, so we need to expire
+    // our retry timeout so that the peer will get re-processed
     EthProtocolManagerTestUtil.expirePendingTimeouts(ethProtocolManager);
 
     assertThat(respondingPeerB.hasOutstandingRequests()).isTrue();
@@ -204,7 +202,8 @@ public class PivotBlockRetrieverTest {
 
     // Add new peer that we can query
     final RespondingEthPeer respondingPeerC =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000, peerValidator);
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000,
+                                              peerValidator);
     respondingPeerC.getEthPeer().markValidated(peerValidator);
     EthProtocolManagerTestUtil.expirePendingTimeouts(ethProtocolManager);
 
@@ -213,9 +212,8 @@ public class PivotBlockRetrieverTest {
     assertThat(badPeerA.hasOutstandingRequests()).isFalse();
     assertThat(badPeerB.hasOutstandingRequests()).isFalse();
 
-    assertThat(future)
-        .isCompletedWithValue(
-            new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
   }
 
   @Test
@@ -223,27 +221,26 @@ public class PivotBlockRetrieverTest {
     pivotBlockRetriever = createPivotBlockRetriever(2, 1, 1);
     EthProtocolManagerTestUtil.disableEthSchedulerAutoRun(ethProtocolManager);
 
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
 
-    final RespondingEthPeer peerA =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(1000), 1000);
-    final RespondingEthPeer peerB =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(500), 500);
-    final RespondingEthPeer peerC =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(1000), 1000);
+    final RespondingEthPeer peerA = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(1000), 1000);
+    final RespondingEthPeer peerB = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(500), 500);
+    final RespondingEthPeer peerC = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(1000), 1000);
 
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
 
     peerA.respond(responder);
     peerC.respond(responder);
 
     // Peers A and C should be queried because they have better chain stats
     assertThat(peerB.hasOutstandingRequests()).isFalse();
-    assertThat(future)
-        .isCompletedWithValue(
-            new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
   }
 
   @Test
@@ -251,24 +248,24 @@ public class PivotBlockRetrieverTest {
     pivotBlockRetriever = createPivotBlockRetriever(2, 1, 1);
     EthProtocolManagerTestUtil.disableEthSchedulerAutoRun(ethProtocolManager);
 
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
     final Responder emptyResponder = RespondingEthPeer.emptyResponder();
 
-    final RespondingEthPeer peerA =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(1000), 1000);
-    final RespondingEthPeer peerB =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(1000), 1000);
-    final RespondingEthPeer peerC =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.of(500), 500);
+    final RespondingEthPeer peerA = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(1000), 1000);
+    final RespondingEthPeer peerB = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(1000), 1000);
+    final RespondingEthPeer peerC = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, Difficulty.of(500), 500);
 
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     peerA.respond(responder);
     peerB.respondTimes(emptyResponder, 2);
 
-    // PeerA should have responded, while peerB is being retried, peerC shouldn't have been queried
-    // yet
+    // PeerA should have responded, while peerB is being retried, peerC
+    // shouldn't have been queried yet
     assertThat(future).isNotCompleted();
     assertThat(peerC.hasOutstandingRequests()).isFalse();
 
@@ -276,9 +273,8 @@ public class PivotBlockRetrieverTest {
     peerB.respondTimes(emptyResponder, 2);
     peerC.respond(responder);
 
-    assertThat(future)
-        .isCompletedWithValue(
-            new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(PIVOT_BLOCK_NUMBER).get()));
   }
 
   @Test
@@ -286,9 +282,8 @@ public class PivotBlockRetrieverTest {
     final long pivotBlockDelta = 1;
     pivotBlockRetriever = createPivotBlockRetriever(2, pivotBlockDelta, 1);
 
-    final Responder responderA =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responderA = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
     final RespondingEthPeer respondingPeerA =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
@@ -298,11 +293,13 @@ public class PivotBlockRetrieverTest {
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
     // Execute task and wait for response
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responderA);
     respondingPeerB.respond(responderB);
 
-    // When disagreement is detected, we should push the pivot block back and retry
+    // When disagreement is detected, we should push the pivot block back and
+    // retry
     final long newPivotBlock = PIVOT_BLOCK_NUMBER - 1;
     assertThat(future).isNotCompleted();
     assertThat(pivotBlockRetriever.pivotBlockNumber).hasValue(newPivotBlock);
@@ -311,8 +308,8 @@ public class PivotBlockRetrieverTest {
     respondingPeerA.respond(responderA);
     respondingPeerB.respond(responderB);
 
-    assertThat(future)
-        .isCompletedWithValue(new FastSyncState(blockchain.getBlockHeader(newPivotBlock).get()));
+    assertThat(future).isCompletedWithValue(
+        new FastSyncState(blockchain.getBlockHeader(newPivotBlock).get()));
   }
 
   @Test
@@ -320,23 +317,24 @@ public class PivotBlockRetrieverTest {
     final long pivotBlockDelta = 1;
     pivotBlockRetriever = createPivotBlockRetriever(2, pivotBlockDelta, 1);
 
-    final Responder responderA =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responderA = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
     final RespondingEthPeer respondingPeerA =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
-    final Responder responderB =
-        responderForFakeBlocks(PIVOT_BLOCK_NUMBER, PIVOT_BLOCK_NUMBER - pivotBlockDelta);
+    final Responder responderB = responderForFakeBlocks(
+        PIVOT_BLOCK_NUMBER, PIVOT_BLOCK_NUMBER - pivotBlockDelta);
     final RespondingEthPeer respondingPeerB =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
     // Execute task and wait for response
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responderA);
     respondingPeerB.respond(responderB);
 
-    // When disagreement is detected, we should push the pivot block back and retry
+    // When disagreement is detected, we should push the pivot block back and
+    // retry
     final long newPivotBlock = PIVOT_BLOCK_NUMBER - 1;
     assertThat(future).isNotCompleted();
     assertThat(pivotBlockRetriever.pivotBlockNumber).hasValue(newPivotBlock);
@@ -348,7 +346,8 @@ public class PivotBlockRetrieverTest {
     assertThat(future).isCompletedExceptionally();
     assertThatThrownBy(future::get)
         .hasRootCauseInstanceOf(FastSyncException.class)
-        .extracting(e -> ((FastSyncException) ExceptionUtils.rootCause(e)).getError())
+        .extracting(
+            e -> ((FastSyncException)ExceptionUtils.rootCause(e)).getError())
         .isEqualTo(FastSyncError.PIVOT_BLOCK_HEADER_MISMATCH);
   }
 
@@ -357,9 +356,8 @@ public class PivotBlockRetrieverTest {
     final long pivotBlockDelta = PIVOT_BLOCK_NUMBER + 1;
     pivotBlockRetriever = createPivotBlockRetriever(2, pivotBlockDelta, 1);
 
-    final Responder responderA =
-        RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+    final Responder responderA = RespondingEthPeer.blockchainResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool);
     final RespondingEthPeer respondingPeerA =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
@@ -368,14 +366,16 @@ public class PivotBlockRetrieverTest {
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
     // Execute task and wait for response
-    final CompletableFuture<FastSyncState> future = pivotBlockRetriever.downloadPivotBlockHeader();
+    final CompletableFuture<FastSyncState> future =
+        pivotBlockRetriever.downloadPivotBlockHeader();
     respondingPeerA.respond(responderA);
     respondingPeerB.respond(responderB);
 
     assertThat(future).isCompletedExceptionally();
     assertThatThrownBy(future::get)
         .hasRootCauseInstanceOf(FastSyncException.class)
-        .extracting(e -> ((FastSyncException) ExceptionUtils.rootCause(e)).getError())
+        .extracting(
+            e -> ((FastSyncException)ExceptionUtils.rootCause(e)).getError())
         .isEqualTo(FastSyncError.PIVOT_BLOCK_HEADER_MISMATCH);
   }
 
@@ -383,12 +383,10 @@ public class PivotBlockRetrieverTest {
     final Blockchain mockBlockchain = spy(blockchain);
     for (long blockNumber : blockNumbers) {
       when(mockBlockchain.getBlockHeader(blockNumber))
-          .thenReturn(
-              Optional.of(
-                  new BlockHeaderTestFixture()
-                      .number(blockNumber)
-                      .extraData(Bytes.of(1))
-                      .buildHeader()));
+          .thenReturn(Optional.of(new BlockHeaderTestFixture()
+                                      .number(blockNumber)
+                                      .extraData(Bytes.of(1))
+                                      .buildHeader()));
     }
 
     return RespondingEthPeer.blockchainResponder(mockBlockchain);

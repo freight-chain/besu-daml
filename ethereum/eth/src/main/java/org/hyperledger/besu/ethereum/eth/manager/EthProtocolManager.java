@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,15 @@ package org.hyperledger.besu.ethereum.eth.manager;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.MinedBlockObserver;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -40,17 +52,6 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.Di
 import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   private static final Logger LOG = LogManager.getLogger();
 
@@ -70,17 +71,13 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   private final List<PeerValidator> peerValidators;
 
   public EthProtocolManager(
-      final Blockchain blockchain,
-      final BigInteger networkId,
+      final Blockchain blockchain, final BigInteger networkId,
       final WorldStateArchive worldStateArchive,
       final TransactionPool transactionPool,
       final EthProtocolConfiguration ethereumWireProtocolConfiguration,
-      final EthPeers ethPeers,
-      final EthMessages ethMessages,
-      final EthContext ethContext,
-      final List<PeerValidator> peerValidators,
-      final boolean fastSyncEnabled,
-      final EthScheduler scheduler,
+      final EthPeers ethPeers, final EthMessages ethMessages,
+      final EthContext ethContext, final List<PeerValidator> peerValidators,
+      final boolean fastSyncEnabled, final EthScheduler scheduler,
       final ForkIdManager forkIdManager) {
     this.networkId = networkId;
     this.peerValidators = peerValidators;
@@ -98,8 +95,8 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
 
     this.blockBroadcaster = new BlockBroadcaster(ethContext);
 
-    supportedCapabilities =
-        calculateCapabilities(fastSyncEnabled, ethereumWireProtocolConfiguration.isEth65Enabled());
+    supportedCapabilities = calculateCapabilities(
+        fastSyncEnabled, ethereumWireProtocolConfiguration.isEth65Enabled());
 
     // Run validators
     for (final PeerValidator peerValidator : this.peerValidators) {
@@ -107,86 +104,53 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
     }
 
     // Set up request handlers
-    new EthServer(
-        blockchain,
-        worldStateArchive,
-        transactionPool,
-        ethMessages,
-        ethereumWireProtocolConfiguration);
+    new EthServer(blockchain, worldStateArchive, transactionPool, ethMessages,
+                  ethereumWireProtocolConfiguration);
   }
 
   @VisibleForTesting
   public EthProtocolManager(
-      final Blockchain blockchain,
-      final BigInteger networkId,
+      final Blockchain blockchain, final BigInteger networkId,
       final WorldStateArchive worldStateArchive,
       final TransactionPool transactionPool,
       final EthProtocolConfiguration ethereumWireProtocolConfiguration,
-      final EthPeers ethPeers,
-      final EthMessages ethMessages,
-      final EthContext ethContext,
-      final List<PeerValidator> peerValidators,
-      final boolean fastSyncEnabled,
-      final EthScheduler scheduler) {
-    this(
-        blockchain,
-        networkId,
-        worldStateArchive,
-        transactionPool,
-        ethereumWireProtocolConfiguration,
-        ethPeers,
-        ethMessages,
-        ethContext,
-        peerValidators,
-        fastSyncEnabled,
-        scheduler,
-        new ForkIdManager(blockchain, Collections.emptyList()));
+      final EthPeers ethPeers, final EthMessages ethMessages,
+      final EthContext ethContext, final List<PeerValidator> peerValidators,
+      final boolean fastSyncEnabled, final EthScheduler scheduler) {
+    this(blockchain, networkId, worldStateArchive, transactionPool,
+         ethereumWireProtocolConfiguration, ethPeers, ethMessages, ethContext,
+         peerValidators, fastSyncEnabled, scheduler,
+         new ForkIdManager(blockchain, Collections.emptyList()));
   }
 
   public EthProtocolManager(
-      final Blockchain blockchain,
-      final BigInteger networkId,
+      final Blockchain blockchain, final BigInteger networkId,
       final WorldStateArchive worldStateArchive,
       final TransactionPool transactionPool,
       final EthProtocolConfiguration ethereumWireProtocolConfiguration,
-      final EthPeers ethPeers,
-      final EthMessages ethMessages,
-      final EthContext ethContext,
-      final List<PeerValidator> peerValidators,
-      final boolean fastSyncEnabled,
-      final EthScheduler scheduler,
+      final EthPeers ethPeers, final EthMessages ethMessages,
+      final EthContext ethContext, final List<PeerValidator> peerValidators,
+      final boolean fastSyncEnabled, final EthScheduler scheduler,
       final List<Long> forks) {
-    this(
-        blockchain,
-        networkId,
-        worldStateArchive,
-        transactionPool,
-        ethereumWireProtocolConfiguration,
-        ethPeers,
-        ethMessages,
-        ethContext,
-        peerValidators,
-        fastSyncEnabled,
-        scheduler,
-        new ForkIdManager(blockchain, forks));
+    this(blockchain, networkId, worldStateArchive, transactionPool,
+         ethereumWireProtocolConfiguration, ethPeers, ethMessages, ethContext,
+         peerValidators, fastSyncEnabled, scheduler,
+         new ForkIdManager(blockchain, forks));
   }
 
-  public EthContext ethContext() {
-    return ethContext;
-  }
+  public EthContext ethContext() { return ethContext; }
 
-  public BlockBroadcaster getBlockBroadcaster() {
-    return blockBroadcaster;
-  }
+  public BlockBroadcaster getBlockBroadcaster() { return blockBroadcaster; }
 
   @Override
   public String getSupportedProtocol() {
     return EthProtocol.NAME;
   }
 
-  private List<Capability> calculateCapabilities(
-      final boolean fastSyncEnabled, final boolean eth65Enabled) {
-    final ImmutableList.Builder<Capability> capabilities = ImmutableList.builder();
+  private List<Capability> calculateCapabilities(final boolean fastSyncEnabled,
+                                                 final boolean eth65Enabled) {
+    final ImmutableList.Builder<Capability> capabilities =
+        ImmutableList.builder();
     if (!fastSyncEnabled) {
       capabilities.add(EthProtocol.ETH62);
     }
@@ -211,7 +175,8 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
       scheduler.stop();
       shutdown.countDown();
     } else {
-      LOG.error("Attempted to stop already stopped {} Subprotocol.", getSupportedProtocol());
+      LOG.error("Attempted to stop already stopped {} Subprotocol.",
+                getSupportedProtocol());
     }
   }
 
@@ -224,14 +189,13 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
 
   @Override
   public void processMessage(final Capability cap, final Message message) {
-    checkArgument(
-        getSupportedCapabilities().contains(cap),
-        "Unsupported capability passed to processMessage(): " + cap);
+    checkArgument(getSupportedCapabilities().contains(cap),
+                  "Unsupported capability passed to processMessage(): " + cap);
     LOG.trace("Process message {}, {}", cap, message.getData().getCode());
     final EthPeer peer = ethPeers.peer(message.getConnection());
     if (peer == null) {
-      LOG.debug(
-          "Ignoring message received from unknown peer connection: " + message.getConnection());
+      LOG.debug("Ignoring message received from unknown peer connection: " +
+                message.getConnection());
       return;
     }
 
@@ -240,13 +204,12 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
       handleStatusMessage(peer, message.getData());
       return;
     } else if (!peer.statusHasBeenReceived()) {
-      // Peers are required to send status messages before any other message type
+      // Peers are required to send status messages before any other message
+      // type
       LOG.debug(
           "{} requires a Status ({}) message to be sent first.  Instead, received message {}.  Disconnecting from {}.",
-          this.getClass().getSimpleName(),
-          EthPV62.STATUS,
-          message.getData().getCode(),
-          peer);
+          this.getClass().getSimpleName(), EthPV62.STATUS,
+          message.getData().getCode(), peer);
       peer.disconnect(DisconnectReason.BREACH_OF_PROTOCOL);
       return;
     }
@@ -271,17 +234,14 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
     }
 
     final Capability cap = connection.capability(getSupportedProtocol());
-    final ForkId latestForkId = cap.getVersion() >= 64 ? forkIdManager.getLatestForkId() : null;
+    final ForkId latestForkId =
+        cap.getVersion() >= 64 ? forkIdManager.getLatestForkId() : null;
     // TODO: look to consolidate code below if possible
     // making status non-final and implementing it above would be one way.
-    final StatusMessage status =
-        StatusMessage.create(
-            cap.getVersion(),
-            networkId,
-            blockchain.getChainHead().getTotalDifficulty(),
-            blockchain.getChainHeadHash(),
-            genesisHash,
-            latestForkId);
+    final StatusMessage status = StatusMessage.create(
+        cap.getVersion(), networkId,
+        blockchain.getChainHead().getTotalDifficulty(),
+        blockchain.getChainHeadHash(), genesisHash, latestForkId);
     try {
       LOG.debug("Sending status message to {}.", peer);
       peer.send(status);
@@ -292,23 +252,16 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   }
 
   @Override
-  public void handleDisconnect(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initiatedByPeer) {
+  public void handleDisconnect(final PeerConnection connection,
+                               final DisconnectReason reason,
+                               final boolean initiatedByPeer) {
     ethPeers.registerDisconnect(connection);
     if (initiatedByPeer) {
-      LOG.debug(
-          "Peer requested to be disconnected ({}), {} peers left: {}",
-          reason,
-          ethPeers.peerCount(),
-          ethPeers);
+      LOG.debug("Peer requested to be disconnected ({}), {} peers left: {}",
+                reason, ethPeers.peerCount(), ethPeers);
     } else {
-      LOG.debug(
-          "Disconnecting from peer ({}), {} peers left: {}",
-          reason,
-          ethPeers.peerCount(),
-          ethPeers);
+      LOG.debug("Disconnecting from peer ({}), {} peers left: {}", reason,
+                ethPeers.peerCount(), ethPeers);
     }
   }
 
@@ -316,28 +269,30 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
     final StatusMessage status = StatusMessage.readFrom(data);
     try {
       if (!status.networkId().equals(networkId)) {
-        LOG.debug("Disconnecting from peer with mismatched network id: {}", status.networkId());
+        LOG.debug("Disconnecting from peer with mismatched network id: {}",
+                  status.networkId());
         peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED);
-      } else if (!forkIdManager.peerCheck(status.forkId()) && status.protocolVersion() > 63) {
+      } else if (!forkIdManager.peerCheck(status.forkId()) &&
+                 status.protocolVersion() > 63) {
         LOG.debug(
             "Disconnecting from peer with matching network id ({}), but non-matching fork id: {}",
-            networkId,
-            status.forkId());
+            networkId, status.forkId());
         peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED);
       } else if (forkIdManager.peerCheck(status.genesisHash())) {
         LOG.debug(
             "Disconnecting from peer with matching network id ({}), but non-matching genesis hash: {}",
-            networkId,
-            status.genesisHash());
+            networkId, status.genesisHash());
         peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED);
       } else {
         LOG.debug("Received status message from {}: {}", peer, status);
-        peer.registerStatusReceived(status.bestHash(), status.totalDifficulty());
+        peer.registerStatusReceived(status.bestHash(),
+                                    status.totalDifficulty());
       }
     } catch (final RLPException e) {
       LOG.debug("Unable to parse status message, disconnecting from peer.", e);
-      // Parsing errors can happen when clients broadcast network ids outside of the int range,
-      // So just disconnect with "subprotocol" error rather than "breach of protocol".
+      // Parsing errors can happen when clients broadcast network ids outside of
+      // the int range, So just disconnect with "subprotocol" error rather than
+      // "breach of protocol".
       peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED);
     }
   }
@@ -346,11 +301,10 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   public void blockMined(final Block block) {
     // This assumes the block has already been included in the chain
     final Difficulty totalDifficulty =
-        blockchain
-            .getTotalDifficultyByHash(block.getHash())
+        blockchain.getTotalDifficultyByHash(block.getHash())
             .orElseThrow(
-                () ->
-                    new IllegalStateException(
+                ()
+                    -> new IllegalStateException(
                         "Unable to get total difficulty from blockchain for mined block."));
     blockBroadcaster.propagate(block, totalDifficulty);
   }

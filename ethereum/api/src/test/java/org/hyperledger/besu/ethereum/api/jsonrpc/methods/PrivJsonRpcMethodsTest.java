@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,15 +24,13 @@ import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod.PRIV_FIND_PRIV
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.filter.FilterManager;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
-
-import java.util.Map;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,30 +50,38 @@ public class PrivJsonRpcMethodsTest {
 
   @Before
   public void setup() {
-    privJsonRpcMethods =
-        new PrivJsonRpcMethods(
-            blockchainQueries, protocolSchedule, transactionPool, privacyParameters, filterManager);
+    privJsonRpcMethods = new PrivJsonRpcMethods(
+        blockchainQueries, protocolSchedule, transactionPool, privacyParameters,
+        filterManager);
 
     lenient().when(privacyParameters.isEnabled()).thenReturn(true);
   }
 
   @Test
-  public void offchainPrivacyGroupMethodsAreDisabledWhenOnchainPrivacyGroupIsEnabled() {
+  public void
+  offchainPrivacyGroupMethodsAreDisabledWhenOnchainPrivacyGroupIsEnabled() {
     when(privacyParameters.isOnchainPrivacyGroupsEnabled()).thenReturn(true);
     final Map<String, JsonRpcMethod> rpcMethods = privJsonRpcMethods.create();
 
-    assertThat(rpcMethods.get(PRIV_CREATE_PRIVACY_GROUP.getMethodName())).isNull();
-    assertThat(rpcMethods.get(PRIV_DELETE_PRIVACY_GROUP.getMethodName())).isNull();
-    assertThat(rpcMethods.get(PRIV_FIND_PRIVACY_GROUP.getMethodName())).isNull();
+    assertThat(rpcMethods.get(PRIV_CREATE_PRIVACY_GROUP.getMethodName()))
+        .isNull();
+    assertThat(rpcMethods.get(PRIV_DELETE_PRIVACY_GROUP.getMethodName()))
+        .isNull();
+    assertThat(rpcMethods.get(PRIV_FIND_PRIVACY_GROUP.getMethodName()))
+        .isNull();
   }
 
   @Test
-  public void offchainPrivacyGroupMethodsAreEnabledWhenOnchainPrivacyGroupIsDisabled() {
+  public void
+  offchainPrivacyGroupMethodsAreEnabledWhenOnchainPrivacyGroupIsDisabled() {
     when(privacyParameters.isOnchainPrivacyGroupsEnabled()).thenReturn(false);
     final Map<String, JsonRpcMethod> rpcMethods = privJsonRpcMethods.create();
 
-    assertThat(rpcMethods.get(PRIV_CREATE_PRIVACY_GROUP.getMethodName())).isNotNull();
-    assertThat(rpcMethods.get(PRIV_DELETE_PRIVACY_GROUP.getMethodName())).isNotNull();
-    assertThat(rpcMethods.get(PRIV_FIND_PRIVACY_GROUP.getMethodName())).isNotNull();
+    assertThat(rpcMethods.get(PRIV_CREATE_PRIVACY_GROUP.getMethodName()))
+        .isNotNull();
+    assertThat(rpcMethods.get(PRIV_DELETE_PRIVACY_GROUP.getMethodName()))
+        .isNotNull();
+    assertThat(rpcMethods.get(PRIV_FIND_PRIVACY_GROUP.getMethodName()))
+        .isNotNull();
   }
 }

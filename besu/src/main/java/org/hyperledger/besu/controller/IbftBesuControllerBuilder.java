@@ -1,19 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.config.IbftConfigOptions;
 import org.hyperledger.besu.config.IbftFork;
@@ -70,15 +79,8 @@ import org.hyperledger.besu.ethereum.p2p.config.SubProtocolConfiguration;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.util.Subscribers;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext> {
+public class IbftBesuControllerBuilder
+    extends BesuControllerBuilder<IbftContext> {
 
   private static final Logger LOG = LogManager.getLogger();
   private IbftEventQueue ibftEventQueue;
@@ -88,7 +90,8 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
 
   @Override
   protected void prepForBuild() {
-    ibftConfig = genesisConfig.getConfigOptions(genesisConfigOverrides).getIbft2ConfigOptions();
+    ibftConfig = genesisConfig.getConfigOptions(genesisConfigOverrides)
+                     .getIbft2ConfigOptions();
     ibftEventQueue = new IbftEventQueue(ibftConfig.getMessageQueueLimit());
   }
 
@@ -99,36 +102,36 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
   }
 
   @Override
-  protected SubProtocolConfiguration createSubProtocolConfiguration(
-      final EthProtocolManager ethProtocolManager) {
+  protected SubProtocolConfiguration
+  createSubProtocolConfiguration(final EthProtocolManager ethProtocolManager) {
     return new SubProtocolConfiguration()
         .withSubProtocol(EthProtocol.get(), ethProtocolManager)
-        .withSubProtocol(IbftSubProtocol.get(), new IbftProtocolManager(ibftEventQueue, peers));
+        .withSubProtocol(IbftSubProtocol.get(),
+                         new IbftProtocolManager(ibftEventQueue, peers));
   }
 
   @Override
-  protected MiningCoordinator createMiningCoordinator(
-      final ProtocolSchedule<IbftContext> protocolSchedule,
-      final ProtocolContext<IbftContext> protocolContext,
-      final TransactionPool transactionPool,
-      final MiningParameters miningParameters,
-      final SyncState syncState,
-      final EthProtocolManager ethProtocolManager) {
+  protected MiningCoordinator
+  createMiningCoordinator(final ProtocolSchedule<IbftContext> protocolSchedule,
+                          final ProtocolContext<IbftContext> protocolContext,
+                          final TransactionPool transactionPool,
+                          final MiningParameters miningParameters,
+                          final SyncState syncState,
+                          final EthProtocolManager ethProtocolManager) {
     final MutableBlockchain blockchain = protocolContext.getBlockchain();
     final IbftExecutors ibftExecutors = IbftExecutors.create(metricsSystem);
 
     final IbftBlockCreatorFactory blockCreatorFactory =
         new IbftBlockCreatorFactory(
-            gasLimitCalculator,
-            transactionPool.getPendingTransactions(),
-            protocolContext,
-            protocolSchedule,
-            miningParameters,
+            gasLimitCalculator, transactionPool.getPendingTransactions(),
+            protocolContext, protocolSchedule, miningParameters,
             Util.publicKeyToAddress(nodeKey.getPublicKey()));
 
-    // NOTE: peers should not be used for accessing the network as it does not enforce the
-    // "only send once" filter applied by the UniqueMessageMulticaster.
-    final VoteTallyCache voteTallyCache = protocolContext.getConsensusState().getVoteTallyCache();
+    // NOTE: peers should not be used for accessing the network as it does not
+    // enforce the "only send once" filter applied by the
+    // UniqueMessageMulticaster.
+    final VoteTallyCache voteTallyCache =
+        protocolContext.getConsensusState().getVoteTallyCache();
 
     final ProposerSelector proposerSelector =
         new ProposerSelector(blockchain, blockInterface, true, voteTallyCache);
@@ -136,74 +139,63 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
     peers = new ValidatorPeers(voteTallyCache);
 
     final UniqueMessageMulticaster uniqueMessageMulticaster =
-        new UniqueMessageMulticaster(peers, ibftConfig.getGossipedHistoryLimit());
+        new UniqueMessageMulticaster(peers,
+                                     ibftConfig.getGossipedHistoryLimit());
 
     final IbftGossip gossiper = new IbftGossip(uniqueMessageMulticaster);
 
-    final IbftFinalState finalState =
-        new IbftFinalState(
-            voteTallyCache,
-            nodeKey,
-            Util.publicKeyToAddress(nodeKey.getPublicKey()),
-            proposerSelector,
-            uniqueMessageMulticaster,
-            new RoundTimer(ibftEventQueue, ibftConfig.getRequestTimeoutSeconds(), ibftExecutors),
-            new BlockTimer(
-                ibftEventQueue, ibftConfig.getBlockPeriodSeconds(), ibftExecutors, clock),
-            blockCreatorFactory,
-            new MessageFactory(nodeKey),
-            clock);
+    final IbftFinalState finalState = new IbftFinalState(
+        voteTallyCache, nodeKey,
+        Util.publicKeyToAddress(nodeKey.getPublicKey()), proposerSelector,
+        uniqueMessageMulticaster,
+        new RoundTimer(ibftEventQueue, ibftConfig.getRequestTimeoutSeconds(),
+                       ibftExecutors),
+        new BlockTimer(ibftEventQueue, ibftConfig.getBlockPeriodSeconds(),
+                       ibftExecutors, clock),
+        blockCreatorFactory, new MessageFactory(nodeKey), clock);
 
     final MessageValidatorFactory messageValidatorFactory =
-        new MessageValidatorFactory(proposerSelector, protocolSchedule, protocolContext);
+        new MessageValidatorFactory(proposerSelector, protocolSchedule,
+                                    protocolContext);
 
-    final Subscribers<MinedBlockObserver> minedBlockObservers = Subscribers.create();
+    final Subscribers<MinedBlockObserver> minedBlockObservers =
+        Subscribers.create();
     minedBlockObservers.subscribe(ethProtocolManager);
 
     final FutureMessageBuffer futureMessageBuffer =
-        new FutureMessageBuffer(
-            ibftConfig.getFutureMessagesMaxDistance(),
-            ibftConfig.getFutureMessagesLimit(),
-            blockchain.getChainHeadBlockNumber());
+        new FutureMessageBuffer(ibftConfig.getFutureMessagesMaxDistance(),
+                                ibftConfig.getFutureMessagesLimit(),
+                                blockchain.getChainHeadBlockNumber());
     final MessageTracker duplicateMessageTracker =
         new MessageTracker(ibftConfig.getDuplicateMessageLimit());
 
-    final IbftController ibftController =
-        new IbftController(
-            blockchain,
+    final IbftController ibftController = new IbftController(
+        blockchain, finalState,
+        new IbftBlockHeightManagerFactory(
             finalState,
-            new IbftBlockHeightManagerFactory(
-                finalState,
-                new IbftRoundFactory(
-                    finalState,
-                    protocolContext,
-                    protocolSchedule,
-                    minedBlockObservers,
-                    messageValidatorFactory),
-                messageValidatorFactory),
-            gossiper,
-            duplicateMessageTracker,
-            futureMessageBuffer,
-            new EthSynchronizerUpdater(ethProtocolManager.ethContext().getEthPeers()));
+            new IbftRoundFactory(finalState, protocolContext, protocolSchedule,
+                                 minedBlockObservers, messageValidatorFactory),
+            messageValidatorFactory),
+        gossiper, duplicateMessageTracker, futureMessageBuffer,
+        new EthSynchronizerUpdater(
+            ethProtocolManager.ethContext().getEthPeers()));
 
-    final EventMultiplexer eventMultiplexer = new EventMultiplexer(ibftController);
-    final IbftProcessor ibftProcessor = new IbftProcessor(ibftEventQueue, eventMultiplexer);
+    final EventMultiplexer eventMultiplexer =
+        new EventMultiplexer(ibftController);
+    final IbftProcessor ibftProcessor =
+        new IbftProcessor(ibftEventQueue, eventMultiplexer);
 
-    final MiningCoordinator ibftMiningCoordinator =
-        new IbftMiningCoordinator(
-            ibftExecutors,
-            ibftController,
-            ibftProcessor,
-            blockCreatorFactory,
-            blockchain,
-            ibftEventQueue);
+    final MiningCoordinator ibftMiningCoordinator = new IbftMiningCoordinator(
+        ibftExecutors, ibftController, ibftProcessor, blockCreatorFactory,
+        blockchain, ibftEventQueue);
     ibftMiningCoordinator.enable();
 
     return ibftMiningCoordinator;
   }
 
   @Override
-  protected PluginServiceFactory createAdditionalPluginServices(final Blockchain blockchain) {
+  protected PluginServiceFactory
+  createAdditionalPluginServices(final Blockchain blockchain) {
     return new IbftQueryPluginServiceFactory(blockchain, nodeKey);
   }
 
@@ -211,13 +203,13 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
   protected ProtocolSchedule<IbftContext> createProtocolSchedule() {
     return IbftProtocolSchedule.create(
         genesisConfig.getConfigOptions(genesisConfigOverrides),
-        privacyParameters,
-        isRevertReasonEnabled);
+        privacyParameters, isRevertReasonEnabled);
   }
 
   @Override
   protected void validateContext(final ProtocolContext<IbftContext> context) {
-    final BlockHeader genesisBlockHeader = context.getBlockchain().getGenesisBlock().getHeader();
+    final BlockHeader genesisBlockHeader =
+        context.getBlockchain().getGenesisBlock().getHeader();
 
     if (blockInterface.validatorsInBlock(genesisBlockHeader).isEmpty()) {
       LOG.warn("Genesis block contains no signers - chain will not progress.");
@@ -225,12 +217,14 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
   }
 
   @Override
-  protected IbftContext createConsensusContext(
-      final Blockchain blockchain, final WorldStateArchive worldStateArchive) {
+  protected IbftContext
+  createConsensusContext(final Blockchain blockchain,
+                         final WorldStateArchive worldStateArchive) {
     final GenesisConfigOptions configOptions =
         genesisConfig.getConfigOptions(genesisConfigOverrides);
     final IbftConfigOptions ibftConfig = configOptions.getIbft2ConfigOptions();
-    final EpochManager epochManager = new EpochManager(ibftConfig.getEpochLength());
+    final EpochManager epochManager =
+        new EpochManager(ibftConfig.getEpochLength());
 
     final Map<Long, List<Address>> ibftValidatorForkMap =
         convertIbftForks(configOptions.getTransitions().getIbftForks());
@@ -239,26 +233,22 @@ public class IbftBesuControllerBuilder extends BesuControllerBuilder<IbftContext
         new ForkingVoteTallyCache(
             blockchain,
             new VoteTallyUpdater(epochManager, new IbftBlockInterface()),
-            epochManager,
-            new IbftBlockInterface(),
+            epochManager, new IbftBlockInterface(),
             new IbftValidatorOverrides(ibftValidatorForkMap)),
-        new VoteProposer(),
-        epochManager,
-        blockInterface);
+        new VoteProposer(), epochManager, blockInterface);
   }
 
-  private Map<Long, List<Address>> convertIbftForks(final List<IbftFork> ibftForks) {
+  private Map<Long, List<Address>>
+  convertIbftForks(final List<IbftFork> ibftForks) {
     final Map<Long, List<Address>> result = new HashMap<>();
 
     for (final IbftFork fork : ibftForks) {
-      fork.getValidators()
-          .map(
-              validators ->
-                  result.put(
-                      fork.getForkBlock(),
-                      validators.stream()
-                          .map(Address::fromHexString)
-                          .collect(Collectors.toList())));
+      fork.getValidators().map(
+          validators
+          -> result.put(fork.getForkBlock(),
+                        validators.stream()
+                            .map(Address::fromHexString)
+                            .collect(Collectors.toList())));
     }
 
     return result;

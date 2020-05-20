@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.consensus.ibft.statemachine;
 
+import java.time.Clock;
+import java.util.Collection;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
 import org.hyperledger.besu.consensus.ibft.BlockTimer;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
@@ -27,10 +32,10 @@ import org.hyperledger.besu.consensus.ibft.payload.MessageFactory;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.ethereum.core.Address;
 
-import java.time.Clock;
-import java.util.Collection;
-
-/** This is the full data set, or context, required for many of the aspects of the IBFT workflow. */
+/**
+ * This is the full data set, or context, required for many of the aspects of
+ * the IBFT workflow.
+ */
 public class IbftFinalState {
   private final VoteTallyCache voteTallyCache;
   private final NodeKey nodeKey;
@@ -43,17 +48,15 @@ public class IbftFinalState {
   private final IbftMessageTransmitter messageTransmitter;
   private final Clock clock;
 
-  public IbftFinalState(
-      final VoteTallyCache voteTallyCache,
-      final NodeKey nodeKey,
-      final Address localAddress,
-      final ProposerSelector proposerSelector,
-      final ValidatorMulticaster validatorMulticaster,
-      final RoundTimer roundTimer,
-      final BlockTimer blockTimer,
-      final IbftBlockCreatorFactory blockCreatorFactory,
-      final MessageFactory messageFactory,
-      final Clock clock) {
+  public IbftFinalState(final VoteTallyCache voteTallyCache,
+                        final NodeKey nodeKey, final Address localAddress,
+                        final ProposerSelector proposerSelector,
+                        final ValidatorMulticaster validatorMulticaster,
+                        final RoundTimer roundTimer,
+                        final BlockTimer blockTimer,
+                        final IbftBlockCreatorFactory blockCreatorFactory,
+                        final MessageFactory messageFactory,
+                        final Clock clock) {
     this.voteTallyCache = voteTallyCache;
     this.nodeKey = nodeKey;
     this.localAddress = localAddress;
@@ -63,7 +66,8 @@ public class IbftFinalState {
     this.blockCreatorFactory = blockCreatorFactory;
     this.messageFactory = messageFactory;
     this.clock = clock;
-    this.messageTransmitter = new IbftMessageTransmitter(messageFactory, validatorMulticaster);
+    this.messageTransmitter =
+        new IbftMessageTransmitter(messageFactory, validatorMulticaster);
   }
 
   public int getQuorum() {
@@ -74,15 +78,12 @@ public class IbftFinalState {
     return voteTallyCache.getVoteTallyAtHead().getValidators();
   }
 
-  public NodeKey getNodeKey() {
-    return nodeKey;
-  }
+  public NodeKey getNodeKey() { return nodeKey; }
 
-  public Address getLocalAddress() {
-    return localAddress;
-  }
+  public Address getLocalAddress() { return localAddress; }
 
-  public boolean isLocalNodeProposerForRound(final ConsensusRoundIdentifier roundIdentifier) {
+  public boolean
+  isLocalNodeProposerForRound(final ConsensusRoundIdentifier roundIdentifier) {
     return getProposerForRound(roundIdentifier).equals(localAddress);
   }
 
@@ -90,31 +91,22 @@ public class IbftFinalState {
     return getValidators().contains(localAddress);
   }
 
-  public RoundTimer getRoundTimer() {
-    return roundTimer;
-  }
+  public RoundTimer getRoundTimer() { return roundTimer; }
 
-  public BlockTimer getBlockTimer() {
-    return blockTimer;
-  }
+  public BlockTimer getBlockTimer() { return blockTimer; }
 
   public IbftBlockCreatorFactory getBlockCreatorFactory() {
     return blockCreatorFactory;
   }
 
-  public MessageFactory getMessageFactory() {
-    return messageFactory;
-  }
+  public MessageFactory getMessageFactory() { return messageFactory; }
 
-  public Address getProposerForRound(final ConsensusRoundIdentifier roundIdentifier) {
+  public Address
+  getProposerForRound(final ConsensusRoundIdentifier roundIdentifier) {
     return proposerSelector.selectProposerForRound(roundIdentifier);
   }
 
-  public IbftMessageTransmitter getTransmitter() {
-    return messageTransmitter;
-  }
+  public IbftMessageTransmitter getTransmitter() { return messageTransmitter; }
 
-  public Clock getClock() {
-    return clock;
-  }
+  public Clock getClock() { return clock; }
 }

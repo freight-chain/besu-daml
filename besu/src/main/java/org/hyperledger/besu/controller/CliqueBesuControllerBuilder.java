@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.controller;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.config.CliqueConfigOptions;
 import org.hyperledger.besu.consensus.clique.CliqueBlockInterface;
 import org.hyperledger.besu.consensus.clique.CliqueContext;
@@ -42,10 +47,8 @@ import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-public class CliqueBesuControllerBuilder extends BesuControllerBuilder<CliqueContext> {
+public class CliqueBesuControllerBuilder
+    extends BesuControllerBuilder<CliqueContext> {
 
   private static final Logger LOG = LogManager.getLogger();
 
@@ -58,7 +61,8 @@ public class CliqueBesuControllerBuilder extends BesuControllerBuilder<CliqueCon
   protected void prepForBuild() {
     localAddress = Util.publicKeyToAddress(nodeKey.getPublicKey());
     final CliqueConfigOptions cliqueConfig =
-        genesisConfig.getConfigOptions(genesisConfigOverrides).getCliqueConfigOptions();
+        genesisConfig.getConfigOptions(genesisConfigOverrides)
+            .getCliqueConfigOptions();
     final long blocksPerEpoch = cliqueConfig.getEpochLength();
     secondsBetweenBlocks = cliqueConfig.getBlockPeriodSeconds();
 
@@ -76,28 +80,18 @@ public class CliqueBesuControllerBuilder extends BesuControllerBuilder<CliqueCon
       final ProtocolSchedule<CliqueContext> protocolSchedule,
       final ProtocolContext<CliqueContext> protocolContext,
       final TransactionPool transactionPool,
-      final MiningParameters miningParameters,
-      final SyncState syncState,
+      final MiningParameters miningParameters, final SyncState syncState,
       final EthProtocolManager ethProtocolManager) {
-    final CliqueMinerExecutor miningExecutor =
-        new CliqueMinerExecutor(
-            protocolContext,
-            protocolSchedule,
-            transactionPool.getPendingTransactions(),
-            nodeKey,
-            miningParameters,
-            new CliqueBlockScheduler(
-                clock,
-                protocolContext.getConsensusState().getVoteTallyCache(),
-                localAddress,
-                secondsBetweenBlocks),
-            epochManager,
-            gasLimitCalculator);
+    final CliqueMinerExecutor miningExecutor = new CliqueMinerExecutor(
+        protocolContext, protocolSchedule,
+        transactionPool.getPendingTransactions(), nodeKey, miningParameters,
+        new CliqueBlockScheduler(
+            clock, protocolContext.getConsensusState().getVoteTallyCache(),
+            localAddress, secondsBetweenBlocks),
+        epochManager, gasLimitCalculator);
     final CliqueMiningCoordinator miningCoordinator =
         new CliqueMiningCoordinator(
-            protocolContext.getBlockchain(),
-            miningExecutor,
-            syncState,
+            protocolContext.getBlockchain(), miningExecutor, syncState,
             new CliqueMiningTracker(localAddress, protocolContext));
     miningCoordinator.addMinedBlockObserver(ethProtocolManager);
 
@@ -109,15 +103,14 @@ public class CliqueBesuControllerBuilder extends BesuControllerBuilder<CliqueCon
   @Override
   protected ProtocolSchedule<CliqueContext> createProtocolSchedule() {
     return CliqueProtocolSchedule.create(
-        genesisConfig.getConfigOptions(genesisConfigOverrides),
-        nodeKey,
-        privacyParameters,
-        isRevertReasonEnabled);
+        genesisConfig.getConfigOptions(genesisConfigOverrides), nodeKey,
+        privacyParameters, isRevertReasonEnabled);
   }
 
   @Override
   protected void validateContext(final ProtocolContext<CliqueContext> context) {
-    final BlockHeader genesisBlockHeader = context.getBlockchain().getGenesisBlock().getHeader();
+    final BlockHeader genesisBlockHeader =
+        context.getBlockchain().getGenesisBlock().getHeader();
 
     if (blockInterface.validatorsInBlock(genesisBlockHeader).isEmpty()) {
       LOG.warn("Genesis block contains no signers - chain will not progress.");
@@ -125,21 +118,19 @@ public class CliqueBesuControllerBuilder extends BesuControllerBuilder<CliqueCon
   }
 
   @Override
-  protected PluginServiceFactory createAdditionalPluginServices(final Blockchain blockchain) {
+  protected PluginServiceFactory
+  createAdditionalPluginServices(final Blockchain blockchain) {
     return new CliqueQueryPluginServiceFactory(blockchain, nodeKey);
   }
 
   @Override
-  protected CliqueContext createConsensusContext(
-      final Blockchain blockchain, final WorldStateArchive worldStateArchive) {
+  protected CliqueContext
+  createConsensusContext(final Blockchain blockchain,
+                         final WorldStateArchive worldStateArchive) {
     return new CliqueContext(
-        new VoteTallyCache(
-            blockchain,
-            new VoteTallyUpdater(epochManager, blockInterface),
-            epochManager,
-            blockInterface),
-        new VoteProposer(),
-        epochManager,
-        blockInterface);
+        new VoteTallyCache(blockchain,
+                           new VoteTallyUpdater(epochManager, blockInterface),
+                           epochManager, blockInterface),
+        new VoteProposer(), epochManager, blockInterface);
   }
 }

@@ -1,23 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.services.kvstore;
 
-import org.hyperledger.besu.plugin.services.exception.StorageException;
-import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
-import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction;
-
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,14 +29,15 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.plugin.services.exception.StorageException;
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction;
 
 /**
- * This KeyValueStorage will keep data in memory up to some maximum number of elements. Elements are
- * evicted as the maximum limit is approached, evicting least-recently-used elements first.
+ * This KeyValueStorage will keep data in memory up to some maximum number of
+ * elements. Elements are evicted as the maximum limit is approached, evicting
+ * least-recently-used elements first.
  */
 public class LimitedInMemoryKeyValueStorage implements KeyValueStorage {
 
@@ -77,15 +79,19 @@ public class LimitedInMemoryKeyValueStorage implements KeyValueStorage {
   }
 
   @Override
-  public long removeAllKeysUnless(final Predicate<byte[]> retainCondition) throws StorageException {
+  public long removeAllKeysUnless(final Predicate<byte[]> retainCondition)
+      throws StorageException {
     final long initialSize = storage.size();
-    storage.asMap().keySet().removeIf(key -> !retainCondition.test(key.toArrayUnsafe()));
+    storage.asMap().keySet().removeIf(
+        key -> !retainCondition.test(key.toArrayUnsafe()));
     return initialSize - storage.size();
   }
 
   @Override
   public Set<byte[]> getAllKeysThat(final Predicate<byte[]> returnCondition) {
-    return storage.asMap().keySet().stream()
+    return storage.asMap()
+        .keySet()
+        .stream()
         .map(Bytes::toArrayUnsafe)
         .filter(returnCondition)
         .collect(Collectors.toSet());
@@ -93,7 +99,8 @@ public class LimitedInMemoryKeyValueStorage implements KeyValueStorage {
 
   @Override
   public KeyValueStorageTransaction startTransaction() throws StorageException {
-    return new KeyValueStorageTransactionTransitionValidatorDecorator(new MemoryTransaction());
+    return new KeyValueStorageTransactionTransitionValidatorDecorator(
+        new MemoryTransaction());
   }
 
   private class MemoryTransaction implements KeyValueStorageTransaction {

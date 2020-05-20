@@ -1,26 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth.manager.task;
 
-import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
-import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
-
+import com.google.common.base.Stopwatch;
 import java.util.Collection;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -29,39 +26,47 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-
-import com.google.common.base.Stopwatch;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
+import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 
 public abstract class AbstractEthTask<T> implements EthTask<T> {
 
   private double taskTimeInSec = -1.0D;
   private final OperationTimer taskTimer;
-  protected final AtomicReference<CompletableFuture<T>> result = new AtomicReference<>();
-  private final Collection<CompletableFuture<?>> subTaskFutures = new ConcurrentLinkedDeque<>();
+  protected final AtomicReference<CompletableFuture<T>> result =
+      new AtomicReference<>();
+  private final Collection<CompletableFuture<?>> subTaskFutures =
+      new ConcurrentLinkedDeque<>();
 
   protected AbstractEthTask(final MetricsSystem metricsSystem) {
-    this.taskTimer = buildOperationTimer(metricsSystem, getClass().getSimpleName());
+    this.taskTimer =
+        buildOperationTimer(metricsSystem, getClass().getSimpleName());
   }
 
   protected AbstractEthTask(final OperationTimer taskTimer) {
     this.taskTimer = taskTimer;
   }
 
-  private static OperationTimer buildOperationTimer(
-      final MetricsSystem metricsSystem, final String taskName) {
+  private static OperationTimer
+  buildOperationTimer(final MetricsSystem metricsSystem,
+                      final String taskName) {
     final LabelledMetric<OperationTimer> ethTasksTimer =
-        metricsSystem.createLabelledTimer(
-            BesuMetricCategory.SYNCHRONIZER, "task", "Internal processing tasks", "taskName");
+        metricsSystem.createLabelledTimer(BesuMetricCategory.SYNCHRONIZER,
+                                          "task", "Internal processing tasks",
+                                          "taskName");
     if (ethTasksTimer == NoOpMetricsSystem.NO_OP_LABELLED_1_OPERATION_TIMER) {
-      return () ->
-          new OperationTimer.TimingContext() {
-            final Stopwatch stopwatch = Stopwatch.createStarted();
+      return () -> new OperationTimer.TimingContext() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
 
-            @Override
-            public double stopTimer() {
-              return stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000.0;
-            }
-          };
+        @Override
+        public double stopTimer() {
+          return stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000.0;
+        }
+      };
     } else {
       return ethTasksTimer.labels(taskName);
     }
@@ -110,19 +115,21 @@ public abstract class AbstractEthTask<T> implements EthTask<T> {
   }
 
   /**
-   * Utility for executing completable futures that handles cleanup if this EthTask is cancelled.
+   * Utility for executing completable futures that handles cleanup if this
+   * EthTask is cancelled.
    *
    * @param subTask a subTask to execute
    * @param <S> the type of data returned from the CompletableFuture
    * @return The completableFuture that was executed
    */
-  protected final <S> CompletableFuture<S> executeSubTask(
-      final Supplier<CompletableFuture<S>> subTask) {
+  protected final <S> CompletableFuture<S>
+  executeSubTask(final Supplier<CompletableFuture<S>> subTask) {
     synchronized (result) {
       if (!isCancelled()) {
         final CompletableFuture<S> subTaskFuture = subTask.get();
         subTaskFutures.add(subTaskFuture);
-        subTaskFuture.whenComplete((r, t) -> subTaskFutures.remove(subTaskFuture));
+        subTaskFuture.whenComplete(
+            (r, t) -> subTaskFutures.remove(subTaskFuture));
         return subTaskFuture;
       } else {
         return CompletableFuture.failedFuture(new CancellationException());
@@ -131,15 +138,17 @@ public abstract class AbstractEthTask<T> implements EthTask<T> {
   }
 
   /**
-   * Helper method for sending subTask to worker that will clean up if this EthTask is cancelled.
+   * Helper method for sending subTask to worker that will clean up if this
+   * EthTask is cancelled.
    *
    * @param scheduler the scheduler that will run worker task
    * @param subTask a subTask to execute
    * @param <S> the type of data returned from the CompletableFuture
    * @return The completableFuture that was executed
    */
-  protected final <S> CompletableFuture<S> executeWorkerSubTask(
-      final EthScheduler scheduler, final Supplier<CompletableFuture<S>> subTask) {
+  protected final <S> CompletableFuture<S>
+  executeWorkerSubTask(final EthScheduler scheduler,
+                       final Supplier<CompletableFuture<S>> subTask) {
     return executeSubTask(() -> scheduler.scheduleSyncWorkerTask(subTask));
   }
 
@@ -156,9 +165,7 @@ public abstract class AbstractEthTask<T> implements EthTask<T> {
     }
   }
 
-  public double getTaskTimeInSec() {
-    return taskTimeInSec;
-  }
+  public double getTaskTimeInSec() { return taskTimeInSec; }
 
   /** Cleanup any resources when task completes. */
   protected void cleanup() {

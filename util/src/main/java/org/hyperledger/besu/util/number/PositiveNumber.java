@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,17 +26,17 @@ public class PositiveNumber {
 
   private final int value;
 
-  private PositiveNumber(final int value) {
-    this.value = value;
-  }
+  private PositiveNumber(final int value) { this.value = value; }
 
   /**
    * Parse a string representing a positive number.
    *
-   * @param str A string representing a valid positive number strictly greater than 0.
+   * @param str A string representing a valid positive number strictly greater
+   *     than 0.
    * @return The parsed int.
    * @throws IllegalArgumentException if the provided string is {@code null}.
-   * @throws IllegalArgumentException if the string is either not a number, or not a positive number
+   * @throws IllegalArgumentException if the string is either not a number, or
+   *     not a positive number
    */
   public static PositiveNumber fromString(final String str) {
     checkArgument(str != null);
@@ -47,9 +50,7 @@ public class PositiveNumber {
     return new PositiveNumber(val);
   }
 
-  public int getValue() {
-    return value;
-  }
+  public int getValue() { return value; }
 
   @Override
   public boolean equals(final Object o) {
@@ -59,7 +60,7 @@ public class PositiveNumber {
     if (!(o instanceof PositiveNumber)) {
       return false;
     }
-    final PositiveNumber that = (PositiveNumber) o;
+    final PositiveNumber that = (PositiveNumber)o;
     return value == that.value;
   }
 

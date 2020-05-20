@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,72 +20,65 @@ package org.hyperledger.besu.cli;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.contentOf;
 
+import java.io.File;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.ethereum.core.Util;
-
-import java.io.File;
-
 import org.junit.Test;
 import picocli.CommandLine.Model.CommandSpec;
 
 public class PublicKeySubCommandTest extends CommandTestAbstract {
 
   private static final String EXPECTED_PUBLIC_KEY_USAGE =
-      "Usage: besu public-key [-hV] [COMMAND]"
-          + System.lineSeparator()
-          + "This command provides node public key related actions."
-          + System.lineSeparator()
-          + "  -h, --help      Show this help message and exit."
-          + System.lineSeparator()
-          + "  -V, --version   Print version information and exit."
-          + System.lineSeparator()
-          + "Commands:"
-          + System.lineSeparator()
-          + "  export          This command outputs the node public key. Default output is"
-          + System.lineSeparator()
-          + "                    standard output."
-          + System.lineSeparator()
-          + "  export-address  This command outputs the node's account address. Default"
-          + System.lineSeparator()
-          + "                    output is standard output."
-          + System.lineSeparator();
+      "Usage: besu public-key [-hV] [COMMAND]" + System.lineSeparator() +
+      "This command provides node public key related actions." +
+      System.lineSeparator() +
+      "  -h, --help      Show this help message and exit." +
+      System.lineSeparator() +
+      "  -V, --version   Print version information and exit." +
+      System.lineSeparator() + "Commands:" + System.lineSeparator() +
+      "  export          This command outputs the node public key. Default output is" +
+      System.lineSeparator() + "                    standard output." +
+      System.lineSeparator() +
+      "  export-address  This command outputs the node's account address. Default" +
+      System.lineSeparator() +
+      "                    output is standard output." + System.lineSeparator();
 
   private static final String EXPECTED_PUBLIC_KEY_EXPORT_USAGE =
-      "Usage: besu public-key export [-hV] [--to=<FILE>]"
-          + System.lineSeparator()
-          + "This command outputs the node public key. Default output is standard output."
-          + System.lineSeparator()
-          + "  -h, --help        Show this help message and exit."
-          + System.lineSeparator()
-          + "      --to=<FILE>   File to write public key to instead of standard output"
-          + System.lineSeparator()
-          + "  -V, --version     Print version information and exit."
-          + System.lineSeparator();
+      "Usage: besu public-key export [-hV] [--to=<FILE>]" +
+      System.lineSeparator() +
+      "This command outputs the node public key. Default output is standard output." +
+      System.lineSeparator() +
+      "  -h, --help        Show this help message and exit." +
+      System.lineSeparator() +
+      "      --to=<FILE>   File to write public key to instead of standard output" +
+      System.lineSeparator() +
+      "  -V, --version     Print version information and exit." +
+      System.lineSeparator();
 
   private static final String EXPECTED_PUBLIC_KEY_EXPORT_ADDRESS_USAGE =
-      "Usage: besu public-key export-address [-hV] [--to=<FILE>]"
-          + System.lineSeparator()
-          + "This command outputs the node's account address. Default output is standard"
-          + System.lineSeparator()
-          + "output."
-          + System.lineSeparator()
-          + "  -h, --help        Show this help message and exit."
-          + System.lineSeparator()
-          + "      --to=<FILE>   File to write address to instead of standard output"
-          + System.lineSeparator()
-          + "  -V, --version     Print version information and exit."
-          + System.lineSeparator();
+      "Usage: besu public-key export-address [-hV] [--to=<FILE>]" +
+      System.lineSeparator() +
+      "This command outputs the node's account address. Default output is standard" +
+      System.lineSeparator() + "output." + System.lineSeparator() +
+      "  -h, --help        Show this help message and exit." +
+      System.lineSeparator() +
+      "      --to=<FILE>   File to write address to instead of standard output" +
+      System.lineSeparator() +
+      "  -V, --version     Print version information and exit." +
+      System.lineSeparator();
 
   private static final String PUBLIC_KEY_SUBCOMMAND_NAME = "public-key";
   private static final String PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME = "export";
-  private static final String PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME = "export-address";
+  private static final String PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME =
+      "export-address";
 
   // public-key sub-command
   @Test
   public void publicKeySubCommandExistsAndHasSubCommands() {
     CommandSpec spec = parseCommand().getSpec();
     assertThat(spec.subcommands()).containsKeys(PUBLIC_KEY_SUBCOMMAND_NAME);
-    assertThat(spec.subcommands().get(PUBLIC_KEY_SUBCOMMAND_NAME).getSubcommands())
+    assertThat(
+        spec.subcommands().get(PUBLIC_KEY_SUBCOMMAND_NAME).getSubcommands())
         .containsKeys(PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME)
         .containsKeys(PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME);
     assertThat(commandOutput.toString()).isEmpty();
@@ -106,13 +102,16 @@ public class PublicKeySubCommandTest extends CommandTestAbstract {
   // Export public key sub-sub-command
   @Test
   public void callingPublicKeyExportSubCommandHelpMustDisplayUsage() {
-    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME, "--help");
-    assertThat(commandOutput.toString()).startsWith(EXPECTED_PUBLIC_KEY_EXPORT_USAGE);
+    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME,
+                 "--help");
+    assertThat(commandOutput.toString())
+        .startsWith(EXPECTED_PUBLIC_KEY_EXPORT_USAGE);
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
   @Test
-  public void callingPublicKeyExportSubCommandWithoutPathMustWriteKeyToStandardOutput() {
+  public void
+  callingPublicKeyExportSubCommandWithoutPathMustWriteKeyToStandardOutput() {
     final NodeKey nodeKey = getNodeKey();
 
     parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME);
@@ -123,15 +122,16 @@ public class PublicKeySubCommandTest extends CommandTestAbstract {
   }
 
   @Test
-  public void callingPublicKeyExportSubCommandWithFilePathMustWritePublicKeyInThisFile()
+  public void
+  callingPublicKeyExportSubCommandWithFilePathMustWritePublicKeyInThisFile()
       throws Exception {
 
     final NodeKey nodeKey = getNodeKey();
 
     final File file = File.createTempFile("public", "key");
 
-    parseCommand(
-        PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME, "--to", file.getPath());
+    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_SUBCOMMAND_NAME,
+                 "--to", file.getPath());
 
     assertThat(contentOf(file))
         .startsWith(nodeKey.getPublicKey().toString())
@@ -144,35 +144,39 @@ public class PublicKeySubCommandTest extends CommandTestAbstract {
   // Export address sub-sub-command
   @Test
   public void callingPublicKeyExportAddressSubCommandHelpMustDisplayUsage() {
-    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME, "--help");
-    assertThat(commandOutput.toString()).startsWith(EXPECTED_PUBLIC_KEY_EXPORT_ADDRESS_USAGE);
+    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME,
+                 PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME, "--help");
+    assertThat(commandOutput.toString())
+        .startsWith(EXPECTED_PUBLIC_KEY_EXPORT_ADDRESS_USAGE);
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
   @Test
-  public void callingPublicKeyExportAddressSubCommandWithoutPathMustWriteAddressToStandardOutput() {
+  public void
+  callingPublicKeyExportAddressSubCommandWithoutPathMustWriteAddressToStandardOutput() {
     final NodeKey nodeKey = getNodeKey();
 
-    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME, PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME);
+    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME,
+                 PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME);
 
-    final String expectedOutputStart = Util.publicKeyToAddress(nodeKey.getPublicKey()).toString();
+    final String expectedOutputStart =
+        Util.publicKeyToAddress(nodeKey.getPublicKey()).toString();
     assertThat(commandOutput.toString()).startsWith(expectedOutputStart);
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
   @Test
-  public void callingPublicKeyExportAddressSubCommandWithFilePathMustWriteAddressInThisFile()
+  public void
+  callingPublicKeyExportAddressSubCommandWithFilePathMustWriteAddressInThisFile()
       throws Exception {
 
     final NodeKey nodeKey = getNodeKey();
 
     final File file = File.createTempFile("public", "address");
 
-    parseCommand(
-        PUBLIC_KEY_SUBCOMMAND_NAME,
-        PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME,
-        "--to",
-        file.getPath());
+    parseCommand(PUBLIC_KEY_SUBCOMMAND_NAME,
+                 PUBLIC_KEY_EXPORT_ADDRESS_SUBCOMMAND_NAME, "--to",
+                 file.getPath());
 
     assertThat(contentOf(file))
         .startsWith(Util.publicKeyToAddress(nodeKey.getPublicKey()).toString())

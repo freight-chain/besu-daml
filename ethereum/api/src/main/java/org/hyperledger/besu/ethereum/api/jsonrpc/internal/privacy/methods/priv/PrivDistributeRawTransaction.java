@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,10 @@ import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRp
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError.ENCLAVE_ERROR;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError.PRIVATE_FROM_DOES_NOT_MATCH_ENCLAVE_PUBLIC_KEY;
 
+import java.util.Base64;
+import java.util.Optional;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.enclave.types.PrivacyGroup;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
@@ -37,12 +44,6 @@ import org.hyperledger.besu.ethereum.privacy.PrivacyController;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
-
-import java.util.Base64;
-import java.util.Optional;
-
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
 
 public class PrivDistributeRawTransaction implements JsonRpcMethod {
 
@@ -68,60 +69,67 @@ public class PrivDistributeRawTransaction implements JsonRpcMethod {
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
     final Object id = requestContext.getRequest().getId();
-    final String rawPrivateTransaction = requestContext.getRequiredParameter(0, String.class);
+    final String rawPrivateTransaction =
+        requestContext.getRequiredParameter(0, String.class);
 
     try {
-      final PrivateTransaction privateTransaction =
-          PrivateTransaction.readFrom(RLP.input(Bytes.fromHexString(rawPrivateTransaction)));
+      final PrivateTransaction privateTransaction = PrivateTransaction.readFrom(
+          RLP.input(Bytes.fromHexString(rawPrivateTransaction)));
 
       final String enclavePublicKey =
           enclavePublicKeyProvider.getEnclaveKey(requestContext.getUser());
 
-      if (!privateTransaction.getPrivateFrom().equals(Bytes.fromBase64String(enclavePublicKey))) {
-        return new JsonRpcErrorResponse(id, PRIVATE_FROM_DOES_NOT_MATCH_ENCLAVE_PUBLIC_KEY);
+      if (!privateTransaction.getPrivateFrom().equals(
+              Bytes.fromBase64String(enclavePublicKey))) {
+        return new JsonRpcErrorResponse(
+            id, PRIVATE_FROM_DOES_NOT_MATCH_ENCLAVE_PUBLIC_KEY);
       }
 
       Optional<PrivacyGroup> maybePrivacyGroup = null;
-      final Optional<Bytes> maybePrivacyGroupId = privateTransaction.getPrivacyGroupId();
+      final Optional<Bytes> maybePrivacyGroupId =
+          privateTransaction.getPrivacyGroupId();
       if (onchainPrivacyGroupsEnabled) {
         if (!maybePrivacyGroupId.isPresent()) {
-          return new JsonRpcErrorResponse(id, JsonRpcError.PRIVACY_GROUP_ID_NOT_AVAILABLE);
+          return new JsonRpcErrorResponse(
+              id, JsonRpcError.PRIVACY_GROUP_ID_NOT_AVAILABLE);
         }
-        maybePrivacyGroup =
-            privacyController.retrieveOnChainPrivacyGroup(
-                maybePrivacyGroupId.get(), enclavePublicKey);
-        if (maybePrivacyGroup.isEmpty()
-            && !privacyController.isGroupAdditionTransaction(privateTransaction)) {
-          return new JsonRpcErrorResponse(id, JsonRpcError.ONCCHAIN_PRIVACY_GROUP_DOES_NOT_EXIST);
+        maybePrivacyGroup = privacyController.retrieveOnChainPrivacyGroup(
+            maybePrivacyGroupId.get(), enclavePublicKey);
+        if (maybePrivacyGroup.isEmpty() &&
+            !privacyController.isGroupAdditionTransaction(privateTransaction)) {
+          return new JsonRpcErrorResponse(
+              id, JsonRpcError.ONCCHAIN_PRIVACY_GROUP_DOES_NOT_EXIST);
         }
       } else { // !onchainPirvacyGroupEnabled
         if (maybePrivacyGroupId.isPresent()) {
-          maybePrivacyGroup =
-              privacyController.retrieveOffChainPrivacyGroup(
-                  maybePrivacyGroupId.get().toBase64String(), enclavePublicKey);
+          maybePrivacyGroup = privacyController.retrieveOffChainPrivacyGroup(
+              maybePrivacyGroupId.get().toBase64String(), enclavePublicKey);
         } else {
           maybePrivacyGroup = Optional.empty();
         }
       }
 
       final ValidationResult<TransactionInvalidReason> validationResult =
-          privacyController.validatePrivateTransaction(privateTransaction, enclavePublicKey);
+          privacyController.validatePrivateTransaction(privateTransaction,
+                                                       enclavePublicKey);
       if (!validationResult.isValid()) {
         return new JsonRpcErrorResponse(
-            id, convertTransactionInvalidReason(validationResult.getInvalidReason()));
+            id, convertTransactionInvalidReason(
+                    validationResult.getInvalidReason()));
       }
 
-      final String enclaveKey =
-          privacyController.sendTransaction(
-              privateTransaction, enclavePublicKey, maybePrivacyGroup);
+      final String enclaveKey = privacyController.sendTransaction(
+          privateTransaction, enclavePublicKey, maybePrivacyGroup);
       return new JsonRpcSuccessResponse(id, hexEncodeEnclaveKey(enclaveKey));
     } catch (final MultiTenancyValidationException e) {
-      LOG.error("Unauthorized privacy multi-tenancy rpc request. {}", e.getMessage());
+      LOG.error("Unauthorized privacy multi-tenancy rpc request. {}",
+                e.getMessage());
       return new JsonRpcErrorResponse(id, ENCLAVE_ERROR);
     } catch (final IllegalArgumentException | RLPException e) {
       return new JsonRpcErrorResponse(id, DECODE_ERROR);
     } catch (final Exception e) {
-      return new JsonRpcErrorResponse(id, convertEnclaveInvalidReason(e.getMessage()));
+      return new JsonRpcErrorResponse(
+          id, convertEnclaveInvalidReason(e.getMessage()));
     }
   }
 

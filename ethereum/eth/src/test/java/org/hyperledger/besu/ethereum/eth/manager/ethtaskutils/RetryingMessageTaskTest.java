@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,33 +20,32 @@ package org.hyperledger.besu.ethereum.eth.manager.ethtaskutils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.exceptions.MaxRetriesReachedException;
 import org.hyperledger.besu.ethereum.eth.manager.task.EthTask;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
 import org.junit.Test;
 
 /**
- * Tests ethTasks that request data from the network, and retry until all of the data is received.
+ * Tests ethTasks that request data from the network, and retry until all of the
+ * data is received.
  *
  * @param <T>
  */
-public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest<T, T> {
+public abstract class RetryingMessageTaskTest<T>
+    extends AbstractMessageTaskTest<T, T> {
 
   protected final int maxRetries;
 
-  public RetryingMessageTaskTest() {
-    this.maxRetries = 3;
-  }
+  public RetryingMessageTaskTest() { this.maxRetries = 3; }
 
   @Override
-  protected void assertResultMatchesExpectation(
-      final T requestedData, final T response, final EthPeer respondingPeer) {
+  protected void assertResultMatchesExpectation(final T requestedData,
+                                                final T response,
+                                                final EthPeer respondingPeer) {
     assertThat(response).isEqualTo(requestedData);
   }
 
@@ -54,12 +56,10 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     // Setup a partially responsive peer and a non-responsive peer
     final RespondingEthPeer.Responder partialResponder =
         RespondingEthPeer.partialResponder(
-            blockchain,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            protocolSchedule,
-            0.5f);
-    final RespondingEthPeer.Responder emptyResponder = RespondingEthPeer.emptyResponder();
+            blockchain, protocolContext.getWorldStateArchive(), transactionPool,
+            protocolSchedule, 0.5f);
+    final RespondingEthPeer.Responder emptyResponder =
+        RespondingEthPeer.emptyResponder();
     final RespondingEthPeer respondingPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
 
@@ -84,7 +84,8 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     respondingPeer.respond(emptyResponder);
     assertThat(future).isDone();
     assertThat(future.isCompletedExceptionally()).isTrue();
-    assertThatThrownBy(future::get).hasCauseInstanceOf(MaxRetriesReachedException.class);
+    assertThatThrownBy(future::get)
+        .hasCauseInstanceOf(MaxRetriesReachedException.class);
   }
 
   @Test
@@ -102,37 +103,22 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     final CompletableFuture<T> future = task.run();
 
     // Respond with partial data up until complete.
-    respondingPeer.respond(
-        RespondingEthPeer.partialResponder(
-            blockchain,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            protocolSchedule,
-            0.25f));
-    respondingPeer.respond(
-        RespondingEthPeer.partialResponder(
-            blockchain,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            protocolSchedule,
-            0.50f));
-    respondingPeer.respond(
-        RespondingEthPeer.partialResponder(
-            blockchain,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            protocolSchedule,
-            0.75f));
-    respondingPeer.respond(
-        RespondingEthPeer.partialResponder(
-            blockchain,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            protocolSchedule,
-            1.0f));
+    respondingPeer.respond(RespondingEthPeer.partialResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool,
+        protocolSchedule, 0.25f));
+    respondingPeer.respond(RespondingEthPeer.partialResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool,
+        protocolSchedule, 0.50f));
+    respondingPeer.respond(RespondingEthPeer.partialResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool,
+        protocolSchedule, 0.75f));
+    respondingPeer.respond(RespondingEthPeer.partialResponder(
+        blockchain, protocolContext.getWorldStateArchive(), transactionPool,
+        protocolSchedule, 1.0f));
 
     assertThat(future.isDone()).isTrue();
-    assertResultMatchesExpectation(requestedData, future.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, future.get(),
+                                   respondingPeer.getEthPeer());
   }
 
   @Test
@@ -161,12 +147,14 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     // Setup a peer
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+            blockchain, protocolContext.getWorldStateArchive(),
+            transactionPool);
     final RespondingEthPeer respondingPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
     respondingPeer.respondWhile(responder, () -> !future.isDone());
 
-    assertResultMatchesExpectation(requestedData, future.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, future.get(),
+                                   respondingPeer.getEthPeer());
   }
 
   @Test
@@ -175,7 +163,8 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     peerCountToTimeout.set(1);
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+            blockchain, protocolContext.getWorldStateArchive(),
+            transactionPool);
     final RespondingEthPeer respondingPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
     final T requestedData = generateDataToBeRequested();
@@ -186,13 +175,15 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     assertThat(future.isDone()).isFalse();
     respondingPeer.respondWhile(responder, () -> !future.isDone());
 
-    assertResultMatchesExpectation(requestedData, future.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, future.get(),
+                                   respondingPeer.getEthPeer());
   }
 
   @Test
   public void failsWhenPeersSendEmptyResponses() {
     // Setup a unresponsive peer
-    final RespondingEthPeer.Responder responder = RespondingEthPeer.emptyResponder();
+    final RespondingEthPeer.Responder responder =
+        RespondingEthPeer.emptyResponder();
     final RespondingEthPeer respondingPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
 
@@ -213,6 +204,7 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     respondingPeer.respond(responder);
     assertThat(future.isDone()).isTrue();
     assertThat(future.isCompletedExceptionally()).isTrue();
-    assertThatThrownBy(future::get).hasCauseInstanceOf(MaxRetriesReachedException.class);
+    assertThatThrownBy(future::get)
+        .hasCauseInstanceOf(MaxRetriesReachedException.class);
   }
 }

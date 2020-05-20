@@ -1,19 +1,39 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntSupplier;
+import java.util.stream.StreamSupport;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.ethereum.p2p.config.RlpxConfiguration;
 import org.hyperledger.besu.ethereum.p2p.discovery.DiscoveryPeer;
@@ -28,25 +48,6 @@ import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.util.Subscribers;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.IntSupplier;
-import java.util.stream.StreamSupport;
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
-
 public class NettyConnectionInitializer implements ConnectionInitializer {
 
   private static final int TIMEOUT_SECONDS = 10;
@@ -56,7 +57,8 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
   private final LocalNode localNode;
   private final PeerConnectionEventDispatcher eventDispatcher;
   private final MetricsSystem metricsSystem;
-  private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
+  private final Subscribers<ConnectCallback> connectSubscribers =
+      Subscribers.create();
 
   private ChannelFuture server;
   private final EventLoopGroup boss = new NioEventLoopGroup(1);
@@ -65,8 +67,7 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
   private final AtomicBoolean stopped = new AtomicBoolean(false);
 
   public NettyConnectionInitializer(
-      final NodeKey nodeKey,
-      final RlpxConfiguration config,
+      final NodeKey nodeKey, final RlpxConfiguration config,
       final LocalNode localNode,
       final PeerConnectionEventDispatcher eventDispatcher,
       final MetricsSystem metricsSystem) {
@@ -77,50 +78,46 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
     this.metricsSystem = metricsSystem;
 
     metricsSystem.createIntegerGauge(
-        BesuMetricCategory.NETWORK,
-        "netty_workers_pending_tasks",
+        BesuMetricCategory.NETWORK, "netty_workers_pending_tasks",
         "The number of pending tasks in the Netty workers event loop",
         pendingTaskCounter(workers));
 
     metricsSystem.createIntegerGauge(
-        BesuMetricCategory.NETWORK,
-        "netty_boss_pending_tasks",
+        BesuMetricCategory.NETWORK, "netty_boss_pending_tasks",
         "The number of pending tasks in the Netty boss event loop",
         pendingTaskCounter(boss));
   }
 
   @Override
   public CompletableFuture<InetSocketAddress> start() {
-    final CompletableFuture<InetSocketAddress> listeningPortFuture = new CompletableFuture<>();
+    final CompletableFuture<InetSocketAddress> listeningPortFuture =
+        new CompletableFuture<>();
     if (!started.compareAndSet(false, true)) {
       listeningPortFuture.completeExceptionally(
-          new IllegalStateException(
-              "Attempt to start an already started " + this.getClass().getSimpleName()));
+          new IllegalStateException("Attempt to start an already started " +
+                                    this.getClass().getSimpleName()));
       return listeningPortFuture;
     }
 
-    this.server =
-        new ServerBootstrap()
-            .group(boss, workers)
-            .channel(NioServerSocketChannel.class)
-            .childHandler(inboundChannelInitializer())
-            .bind(config.getBindHost(), config.getBindPort());
-    server.addListener(
-        future -> {
-          final InetSocketAddress socketAddress =
-              (InetSocketAddress) server.channel().localAddress();
-          if (!future.isSuccess() || socketAddress == null) {
-            final String message =
-                String.format(
-                    "Unable start listening on %s:%s. Check for port conflicts.",
-                    config.getBindHost(), config.getBindPort());
-            listeningPortFuture.completeExceptionally(
-                new IllegalStateException(message, future.cause()));
-            return;
-          }
+    this.server = new ServerBootstrap()
+                      .group(boss, workers)
+                      .channel(NioServerSocketChannel.class)
+                      .childHandler(inboundChannelInitializer())
+                      .bind(config.getBindHost(), config.getBindPort());
+    server.addListener(future -> {
+      final InetSocketAddress socketAddress =
+          (InetSocketAddress)server.channel().localAddress();
+      if (!future.isSuccess() || socketAddress == null) {
+        final String message = String.format(
+            "Unable start listening on %s:%s. Check for port conflicts.",
+            config.getBindHost(), config.getBindPort());
+        listeningPortFuture.completeExceptionally(
+            new IllegalStateException(message, future.cause()));
+        return;
+      }
 
-          listeningPortFuture.complete(socketAddress);
-        });
+      listeningPortFuture.complete(socketAddress);
+    });
 
     return listeningPortFuture;
   }
@@ -129,24 +126,20 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
   public CompletableFuture<Void> stop() {
     CompletableFuture<Void> stoppedFuture = new CompletableFuture<>();
     if (!started.get() || !stopped.compareAndSet(false, true)) {
-      stoppedFuture.completeExceptionally(
-          new IllegalStateException("Illegal attempt to stop " + this.getClass().getSimpleName()));
+      stoppedFuture.completeExceptionally(new IllegalStateException(
+          "Illegal attempt to stop " + this.getClass().getSimpleName()));
       return stoppedFuture;
     }
 
     workers.shutdownGracefully();
     boss.shutdownGracefully();
-    server
-        .channel()
-        .closeFuture()
-        .addListener(
-            (future) -> {
-              if (future.isSuccess()) {
-                stoppedFuture.complete(null);
-              } else {
-                stoppedFuture.completeExceptionally(future.cause());
-              }
-            });
+    server.channel().closeFuture().addListener((future) -> {
+      if (future.isSuccess()) {
+        stoppedFuture.complete(null);
+      } else {
+        stoppedFuture.completeExceptionally(future.cause());
+      }
+    });
     return stoppedFuture;
   }
 
@@ -157,50 +150,44 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
 
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
+    final CompletableFuture<PeerConnection> connectionFuture =
+        new CompletableFuture<>();
 
     if (peer instanceof DiscoveryPeer) {
-      ((DiscoveryPeer) peer).setLastAttemptedConnection(System.currentTimeMillis());
+      ((DiscoveryPeer)peer)
+          .setLastAttemptedConnection(System.currentTimeMillis());
     }
 
     final EnodeURL enode = peer.getEnodeURL();
     new Bootstrap()
         .group(workers)
         .channel(NioSocketChannel.class)
-        .remoteAddress(new InetSocketAddress(enode.getIp(), enode.getListeningPort().getAsInt()))
+        .remoteAddress(new InetSocketAddress(
+            enode.getIp(), enode.getListeningPort().getAsInt()))
         .option(ChannelOption.TCP_NODELAY, true)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT_SECONDS * 1000)
-        .handler(
-            new ChannelInitializer<SocketChannel>() {
-              @Override
-              protected void initChannel(final SocketChannel ch) {
-                ch.pipeline()
-                    .addLast(
-                        new TimeoutHandler<>(
-                            connectionFuture::isDone,
-                            TIMEOUT_SECONDS,
-                            () ->
-                                connectionFuture.completeExceptionally(
-                                    new TimeoutException(
-                                        "Timed out waiting to establish connection with peer: "
-                                            + peer.getId()))),
-                        new HandshakeHandlerOutbound(
-                            nodeKey,
-                            peer,
-                            config.getSupportedProtocols(),
-                            localNode,
-                            connectionFuture,
-                            eventDispatcher,
-                            metricsSystem));
-              }
-            })
+        .handler(new ChannelInitializer<SocketChannel>() {
+          @Override
+          protected void initChannel(final SocketChannel ch) {
+            ch.pipeline().addLast(
+                new TimeoutHandler<>(
+                    connectionFuture::isDone, TIMEOUT_SECONDS,
+                    ()
+                        -> connectionFuture.completeExceptionally(
+                            new TimeoutException(
+                                "Timed out waiting to establish connection with peer: " +
+                                peer.getId()))),
+                new HandshakeHandlerOutbound(
+                    nodeKey, peer, config.getSupportedProtocols(), localNode,
+                    connectionFuture, eventDispatcher, metricsSystem));
+          }
+        })
         .connect()
-        .addListener(
-            (f) -> {
-              if (!f.isSuccess()) {
-                connectionFuture.completeExceptionally(f.cause());
-              }
-            });
+        .addListener((f) -> {
+          if (!f.isSuccess()) {
+            connectionFuture.completeExceptionally(f.cause());
+          }
+        });
 
     return connectionFuture;
   }
@@ -210,35 +197,34 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
     return new ChannelInitializer<SocketChannel>() {
       @Override
       protected void initChannel(final SocketChannel ch) {
-        final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
+        final CompletableFuture<PeerConnection> connectionFuture =
+            new CompletableFuture<>();
         connectionFuture.thenAccept(
-            connection -> connectSubscribers.forEach(c -> c.onConnect(connection)));
+            connection
+            -> connectSubscribers.forEach(c -> c.onConnect(connection)));
 
-        ch.pipeline()
-            .addLast(
-                new TimeoutHandler<>(
-                    connectionFuture::isDone,
-                    TIMEOUT_SECONDS,
-                    () ->
-                        connectionFuture.completeExceptionally(
-                            new TimeoutException(
-                                "Timed out waiting to fully establish incoming connection"))),
-                new HandshakeHandlerInbound(
-                    nodeKey,
-                    config.getSupportedProtocols(),
-                    localNode,
-                    connectionFuture,
-                    eventDispatcher,
-                    metricsSystem));
+        ch.pipeline().addLast(
+            new TimeoutHandler<>(
+                connectionFuture::isDone, TIMEOUT_SECONDS,
+                ()
+                    -> connectionFuture.completeExceptionally(new TimeoutException(
+                        "Timed out waiting to fully establish incoming connection"))),
+            new HandshakeHandlerInbound(nodeKey, config.getSupportedProtocols(),
+                                        localNode, connectionFuture,
+                                        eventDispatcher, metricsSystem));
       }
     };
   }
 
   private IntSupplier pendingTaskCounter(final EventLoopGroup eventLoopGroup) {
-    return () ->
-        StreamSupport.stream(eventLoopGroup.spliterator(), false)
-            .filter(eventExecutor -> eventExecutor instanceof SingleThreadEventExecutor)
-            .mapToInt(eventExecutor -> ((SingleThreadEventExecutor) eventExecutor).pendingTasks())
-            .sum();
+    return ()
+               -> StreamSupport.stream(eventLoopGroup.spliterator(), false)
+                      .filter(eventExecutor
+                              -> eventExecutor instanceof
+                                     SingleThreadEventExecutor)
+                      .mapToInt(eventExecutor
+                                -> ((SingleThreadEventExecutor)eventExecutor)
+                                       .pendingTasks())
+                      .sum();
   }
 }

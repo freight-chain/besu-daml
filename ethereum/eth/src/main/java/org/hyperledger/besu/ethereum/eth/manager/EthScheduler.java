@@ -1,25 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth.manager;
 
 import static org.hyperledger.besu.util.FutureUtils.propagateResult;
-
-import org.hyperledger.besu.ethereum.eth.manager.task.EthTask;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.services.pipeline.Pipeline;
-import org.hyperledger.besu.util.ExceptionUtils;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -36,9 +34,12 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.eth.manager.task.EthTask;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.services.pipeline.Pipeline;
+import org.hyperledger.besu.util.ExceptionUtils;
 
 public class EthScheduler {
   private static final Logger LOG = LogManager.getLogger();
@@ -54,46 +55,40 @@ public class EthScheduler {
   protected final ExecutorService servicesExecutor;
   protected final ExecutorService computationExecutor;
 
-  private final Collection<CompletableFuture<?>> pendingFutures = new ConcurrentLinkedDeque<>();
+  private final Collection<CompletableFuture<?>> pendingFutures =
+      new ConcurrentLinkedDeque<>();
 
-  public EthScheduler(
-      final int syncWorkerCount,
-      final int txWorkerCount,
-      final int computationWorkerCount,
-      final MetricsSystem metricsSystem) {
-    this(syncWorkerCount, txWorkerCount, TX_WORKER_CAPACITY, computationWorkerCount, metricsSystem);
+  public EthScheduler(final int syncWorkerCount, final int txWorkerCount,
+                      final int computationWorkerCount,
+                      final MetricsSystem metricsSystem) {
+    this(syncWorkerCount, txWorkerCount, TX_WORKER_CAPACITY,
+         computationWorkerCount, metricsSystem);
   }
 
-  public EthScheduler(
-      final int syncWorkerCount,
-      final int txWorkerCount,
-      final int txWorkerQueueSize,
-      final int computationWorkerCount,
-      final MetricsSystem metricsSystem) {
-    this(
-        MonitoredExecutors.newFixedThreadPool(
-            EthScheduler.class.getSimpleName() + "-Workers", syncWorkerCount, metricsSystem),
-        MonitoredExecutors.newScheduledThreadPool(
-            EthScheduler.class.getSimpleName() + "-Timer", 1, metricsSystem),
-        MonitoredExecutors.newBoundedThreadPool(
-            EthScheduler.class.getSimpleName() + "-Transactions",
-            txWorkerCount,
-            txWorkerQueueSize,
-            metricsSystem),
-        MonitoredExecutors.newCachedThreadPool(
-            EthScheduler.class.getSimpleName() + "-Services", metricsSystem),
-        MonitoredExecutors.newFixedThreadPool(
-            EthScheduler.class.getSimpleName() + "-Computation",
-            computationWorkerCount,
-            metricsSystem));
+  public EthScheduler(final int syncWorkerCount, final int txWorkerCount,
+                      final int txWorkerQueueSize,
+                      final int computationWorkerCount,
+                      final MetricsSystem metricsSystem) {
+    this(MonitoredExecutors.newFixedThreadPool(
+             EthScheduler.class.getSimpleName() + "-Workers", syncWorkerCount,
+             metricsSystem),
+         MonitoredExecutors.newScheduledThreadPool(
+             EthScheduler.class.getSimpleName() + "-Timer", 1, metricsSystem),
+         MonitoredExecutors.newBoundedThreadPool(
+             EthScheduler.class.getSimpleName() + "-Transactions",
+             txWorkerCount, txWorkerQueueSize, metricsSystem),
+         MonitoredExecutors.newCachedThreadPool(
+             EthScheduler.class.getSimpleName() + "-Services", metricsSystem),
+         MonitoredExecutors.newFixedThreadPool(
+             EthScheduler.class.getSimpleName() + "-Computation",
+             computationWorkerCount, metricsSystem));
   }
 
-  protected EthScheduler(
-      final ExecutorService syncWorkerExecutor,
-      final ScheduledExecutorService scheduler,
-      final ExecutorService txWorkerExecutor,
-      final ExecutorService servicesExecutor,
-      final ExecutorService computationExecutor) {
+  protected EthScheduler(final ExecutorService syncWorkerExecutor,
+                         final ScheduledExecutorService scheduler,
+                         final ExecutorService txWorkerExecutor,
+                         final ExecutorService servicesExecutor,
+                         final ExecutorService computationExecutor) {
     this.syncWorkerExecutor = syncWorkerExecutor;
     this.scheduler = scheduler;
     this.txWorkerExecutor = txWorkerExecutor;
@@ -101,18 +96,17 @@ public class EthScheduler {
     this.computationExecutor = computationExecutor;
   }
 
-  public <T> CompletableFuture<T> scheduleSyncWorkerTask(
-      final Supplier<CompletableFuture<T>> future) {
+  public <T> CompletableFuture<T>
+  scheduleSyncWorkerTask(final Supplier<CompletableFuture<T>> future) {
     final CompletableFuture<T> promise = new CompletableFuture<>();
     final Future<?> workerFuture =
         syncWorkerExecutor.submit(() -> propagateResult(future, promise));
     // If returned promise is cancelled, cancel the worker future
-    promise.whenComplete(
-        (r, t) -> {
-          if (t instanceof CancellationException) {
-            workerFuture.cancel(false);
-          }
-        });
+    promise.whenComplete((r, t) -> {
+      if (t instanceof CancellationException) {
+        workerFuture.cancel(false);
+      }
+    });
     return promise;
   }
 
@@ -120,7 +114,8 @@ public class EthScheduler {
     syncWorkerExecutor.execute(command);
   }
 
-  public <T> CompletableFuture<T> scheduleSyncWorkerTask(final EthTask<T> task) {
+  public <T> CompletableFuture<T>
+  scheduleSyncWorkerTask(final EthTask<T> task) {
     final CompletableFuture<T> syncFuture = task.runAsync(syncWorkerExecutor);
     pendingFutures.add(syncFuture);
     syncFuture.whenComplete((r, t) -> pendingFutures.remove(syncFuture));
@@ -139,54 +134,53 @@ public class EthScheduler {
   }
 
   public CompletableFuture<Void> startPipeline(final Pipeline<?> pipeline) {
-    final CompletableFuture<Void> pipelineFuture = pipeline.start(servicesExecutor);
+    final CompletableFuture<Void> pipelineFuture =
+        pipeline.start(servicesExecutor);
     pendingFutures.add(pipelineFuture);
-    pipelineFuture.whenComplete((r, t) -> pendingFutures.remove(pipelineFuture));
+    pipelineFuture.whenComplete(
+        (r, t) -> pendingFutures.remove(pipelineFuture));
     return pipelineFuture;
   }
 
-  public <T> CompletableFuture<T> scheduleComputationTask(final Supplier<T> computation) {
+  public <T> CompletableFuture<T>
+  scheduleComputationTask(final Supplier<T> computation) {
     return CompletableFuture.supplyAsync(computation, computationExecutor);
   }
 
-  public CompletableFuture<Void> scheduleFutureTask(
-      final Runnable command, final Duration duration) {
+  public CompletableFuture<Void> scheduleFutureTask(final Runnable command,
+                                                    final Duration duration) {
     final CompletableFuture<Void> promise = new CompletableFuture<>();
-    final ScheduledFuture<?> scheduledFuture =
-        scheduler.schedule(
-            () -> {
-              try {
-                command.run();
-                promise.complete(null);
-              } catch (final Throwable t) {
-                promise.completeExceptionally(t);
-              }
-            },
-            duration.toMillis(),
-            TimeUnit.MILLISECONDS);
+    final ScheduledFuture<?> scheduledFuture = scheduler.schedule(() -> {
+      try {
+        command.run();
+        promise.complete(null);
+      } catch (final Throwable t) {
+        promise.completeExceptionally(t);
+      }
+    }, duration.toMillis(), TimeUnit.MILLISECONDS);
     // If returned promise is cancelled, cancel scheduled task
-    promise.whenComplete(
-        (r, t) -> {
-          if (t instanceof CancellationException) {
-            scheduledFuture.cancel(false);
-          }
-        });
+    promise.whenComplete((r, t) -> {
+      if (t instanceof CancellationException) {
+        scheduledFuture.cancel(false);
+      }
+    });
     return promise;
   }
 
-  public <T> CompletableFuture<T> scheduleFutureTask(
-      final Supplier<CompletableFuture<T>> future, final Duration duration) {
+  public <T> CompletableFuture<T>
+  scheduleFutureTask(final Supplier<CompletableFuture<T>> future,
+                     final Duration duration) {
     final CompletableFuture<T> promise = new CompletableFuture<>();
     final ScheduledFuture<?> scheduledFuture =
-        scheduler.schedule(
-            () -> propagateResult(future, promise), duration.toMillis(), TimeUnit.MILLISECONDS);
+        scheduler.schedule(()
+                               -> propagateResult(future, promise),
+                           duration.toMillis(), TimeUnit.MILLISECONDS);
     // If returned promise is cancelled, cancel scheduled task
-    promise.whenComplete(
-        (r, t) -> {
-          if (t instanceof CancellationException) {
-            scheduledFuture.cancel(false);
-          }
-        });
+    promise.whenComplete((r, t) -> {
+      if (t instanceof CancellationException) {
+        scheduledFuture.cancel(false);
+      }
+    });
     return promise;
   }
 
@@ -194,25 +188,26 @@ public class EthScheduler {
     return timeout(task, defaultTimeout);
   }
 
-  public <T> CompletableFuture<T> timeout(final EthTask<T> task, final Duration timeout) {
+  public <T> CompletableFuture<T> timeout(final EthTask<T> task,
+                                          final Duration timeout) {
     final CompletableFuture<T> future = task.run();
     final CompletableFuture<T> result = timeout(future, timeout);
-    result.whenComplete(
-        (r, error) -> {
-          if (errorIsTimeoutOrCancellation(error)) {
-            task.cancel();
-          }
-        });
+    result.whenComplete((r, error) -> {
+      if (errorIsTimeoutOrCancellation(error)) {
+        task.cancel();
+      }
+    });
     return result;
   }
 
   private boolean errorIsTimeoutOrCancellation(final Throwable error) {
     final Throwable cause = ExceptionUtils.rootCause(error);
-    return cause instanceof TimeoutException || cause instanceof CancellationException;
+    return cause instanceof TimeoutException || cause instanceof
+                                                    CancellationException;
   }
 
-  private <T> CompletableFuture<T> timeout(
-      final CompletableFuture<T> future, final Duration delay) {
+  private <T> CompletableFuture<T> timeout(final CompletableFuture<T> future,
+                                           final Duration delay) {
     final CompletableFuture<T> timeout = failAfterTimeout(delay);
     return future.applyToEither(timeout, Function.identity());
   }
@@ -227,7 +222,8 @@ public class EthScheduler {
       computationExecutor.shutdownNow();
       shutdown.countDown();
     } else {
-      LOG.trace("Attempted to stop already stopped " + getClass().getSimpleName());
+      LOG.trace("Attempted to stop already stopped " +
+                getClass().getSimpleName());
     }
   }
 
@@ -235,23 +231,25 @@ public class EthScheduler {
     shutdown.await();
     pendingFutures.forEach(future -> future.cancel(true));
     if (!syncWorkerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-      LOG.error("{} worker executor did not shutdown cleanly.", this.getClass().getSimpleName());
+      LOG.error("{} worker executor did not shutdown cleanly.",
+                this.getClass().getSimpleName());
     }
     if (!txWorkerExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-      LOG.error(
-          "{} transaction worker executor did not shutdown cleanly.",
-          this.getClass().getSimpleName());
+      LOG.error("{} transaction worker executor did not shutdown cleanly.",
+                this.getClass().getSimpleName());
     }
     if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
-      LOG.error("{} scheduler did not shutdown cleanly.", this.getClass().getSimpleName());
+      LOG.error("{} scheduler did not shutdown cleanly.",
+                this.getClass().getSimpleName());
       scheduler.shutdownNow();
     }
     if (!servicesExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-      LOG.error("{} services executor did not shutdown cleanly.", this.getClass().getSimpleName());
+      LOG.error("{} services executor did not shutdown cleanly.",
+                this.getClass().getSimpleName());
     }
     if (!computationExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
-      LOG.error(
-          "{} computation executor did not shutdown cleanly.", this.getClass().getSimpleName());
+      LOG.error("{} computation executor did not shutdown cleanly.",
+                this.getClass().getSimpleName());
     }
     LOG.trace("{} stopped.", this.getClass().getSimpleName());
   }
@@ -262,16 +260,14 @@ public class EthScheduler {
     return promise;
   }
 
-  public <T> void failAfterTimeout(final CompletableFuture<T> promise, final Duration timeout) {
+  public <T> void failAfterTimeout(final CompletableFuture<T> promise,
+                                   final Duration timeout) {
     final long delay = timeout.toMillis();
     final TimeUnit unit = TimeUnit.MILLISECONDS;
-    scheduler.schedule(
-        () -> {
-          final TimeoutException ex =
-              new TimeoutException("Timeout after " + delay + " " + unit.name());
-          return promise.completeExceptionally(ex);
-        },
-        delay,
-        unit);
+    scheduler.schedule(() -> {
+      final TimeoutException ex =
+          new TimeoutException("Timeout after " + delay + " " + unit.name());
+      return promise.completeExceptionally(ex);
+    }, delay, unit);
   }
 }

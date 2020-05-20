@@ -1,28 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.core;
 
+import com.google.common.base.Suppliers;
+import java.util.Objects;
+import java.util.function.Supplier;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
-
-import java.util.Objects;
-import java.util.function.Supplier;
-
-import com.google.common.base.Suppliers;
-import org.apache.tuweni.bytes.Bytes;
 
 /** A mined Ethereum block header. */
 public class BlockHeader extends SealableBlockHeader
@@ -40,43 +41,23 @@ public class BlockHeader extends SealableBlockHeader
 
   private final Supplier<ParsedExtraData> parsedExtraData;
 
-  public BlockHeader(
-      final Hash parentHash,
-      final Hash ommersHash,
-      final Address coinbase,
-      final Hash stateRoot,
-      final Hash transactionsRoot,
-      final Hash receiptsRoot,
-      final LogsBloomFilter logsBloom,
-      final Difficulty difficulty,
-      final long number,
-      final long gasLimit,
-      final long gasUsed,
-      final long timestamp,
-      final Bytes extraData,
-      final Long baseFee,
-      final Hash mixHash,
-      final long nonce,
-      final BlockHeaderFunctions blockHeaderFunctions) {
-    super(
-        parentHash,
-        ommersHash,
-        coinbase,
-        stateRoot,
-        transactionsRoot,
-        receiptsRoot,
-        logsBloom,
-        difficulty,
-        number,
-        gasLimit,
-        gasUsed,
-        timestamp,
-        extraData,
-        baseFee);
+  public BlockHeader(final Hash parentHash, final Hash ommersHash,
+                     final Address coinbase, final Hash stateRoot,
+                     final Hash transactionsRoot, final Hash receiptsRoot,
+                     final LogsBloomFilter logsBloom,
+                     final Difficulty difficulty, final long number,
+                     final long gasLimit, final long gasUsed,
+                     final long timestamp, final Bytes extraData,
+                     final Long baseFee, final Hash mixHash, final long nonce,
+                     final BlockHeaderFunctions blockHeaderFunctions) {
+    super(parentHash, ommersHash, coinbase, stateRoot, transactionsRoot,
+          receiptsRoot, logsBloom, difficulty, number, gasLimit, gasUsed,
+          timestamp, extraData, baseFee);
     this.mixHash = mixHash;
     this.nonce = nonce;
     this.hash = Suppliers.memoize(() -> blockHeaderFunctions.hash(this));
-    this.parsedExtraData = Suppliers.memoize(() -> blockHeaderFunctions.parseExtraData(this));
+    this.parsedExtraData =
+        Suppliers.memoize(() -> blockHeaderFunctions.parseExtraData(this));
   }
 
   /**
@@ -100,22 +81,19 @@ public class BlockHeader extends SealableBlockHeader
   }
 
   /**
-   * Returns the block extra data field, as parsed by the {@link BlockHeaderFunctions}.
+   * Returns the block extra data field, as parsed by the {@link
+   * BlockHeaderFunctions}.
    *
    * @return the block extra data field
    */
-  public ParsedExtraData getParsedExtraData() {
-    return parsedExtraData.get();
-  }
+  public ParsedExtraData getParsedExtraData() { return parsedExtraData.get(); }
 
   /**
    * Returns the block header hash.
    *
    * @return the block header hash
    */
-  public Hash getHash() {
-    return hash.get();
-  }
+  public Hash getHash() { return hash.get(); }
 
   @Override
   public org.hyperledger.besu.plugin.data.Hash getBlockHash() {
@@ -151,8 +129,9 @@ public class BlockHeader extends SealableBlockHeader
     out.endList();
   }
 
-  public static BlockHeader readFrom(
-      final RLPInput input, final BlockHeaderFunctions blockHeaderFunctions) {
+  public static BlockHeader
+  readFrom(final RLPInput input,
+           final BlockHeaderFunctions blockHeaderFunctions) {
     input.enterList();
     final Hash parentHash = Hash.wrap(input.readBytes32());
     final Hash ommersHash = Hash.wrap(input.readBytes32());
@@ -175,23 +154,9 @@ public class BlockHeader extends SealableBlockHeader
             : null;
     input.leaveList();
     return new BlockHeader(
-        parentHash,
-        ommersHash,
-        coinbase,
-        stateRoot,
-        transactionsRoot,
-        receiptsRoot,
-        logsBloom,
-        difficulty,
-        number,
-        gasLimit,
-        gasUsed,
-        timestamp,
-        extraData,
-        baseFee,
-        mixHash,
-        nonce,
-        blockHeaderFunctions);
+        parentHash, ommersHash, coinbase, stateRoot, transactionsRoot,
+        receiptsRoot, logsBloom, difficulty, number, gasLimit, gasUsed,
+        timestamp, extraData, baseFee, mixHash, nonce, blockHeaderFunctions);
   }
 
   @Override
@@ -202,7 +167,7 @@ public class BlockHeader extends SealableBlockHeader
     if (!(obj instanceof BlockHeader)) {
       return false;
     }
-    final BlockHeader other = (BlockHeader) obj;
+    final BlockHeader other = (BlockHeader)obj;
     return getHash().equals(other.getHash());
   }
 
@@ -235,7 +200,8 @@ public class BlockHeader extends SealableBlockHeader
     return sb.append("}").toString();
   }
 
-  public static org.hyperledger.besu.ethereum.core.BlockHeader convertPluginBlockHeader(
+  public static org.hyperledger.besu.ethereum.core.BlockHeader
+  convertPluginBlockHeader(
       final org.hyperledger.besu.plugin.data.BlockHeader pluginBlockHeader,
       final BlockHeaderFunctions blockHeaderFunctions) {
     return new org.hyperledger.besu.ethereum.core.BlockHeader(
@@ -244,18 +210,18 @@ public class BlockHeader extends SealableBlockHeader
         org.hyperledger.besu.ethereum.core.Address.fromHexString(
             pluginBlockHeader.getCoinbase().toHexString()),
         Hash.fromHexString(pluginBlockHeader.getStateRoot().toHexString()),
-        Hash.fromHexString(pluginBlockHeader.getTransactionsRoot().toHexString()),
+        Hash.fromHexString(
+            pluginBlockHeader.getTransactionsRoot().toHexString()),
         Hash.fromHexString(pluginBlockHeader.getReceiptsRoot().toHexString()),
-        LogsBloomFilter.fromHexString(pluginBlockHeader.getLogsBloom().toHexString()),
-        Difficulty.fromHexString(pluginBlockHeader.getDifficulty().toHexString()),
-        pluginBlockHeader.getNumber(),
-        pluginBlockHeader.getGasLimit(),
-        pluginBlockHeader.getGasUsed(),
-        pluginBlockHeader.getTimestamp(),
+        LogsBloomFilter.fromHexString(
+            pluginBlockHeader.getLogsBloom().toHexString()),
+        Difficulty.fromHexString(
+            pluginBlockHeader.getDifficulty().toHexString()),
+        pluginBlockHeader.getNumber(), pluginBlockHeader.getGasLimit(),
+        pluginBlockHeader.getGasUsed(), pluginBlockHeader.getTimestamp(),
         pluginBlockHeader.getExtraData(),
         pluginBlockHeader.getBaseFee().orElse(null),
         Hash.fromHexString(pluginBlockHeader.getMixHash().toHexString()),
-        pluginBlockHeader.getNonce(),
-        blockHeaderFunctions);
+        pluginBlockHeader.getNonce(), blockHeaderFunctions);
   }
 }

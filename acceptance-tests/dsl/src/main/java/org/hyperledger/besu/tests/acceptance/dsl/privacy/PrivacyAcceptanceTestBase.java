@@ -1,19 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.tests.acceptance.dsl.privacy;
 
+import io.vertx.core.Vertx;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.eth.EthConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.priv.PrivConditions;
@@ -26,14 +30,13 @@ import org.hyperledger.besu.tests.acceptance.dsl.privacy.transaction.PrivacyTran
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.contract.ContractTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions;
-
-import io.vertx.core.Vertx;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
 public class PrivacyAcceptanceTestBase {
-  @ClassRule public static final TemporaryFolder privacy = new TemporaryFolder();
+  @ClassRule
+  public static final TemporaryFolder privacy = new TemporaryFolder();
 
   protected static final long POW_CHAIN_ID = 2018;
 
@@ -56,15 +59,14 @@ public class PrivacyAcceptanceTestBase {
     net = new NetConditions(new NetTransactions());
     privacyTransactions = new PrivacyTransactions();
     privateContractVerifier = new PrivateContractVerifier();
-    privateTransactionVerifier = new PrivateTransactionVerifier(privacyTransactions);
+    privateTransactionVerifier =
+        new PrivateTransactionVerifier(privacyTransactions);
     privacyBesu = new PrivacyNodeFactory(vertx);
     privateContractTransactions = new PrivateContractTransactions();
     privacyCluster = new PrivacyCluster(net);
     privacyAccountResolver = new PrivacyAccountResolver();
-    priv =
-        new PrivConditions(
-            new org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy
-                .PrivacyTransactions());
+    priv = new PrivConditions(new org.hyperledger.besu.tests.acceptance.dsl
+                                  .transaction.privacy.PrivacyTransactions());
     contractTransactions = new ContractTransactions();
     eth = new EthConditions(ethTransactions);
   }

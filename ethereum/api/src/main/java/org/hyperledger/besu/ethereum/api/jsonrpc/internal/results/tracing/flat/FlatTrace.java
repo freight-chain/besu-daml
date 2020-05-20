@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,29 +19,18 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.tracing.flat;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.processor.TransactionTrace;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.tracing.Trace;
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.processor.TransactionTrace;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.tracing.Trace;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
-@JsonPropertyOrder({
-  "action",
-  "blockHash",
-  "blockNumber",
-  "result",
-  "error",
-  "subtraces",
-  "traceAddress",
-  "transactionHash",
-  "transactionPosition",
-  "type"
-})
+@JsonPropertyOrder({"action", "blockHash", "blockNumber", "result", "error",
+                    "subtraces", "traceAddress", "transactionHash",
+                    "transactionPosition", "type"})
 public class FlatTrace implements Trace {
   private final Action action;
   private final Result result;
@@ -51,41 +43,25 @@ public class FlatTrace implements Trace {
   private final List<Integer> traceAddress;
   private final String type;
 
-  protected FlatTrace(
-      final Action.Builder actionBuilder,
-      final Result.Builder resultBuilder,
-      final int subtraces,
-      final List<Integer> traceAddress,
-      final String type,
-      final Long blockNumber,
-      final String blockHash,
-      final Integer transactionPosition,
-      final String transactionHash,
-      final Optional<String> error) {
-    this(
-        actionBuilder != null ? actionBuilder.build() : null,
-        resultBuilder != null ? resultBuilder.build() : null,
-        subtraces,
-        traceAddress,
-        type,
-        blockNumber,
-        blockHash,
-        transactionPosition,
-        transactionHash,
-        error);
+  protected FlatTrace(final Action.Builder actionBuilder,
+                      final Result.Builder resultBuilder, final int subtraces,
+                      final List<Integer> traceAddress, final String type,
+                      final Long blockNumber, final String blockHash,
+                      final Integer transactionPosition,
+                      final String transactionHash,
+                      final Optional<String> error) {
+    this(actionBuilder != null ? actionBuilder.build() : null,
+         resultBuilder != null ? resultBuilder.build() : null, subtraces,
+         traceAddress, type, blockNumber, blockHash, transactionPosition,
+         transactionHash, error);
   }
 
-  protected FlatTrace(
-      final Action action,
-      final Result result,
-      final int subtraces,
-      final List<Integer> traceAddress,
-      final String type,
-      final Long blockNumber,
-      final String blockHash,
-      final Integer transactionPosition,
-      final String transactionHash,
-      final Optional<String> error) {
+  protected FlatTrace(final Action action, final Result result,
+                      final int subtraces, final List<Integer> traceAddress,
+                      final String type, final Long blockNumber,
+                      final String blockHash, final Integer transactionPosition,
+                      final String transactionHash,
+                      final Optional<String> error) {
     this.action = action;
     this.result = result;
     this.subtraces = subtraces;
@@ -104,9 +80,7 @@ public class FlatTrace implements Trace {
         .actionBuilder(Action.Builder.from(transactionTrace));
   }
 
-  public Action getAction() {
-    return action;
-  }
+  public Action getAction() { return action; }
 
   @JsonInclude(NON_NULL)
   public Long getBlockNumber() {
@@ -134,13 +108,14 @@ public class FlatTrace implements Trace {
   }
 
   /**
-   * This ridiculous construction returns a true "null" when we have a value in error, resulting in
-   * jackson not serializing it, or a wrapped reference of either null or the value, resulting in
-   * jackson serializing a null if we don't have an error.
+   * This ridiculous construction returns a true "null" when we have a value in
+   * error, resulting in jackson not serializing it, or a wrapped reference of
+   * either null or the value, resulting in jackson serializing a null if we
+   * don't have an error.
    *
-   * <p>This is done for binary compatibility: we need either an absent value, a present null value,
-   * or a real value. And since Java Optionals refuse to hold nulls (by design) an atomic reference
-   * is used instead.
+   * <p>This is done for binary compatibility: we need either an absent value, a
+   * present null value, or a real value. And since Java Optionals refuse to
+   * hold nulls (by design) an atomic reference is used instead.
    *
    * @return the jackson optimized result
    */
@@ -149,21 +124,13 @@ public class FlatTrace implements Trace {
     return (error.isPresent()) ? null : new AtomicReference<>(result);
   }
 
-  public int getSubtraces() {
-    return subtraces;
-  }
+  public int getSubtraces() { return subtraces; }
 
-  public List<Integer> getTraceAddress() {
-    return traceAddress;
-  }
+  public List<Integer> getTraceAddress() { return traceAddress; }
 
-  public String getType() {
-    return type;
-  }
+  public String getType() { return type; }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
   public static class Context {
 
@@ -171,38 +138,24 @@ public class FlatTrace implements Trace {
     private long gasUsed = 0;
     private boolean createOp;
 
-    Context(final Builder builder) {
-      this.builder = builder;
-    }
+    Context(final Builder builder) { this.builder = builder; }
 
-    public Builder getBuilder() {
-      return builder;
-    }
+    public Builder getBuilder() { return builder; }
 
-    void incGasUsed(final long gas) {
-      setGasUsed(gasUsed + gas);
-    }
+    void incGasUsed(final long gas) { setGasUsed(gasUsed + gas); }
 
-    void decGasUsed(final long gas) {
-      setGasUsed(gasUsed - gas);
-    }
+    void decGasUsed(final long gas) { setGasUsed(gasUsed - gas); }
 
-    public long getGasUsed() {
-      return gasUsed;
-    }
+    public long getGasUsed() { return gasUsed; }
 
     public void setGasUsed(final long gasUsed) {
       this.gasUsed = gasUsed;
       builder.getResultBuilder().gasUsed("0x" + Long.toHexString(gasUsed));
     }
 
-    boolean isCreateOp() {
-      return createOp;
-    }
+    boolean isCreateOp() { return createOp; }
 
-    void setCreateOp(final boolean createOp) {
-      this.createOp = createOp;
-    }
+    void setCreateOp(final boolean createOp) { this.createOp = createOp; }
   }
 
   public static class Builder {
@@ -265,62 +218,32 @@ public class FlatTrace implements Trace {
       return this;
     }
 
-    public String getType() {
-      return type;
-    }
+    public String getType() { return type; }
 
-    public int getSubtraces() {
-      return subtraces;
-    }
+    public int getSubtraces() { return subtraces; }
 
-    public List<Integer> getTraceAddress() {
-      return traceAddress;
-    }
+    public List<Integer> getTraceAddress() { return traceAddress; }
 
-    public Long getBlockNumber() {
-      return blockNumber;
-    }
+    public Long getBlockNumber() { return blockNumber; }
 
-    public String getBlockHash() {
-      return blockHash;
-    }
+    public String getBlockHash() { return blockHash; }
 
-    public String getTransactionHash() {
-      return transactionHash;
-    }
+    public String getTransactionHash() { return transactionHash; }
 
-    public Integer getTransactionPosition() {
-      return transactionPosition;
-    }
+    public Integer getTransactionPosition() { return transactionPosition; }
 
-    public Optional<String> getError() {
-      return error;
-    }
+    public Optional<String> getError() { return error; }
 
-    void incSubTraces() {
-      this.subtraces++;
-    }
+    void incSubTraces() { this.subtraces++; }
 
     public FlatTrace build() {
-      return new FlatTrace(
-          actionBuilder,
-          resultBuilder,
-          subtraces,
-          traceAddress,
-          type,
-          blockNumber,
-          blockHash,
-          transactionPosition,
-          transactionHash,
-          error);
+      return new FlatTrace(actionBuilder, resultBuilder, subtraces,
+                           traceAddress, type, blockNumber, blockHash,
+                           transactionPosition, transactionHash, error);
     }
 
-    public Result.Builder getResultBuilder() {
-      return resultBuilder;
-    }
+    public Result.Builder getResultBuilder() { return resultBuilder; }
 
-    public Action.Builder getActionBuilder() {
-      return actionBuilder;
-    }
+    public Action.Builder getActionBuilder() { return actionBuilder; }
   }
 }

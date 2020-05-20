@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,13 @@ import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createI
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -40,15 +50,6 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,8 +59,10 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class DetermineCommonAncestorTaskParameterizedTest {
-  private final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
-  private static final BlockDataGenerator blockDataGenerator = new BlockDataGenerator();
+  private final ProtocolSchedule<Void> protocolSchedule =
+      MainnetProtocolSchedule.create();
+  private static final BlockDataGenerator blockDataGenerator =
+      new BlockDataGenerator();
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   private static Block genesisBlock;
@@ -84,11 +87,11 @@ public class DetermineCommonAncestorTaskParameterizedTest {
     // Setup local chain
     for (int i = 1; i <= chainHeight; i++) {
       final BlockDataGenerator.BlockOptions options =
-          new BlockDataGenerator.BlockOptions()
-              .setBlockNumber(i)
-              .setParentHash(localBlockchain.getBlockHashByNumber(i - 1).get());
+          new BlockDataGenerator.BlockOptions().setBlockNumber(i).setParentHash(
+              localBlockchain.getBlockHashByNumber(i - 1).get());
       final Block block = blockDataGenerator.block(options);
-      final List<TransactionReceipt> receipts = blockDataGenerator.receipts(block);
+      final List<TransactionReceipt> receipts =
+          blockDataGenerator.receipts(block);
       localBlockchain.appendBlock(block, receipts);
     }
   }
@@ -117,36 +120,39 @@ public class DetermineCommonAncestorTaskParameterizedTest {
       commonHeader = localBlockchain.getBlockHeader(i).get();
       final List<TransactionReceipt> receipts =
           localBlockchain.getTxReceipts(commonHeader.getHash()).get();
-      final BlockBody commonBody = localBlockchain.getBlockBody(commonHeader.getHash()).get();
-      remoteBlockchain.appendBlock(new Block(commonHeader, commonBody), receipts);
+      final BlockBody commonBody =
+          localBlockchain.getBlockBody(commonHeader.getHash()).get();
+      remoteBlockchain.appendBlock(new Block(commonHeader, commonBody),
+                                   receipts);
     }
 
     // Remaining blocks are disparate...
     for (long i = commonAncestorHeight + 1L; i <= chainHeight; i++) {
       final BlockDataGenerator.BlockOptions localOptions =
-          new BlockDataGenerator.BlockOptions()
-              .setBlockNumber(i)
-              .setParentHash(localBlockchain.getBlockHashByNumber(i - 1).get());
+          new BlockDataGenerator.BlockOptions().setBlockNumber(i).setParentHash(
+              localBlockchain.getBlockHashByNumber(i - 1).get());
       final Block localBlock = blockDataGenerator.block(localOptions);
-      final List<TransactionReceipt> localReceipts = blockDataGenerator.receipts(localBlock);
+      final List<TransactionReceipt> localReceipts =
+          blockDataGenerator.receipts(localBlock);
       localBlockchain.appendBlock(localBlock, localReceipts);
 
       final BlockDataGenerator.BlockOptions remoteOptions =
           new BlockDataGenerator.BlockOptions()
               .setDifficulty(Difficulty.ONE) // differentiator
               .setBlockNumber(i)
-              .setParentHash(remoteBlockchain.getBlockHashByNumber(i - 1).get());
+              .setParentHash(
+                  remoteBlockchain.getBlockHashByNumber(i - 1).get());
       final Block remoteBlock = blockDataGenerator.block(remoteOptions);
-      final List<TransactionReceipt> remoteReceipts = blockDataGenerator.receipts(remoteBlock);
+      final List<TransactionReceipt> remoteReceipts =
+          blockDataGenerator.receipts(remoteBlock);
       remoteBlockchain.appendBlock(remoteBlock, remoteReceipts);
     }
 
-    final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
+    final WorldStateArchive worldStateArchive =
+        createInMemoryWorldStateArchive();
     final EthProtocolManager ethProtocolManager =
         EthProtocolManagerTestUtil.create(
-            localBlockchain,
-            worldStateArchive,
-            mock(TransactionPool.class),
+            localBlockchain, worldStateArchive, mock(TransactionPool.class),
             EthProtocolConfiguration.defaultConfig());
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(remoteBlockchain);
@@ -161,23 +167,17 @@ public class DetermineCommonAncestorTaskParameterizedTest {
     final ProtocolContext<Void> protocolContext =
         new ProtocolContext<>(localBlockchain, worldStateArchive, null);
 
-    final EthTask<BlockHeader> task =
-        DetermineCommonAncestorTask.create(
-            protocolSchedule,
-            protocolContext,
-            ethContext,
-            respondingEthPeer.getEthPeer(),
-            headerRequestSize,
-            metricsSystem);
+    final EthTask<BlockHeader> task = DetermineCommonAncestorTask.create(
+        protocolSchedule, protocolContext, ethContext,
+        respondingEthPeer.getEthPeer(), headerRequestSize, metricsSystem);
 
     final CompletableFuture<BlockHeader> future = task.run();
     respondingEthPeer.respondWhile(responder, () -> !future.isDone());
 
-    future.whenComplete(
-        (response, error) -> {
-          actualResult.set(response);
-          done.compareAndSet(false, true);
-        });
+    future.whenComplete((response, error) -> {
+      actualResult.set(response);
+      done.compareAndSet(false, true);
+    });
 
     assertThat(actualResult.get()).isNotNull();
     assertThat(actualResult.get().getHash())

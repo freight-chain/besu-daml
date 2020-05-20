@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,13 @@ package org.hyperledger.besu.ethereum.core;
 
 import static org.hyperledger.besu.ethereum.vm.MessageFrame.DEFAULT_MAX_STACK_SIZE;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.Code;
@@ -23,18 +33,10 @@ import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.MessageFrame.Type;
 import org.hyperledger.besu.ethereum.vm.operations.ReturnStack;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-
 public class MessageFrameTestFixture {
 
-  public static final Address DEFAUT_ADDRESS = AddressHelpers.ofValue(244259721);
+  public static final Address DEFAUT_ADDRESS =
+      AddressHelpers.ofValue(244259721);
   private final int maxStackSize = DEFAULT_MAX_STACK_SIZE;
 
   private Type type = Type.MESSAGE_CALL;
@@ -55,7 +57,8 @@ public class MessageFrameTestFixture {
   private Optional<BlockHeader> blockHeader = Optional.empty();
   private int depth = 0;
   private Optional<BlockHashLookup> blockHashLookup = Optional.empty();
-  private ReturnStack returnStack = new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
+  private ReturnStack returnStack =
+      new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
   private ExecutionContextTestFixture executionContextTestFixture;
 
   public MessageFrameTestFixture type(final Type type) {
@@ -63,7 +66,8 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture messageFrameStack(final Deque<MessageFrame> messageFrameStack) {
+  public MessageFrameTestFixture
+  messageFrameStack(final Deque<MessageFrame> messageFrameStack) {
     this.messageFrameStack = messageFrameStack;
     return this;
   }
@@ -84,7 +88,8 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture worldState(final MutableWorldState worldState) {
+  public MessageFrameTestFixture
+  worldState(final MutableWorldState worldState) {
     this.worldState = Optional.of(worldState.updater());
     return this;
   }
@@ -114,7 +119,8 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture contractAccountVersion(final int contractAccountVersion) {
+  public MessageFrameTestFixture
+  contractAccountVersion(final int contractAccountVersion) {
     this.contractAccountVersion = contractAccountVersion;
     return this;
   }
@@ -154,7 +160,8 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture blockHashLookup(final BlockHashLookup blockHashLookup) {
+  public MessageFrameTestFixture
+  blockHashLookup(final BlockHashLookup blockHashLookup) {
     this.blockHashLookup = Optional.of(blockHashLookup);
     return this;
   }
@@ -165,7 +172,8 @@ public class MessageFrameTestFixture {
   }
 
   public MessageFrame build() {
-    final Blockchain blockchain = this.blockchain.orElseGet(this::createDefaultBlockchain);
+    final Blockchain blockchain =
+        this.blockchain.orElseGet(this::createDefaultBlockchain);
     final BlockHeader blockHeader =
         this.blockHeader.orElseGet(() -> blockchain.getBlockHeader(0).get());
     final MessageFrame frame =
@@ -189,8 +197,8 @@ public class MessageFrameTestFixture {
             .depth(depth)
             .completer(c -> {})
             .miningBeneficiary(blockHeader.getCoinbase())
-            .blockHashLookup(
-                blockHashLookup.orElseGet(() -> new BlockHashLookup(blockHeader, blockchain)))
+            .blockHashLookup(blockHashLookup.orElseGet(
+                () -> new BlockHashLookup(blockHeader, blockchain)))
             .maxStackSize(maxStackSize)
             .returnStack(returnStack)
             .build();
@@ -199,7 +207,10 @@ public class MessageFrameTestFixture {
   }
 
   private WorldUpdater createDefaultWorldState() {
-    return getOrCreateExecutionContextTestFixture().getStateArchive().getMutable().updater();
+    return getOrCreateExecutionContextTestFixture()
+        .getStateArchive()
+        .getMutable()
+        .updater();
   }
 
   private Blockchain createDefaultBlockchain() {
@@ -207,7 +218,8 @@ public class MessageFrameTestFixture {
   }
 
   private ExecutionContextTestFixture getOrCreateExecutionContextTestFixture() {
-    // Avoid creating a test fixture if the test supplies the blockchain and worldstate.
+    // Avoid creating a test fixture if the test supplies the blockchain and
+    // worldstate.
     if (executionContextTestFixture == null) {
       executionContextTestFixture = ExecutionContextTestFixture.create();
     }

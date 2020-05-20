@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigInteger;
+import java.util.Collection;
+import java.util.List;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.consensus.common.VoteTally;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
 import org.hyperledger.besu.consensus.ibft.IbftContext;
@@ -35,18 +42,12 @@ import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.mainnet.BlockHeaderValidator;
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
-
-import java.math.BigInteger;
-import java.util.Collection;
-import java.util.List;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Test;
 
 public class IbftBlockHeaderValidationRulesetFactoryTest {
 
-  private ProtocolContext<IbftContext> setupContextWithValidators(
-      final Collection<Address> validators) {
+  private ProtocolContext<IbftContext>
+  setupContextWithValidators(final Collection<Address> validators) {
     final IbftContext ibftContext = mock(IbftContext.class);
     final VoteTallyCache mockCache = mock(VoteTallyCache.class);
     final VoteTally mockVoteTally = mock(VoteTally.class);
@@ -60,54 +61,53 @@ public class IbftBlockHeaderValidationRulesetFactoryTest {
   @Test
   public void ibftValidateHeaderPasses() {
     final KeyPair proposerKeyPair = KeyPair.generate();
-    final Address proposerAddress =
-        Address.extract(Hash.hash(proposerKeyPair.getPublicKey().getEncodedBytes()));
+    final Address proposerAddress = Address.extract(
+        Hash.hash(proposerKeyPair.getPublicKey().getEncodedBytes()));
 
     final List<Address> validators = singletonList(proposerAddress);
 
-    final BlockHeader parentHeader = buildBlockHeader(1, proposerKeyPair, validators, null);
-    final BlockHeader blockHeader = buildBlockHeader(2, proposerKeyPair, validators, parentHeader);
+    final BlockHeader parentHeader =
+        buildBlockHeader(1, proposerKeyPair, validators, null);
+    final BlockHeader blockHeader =
+        buildBlockHeader(2, proposerKeyPair, validators, parentHeader);
 
     final BlockHeaderValidator<IbftContext> validator =
-        IbftBlockHeaderValidationRulesetFactory.ibftBlockHeaderValidator(5).build();
+        IbftBlockHeaderValidationRulesetFactory.ibftBlockHeaderValidator(5)
+            .build();
 
-    assertThat(
-            validator.validateHeader(
-                blockHeader,
-                parentHeader,
-                setupContextWithValidators(validators),
-                HeaderValidationMode.FULL))
+    assertThat(validator.validateHeader(blockHeader, parentHeader,
+                                        setupContextWithValidators(validators),
+                                        HeaderValidationMode.FULL))
         .isTrue();
   }
 
   @Test
   public void ibftValidateHeaderFails() {
     final KeyPair proposerKeyPair = KeyPair.generate();
-    final Address proposerAddress =
-        Address.extract(Hash.hash(proposerKeyPair.getPublicKey().getEncodedBytes()));
+    final Address proposerAddress = Address.extract(
+        Hash.hash(proposerKeyPair.getPublicKey().getEncodedBytes()));
 
     final List<Address> validators = singletonList(proposerAddress);
 
-    final BlockHeader parentHeader = buildBlockHeader(1, proposerKeyPair, validators, null);
-    final BlockHeader blockHeader = buildBlockHeader(2, proposerKeyPair, validators, null);
+    final BlockHeader parentHeader =
+        buildBlockHeader(1, proposerKeyPair, validators, null);
+    final BlockHeader blockHeader =
+        buildBlockHeader(2, proposerKeyPair, validators, null);
 
     final BlockHeaderValidator<IbftContext> validator =
-        IbftBlockHeaderValidationRulesetFactory.ibftBlockHeaderValidator(5).build();
+        IbftBlockHeaderValidationRulesetFactory.ibftBlockHeaderValidator(5)
+            .build();
 
-    assertThat(
-            validator.validateHeader(
-                blockHeader,
-                parentHeader,
-                setupContextWithValidators(validators),
-                HeaderValidationMode.FULL))
+    assertThat(validator.validateHeader(blockHeader, parentHeader,
+                                        setupContextWithValidators(validators),
+                                        HeaderValidationMode.FULL))
         .isFalse();
   }
 
-  private BlockHeader buildBlockHeader(
-      final long number,
-      final KeyPair proposerKeyPair,
-      final List<Address> validators,
-      final BlockHeader parent) {
+  private BlockHeader buildBlockHeader(final long number,
+                                       final KeyPair proposerKeyPair,
+                                       final List<Address> validators,
+                                       final BlockHeader parent) {
     final BlockHeaderTestFixture builder = new BlockHeaderTestFixture();
 
     if (parent != null) {
@@ -116,45 +116,40 @@ public class IbftBlockHeaderValidationRulesetFactoryTest {
     builder.number(number);
     builder.gasLimit(5000);
     builder.timestamp(6000 * number);
-    builder.mixHash(
-        Hash.fromHexString("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"));
+    builder.mixHash(Hash.fromHexString(
+        "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365"));
     builder.ommersHash(Hash.EMPTY_LIST_HASH);
     builder.nonce(IbftLegacyBlockInterface.DROP_NONCE);
     builder.difficulty(Difficulty.ONE);
 
     // Construct an extraData block
-    final IbftExtraData initialIbftExtraData =
-        new IbftExtraData(
-            Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]),
-            emptyList(),
-            Signature.create(BigInteger.ONE, BigInteger.ONE, (byte) 0),
-            validators);
+    final IbftExtraData initialIbftExtraData = new IbftExtraData(
+        Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]), emptyList(),
+        Signature.create(BigInteger.ONE, BigInteger.ONE, (byte)0), validators);
 
     builder.extraData(initialIbftExtraData.encode());
     final BlockHeader parentHeader = builder.buildHeader();
     final Hash proposerSealHash =
-        IbftBlockHashing.calculateDataHashForProposerSeal(parentHeader, initialIbftExtraData);
+        IbftBlockHashing.calculateDataHashForProposerSeal(parentHeader,
+                                                          initialIbftExtraData);
 
-    final Signature proposerSignature = SECP256K1.sign(proposerSealHash, proposerKeyPair);
+    final Signature proposerSignature =
+        SECP256K1.sign(proposerSealHash, proposerKeyPair);
 
-    final IbftExtraData proposedData =
-        new IbftExtraData(
-            Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]),
-            singletonList(proposerSignature),
-            proposerSignature,
-            validators);
+    final IbftExtraData proposedData = new IbftExtraData(
+        Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]),
+        singletonList(proposerSignature), proposerSignature, validators);
 
     final Hash headerHashForCommitters =
-        IbftBlockHashing.calculateDataHashForCommittedSeal(parentHeader, proposedData);
+        IbftBlockHashing.calculateDataHashForCommittedSeal(parentHeader,
+                                                           proposedData);
     final Signature proposerAsCommitterSignature =
         SECP256K1.sign(headerHashForCommitters, proposerKeyPair);
 
-    final IbftExtraData sealedData =
-        new IbftExtraData(
-            Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]),
-            singletonList(proposerAsCommitterSignature),
-            proposerSignature,
-            validators);
+    final IbftExtraData sealedData = new IbftExtraData(
+        Bytes.wrap(new byte[IbftExtraData.EXTRA_VANITY_LENGTH]),
+        singletonList(proposerAsCommitterSignature), proposerSignature,
+        validators);
 
     builder.extraData(sealedData.encode());
     return builder.buildHeader();

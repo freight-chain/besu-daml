@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,17 +19,15 @@ package org.hyperledger.besu.tests.acceptance.dsl.transaction.account;
 
 import static org.web3j.utils.Numeric.toHexString;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.Optional;
-
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.utils.Convert;
@@ -47,17 +48,15 @@ public class TransferTransaction implements Transaction<Hash> {
   private final BigInteger gasPrice;
   private final BigInteger nonce;
 
-  public TransferTransaction(
-      final Account sender,
-      final Account recipient,
-      final Amount transferAmount,
-      final Amount gasPrice,
-      final BigInteger nonce) {
+  public TransferTransaction(final Account sender, final Account recipient,
+                             final Amount transferAmount, final Amount gasPrice,
+                             final BigInteger nonce) {
     this.sender = sender;
     this.recipient = recipient;
     this.transferAmount = transferAmount.getValue();
     this.transferUnit = transferAmount.getUnit();
-    this.gasPrice = gasPrice == null ? MINIMUM_GAS_PRICE : convertGasPriceToWei(gasPrice);
+    this.gasPrice =
+        gasPrice == null ? MINIMUM_GAS_PRICE : convertGasPriceToWei(gasPrice);
     this.nonce = nonce;
   }
 
@@ -66,7 +65,10 @@ public class TransferTransaction implements Transaction<Hash> {
     final String signedTransactionData = signedTransactionData();
     try {
       return Hash.fromHexString(
-          node.eth().ethSendRawTransaction(signedTransactionData).send().getTransactionHash());
+          node.eth()
+              .ethSendRawTransaction(signedTransactionData)
+              .send()
+              .getTransactionHash());
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -79,16 +81,13 @@ public class TransferTransaction implements Transaction<Hash> {
   public String signedTransactionData() {
     final Optional<BigInteger> nonce = getNonce();
 
-    final RawTransaction transaction =
-        RawTransaction.createEtherTransaction(
-            nonce.orElse(nonce.orElseGet(sender::getNextNonce)),
-            gasPrice,
-            INTRINSIC_GAS,
-            recipient.getAddress(),
-            Convert.toWei(transferAmount, transferUnit).toBigIntegerExact());
+    final RawTransaction transaction = RawTransaction.createEtherTransaction(
+        nonce.orElse(nonce.orElseGet(sender::getNextNonce)), gasPrice,
+        INTRINSIC_GAS, recipient.getAddress(),
+        Convert.toWei(transferAmount, transferUnit).toBigIntegerExact());
 
-    return toHexString(
-        TransactionEncoder.signMessage(transaction, sender.web3jCredentialsOrThrow()));
+    return toHexString(TransactionEncoder.signMessage(
+        transaction, sender.web3jCredentialsOrThrow()));
   }
 
   private Optional<BigInteger> getNonce() {
@@ -97,13 +96,13 @@ public class TransferTransaction implements Transaction<Hash> {
 
   private BigInteger convertGasPriceToWei(final Amount unconverted) {
     final BigInteger price =
-        Convert.toWei(unconverted.getValue(), unconverted.getUnit()).toBigInteger();
+        Convert.toWei(unconverted.getValue(), unconverted.getUnit())
+            .toBigInteger();
 
     if (MINIMUM_GAS_PRICE.compareTo(price) > 0) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Gas price: %s WEI, is below the accepted minimum: %s WEI",
-              price, MINIMUM_GAS_PRICE));
+      throw new IllegalArgumentException(String.format(
+          "Gas price: %s WEI, is below the accepted minimum: %s WEI", price,
+          MINIMUM_GAS_PRICE));
     }
 
     return price;

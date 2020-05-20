@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,27 +19,26 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.tracing.flat;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.processor.TransactionTrace;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 @JsonInclude(NON_NULL)
 @JsonPropertyOrder({
-  "creationMethod",
-  "callType",
-  "from",
-  "gas",
-  "input",
-  "to",
-  "init",
-  "author",
-  "rewardType",
-  "value",
-  "address",
-  "balance",
-  "refundAddress",
+    "creationMethod",
+    "callType",
+    "from",
+    "gas",
+    "input",
+    "to",
+    "init",
+    "author",
+    "rewardType",
+    "value",
+    "address",
+    "balance",
+    "refundAddress",
 })
 public class Action {
 
@@ -54,20 +56,12 @@ public class Action {
   private final String author;
   private final String rewardType;
 
-  private Action(
-      final String creationMethod,
-      final String callType,
-      final String from,
-      final String gas,
-      final String input,
-      final String to,
-      final String init,
-      final String value,
-      final String address,
-      final String balance,
-      final String refundAddress,
-      final String author,
-      final String rewardType) {
+  private Action(final String creationMethod, final String callType,
+                 final String from, final String gas, final String input,
+                 final String to, final String init, final String value,
+                 final String address, final String balance,
+                 final String refundAddress, final String author,
+                 final String rewardType) {
     this.creationMethod = creationMethod;
     this.callType = callType;
     this.from = from;
@@ -83,61 +77,33 @@ public class Action {
     this.rewardType = rewardType;
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
-  public String getCreationMethod() {
-    return creationMethod;
-  }
+  public String getCreationMethod() { return creationMethod; }
 
-  public String getCallType() {
-    return callType;
-  }
+  public String getCallType() { return callType; }
 
-  public String getFrom() {
-    return from;
-  }
+  public String getFrom() { return from; }
 
-  public String getGas() {
-    return gas;
-  }
+  public String getGas() { return gas; }
 
-  public String getInput() {
-    return input;
-  }
+  public String getInput() { return input; }
 
-  public String getTo() {
-    return to;
-  }
+  public String getTo() { return to; }
 
-  public String getValue() {
-    return value;
-  }
+  public String getValue() { return value; }
 
-  public String getInit() {
-    return init;
-  }
+  public String getInit() { return init; }
 
-  public String getAddress() {
-    return address;
-  }
+  public String getAddress() { return address; }
 
-  public String getBalance() {
-    return balance;
-  }
+  public String getBalance() { return balance; }
 
-  public String getRefundAddress() {
-    return refundAddress;
-  }
+  public String getRefundAddress() { return refundAddress; }
 
-  public String getAuthor() {
-    return author;
-  }
+  public String getAuthor() { return author; }
 
-  public String getRewardType() {
-    return rewardType;
-  }
+  public String getRewardType() { return rewardType; }
 
   public static final class Builder {
     private String creationMethod;
@@ -191,18 +157,14 @@ public class Action {
       return this;
     }
 
-    public String getCallType() {
-      return callType;
-    }
+    public String getCallType() { return callType; }
 
     public Builder from(final String from) {
       this.from = from;
       return this;
     }
 
-    public String getFrom() {
-      return from;
-    }
+    public String getFrom() { return from; }
 
     public Builder gas(final String gas) {
       this.gas = gas;
@@ -229,9 +191,7 @@ public class Action {
       return this;
     }
 
-    public String getTo() {
-      return to;
-    }
+    public String getTo() { return to; }
 
     public Builder init(final String init) {
       this.init = init;
@@ -258,25 +218,12 @@ public class Action {
       return this;
     }
 
-    public String getGas() {
-      return gas;
-    }
+    public String getGas() { return gas; }
 
     public Action build() {
-      return new Action(
-          creationMethod,
-          callType,
-          from,
-          gas,
-          input,
-          to,
-          init,
-          value,
-          address,
-          balance,
-          refundAddress,
-          author,
-          rewardType);
+      return new Action(creationMethod, callType, from, gas, input, to, init,
+                        value, address, balance, refundAddress, author,
+                        rewardType);
     }
   }
 }

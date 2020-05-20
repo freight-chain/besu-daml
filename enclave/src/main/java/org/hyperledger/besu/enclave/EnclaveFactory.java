@@ -1,33 +1,34 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.enclave;
 
-import org.hyperledger.besu.util.InvalidConfigurationException;
-
+import com.google.common.io.Files;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.net.PfxOptions;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-
-import com.google.common.io.Files;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.net.PfxOptions;
 import org.apache.tuweni.net.tls.VertxTrustOptions;
+import org.hyperledger.besu.util.InvalidConfigurationException;
 
 public class EnclaveFactory {
 
@@ -35,12 +36,11 @@ public class EnclaveFactory {
   private static final int CONNECT_TIMEOUT = 1000;
   private static final boolean TRUST_CA = false;
 
-  public EnclaveFactory(final Vertx vertx) {
-    this.vertx = vertx;
-  }
+  public EnclaveFactory(final Vertx vertx) { this.vertx = vertx; }
 
   public Enclave createVertxEnclave(final URI enclaveUri) {
-    final HttpClientOptions clientOptions = createNonTlsClientOptions(enclaveUri);
+    final HttpClientOptions clientOptions =
+        createNonTlsClientOptions(enclaveUri);
 
     final RequestTransmitter vertxTransmitter =
         new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
@@ -61,13 +61,13 @@ public class EnclaveFactory {
     return clientOptions;
   }
 
-  private HttpClientOptions createTlsClientOptions(
-      final URI enclaveUri,
-      final Path privacyKeyStoreFile,
-      final Path privacyKeyStorePasswordFile,
-      final Path privacyWhitelistFile) {
+  private HttpClientOptions
+  createTlsClientOptions(final URI enclaveUri, final Path privacyKeyStoreFile,
+                         final Path privacyKeyStorePasswordFile,
+                         final Path privacyWhitelistFile) {
 
-    final HttpClientOptions clientOptions = createNonTlsClientOptions(enclaveUri);
+    final HttpClientOptions clientOptions =
+        createNonTlsClientOptions(enclaveUri);
     try {
       if (privacyKeyStoreFile != null && privacyKeyStorePasswordFile != null) {
         clientOptions.setSsl(true);
@@ -78,27 +78,29 @@ public class EnclaveFactory {
           VertxTrustOptions.whitelistServers(privacyWhitelistFile, TRUST_CA));
     } catch (final NoSuchFileException e) {
       throw new InvalidConfigurationException(
-          "Requested file " + e.getMessage() + " does not exist at specified location.");
+          "Requested file " + e.getMessage() +
+          " does not exist at specified location.");
     } catch (final AccessDeniedException e) {
       throw new InvalidConfigurationException(
           "Current user does not have permissions to access " + e.getMessage());
     } catch (final IllegalArgumentException e) {
-      throw new InvalidConfigurationException("Illegally formatted client fingerprint file.");
+      throw new InvalidConfigurationException(
+          "Illegally formatted client fingerprint file.");
     } catch (final IOException e) {
-      throw new InvalidConfigurationException("Failed to load TLS files " + e.getMessage());
+      throw new InvalidConfigurationException("Failed to load TLS files " +
+                                              e.getMessage());
     }
     return clientOptions;
   }
 
-  public Enclave createVertxEnclave(
-      final URI enclaveUri,
-      final Path privacyKeyStoreFile,
-      final Path privacyKeyStorePasswordFile,
-      final Path privacyWhitelistFile) {
+  public Enclave createVertxEnclave(final URI enclaveUri,
+                                    final Path privacyKeyStoreFile,
+                                    final Path privacyKeyStorePasswordFile,
+                                    final Path privacyWhitelistFile) {
 
-    final HttpClientOptions clientOptions =
-        createTlsClientOptions(
-            enclaveUri, privacyKeyStoreFile, privacyKeyStorePasswordFile, privacyWhitelistFile);
+    final HttpClientOptions clientOptions = createTlsClientOptions(
+        enclaveUri, privacyKeyStoreFile, privacyKeyStorePasswordFile,
+        privacyWhitelistFile);
 
     final RequestTransmitter vertxTransmitter =
         new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
@@ -106,17 +108,21 @@ public class EnclaveFactory {
     return new Enclave(vertxTransmitter);
   }
 
-  private static PfxOptions convertFrom(final Path keystoreFile, final Path keystorePasswordFile)
+  private static PfxOptions convertFrom(final Path keystoreFile,
+                                        final Path keystorePasswordFile)
       throws IOException {
     final String password = readSecretFromFile(keystorePasswordFile);
-    return new PfxOptions().setPassword(password).setPath(keystoreFile.toString());
+    return new PfxOptions().setPassword(password).setPath(
+        keystoreFile.toString());
   }
 
   static String readSecretFromFile(final Path path) throws IOException {
     final String password =
-        Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).readFirstLine();
+        Files.asCharSource(path.toFile(), StandardCharsets.UTF_8)
+            .readFirstLine();
     if (password == null || password.isEmpty()) {
-      throw new InvalidConfigurationException("Keystore password file is empty: " + path);
+      throw new InvalidConfigurationException(
+          "Keystore password file is empty: " + path);
     }
     return password;
   }

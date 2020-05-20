@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,8 +20,9 @@ package org.hyperledger.besu.config;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.isNull;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableMap;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Map;
@@ -26,10 +30,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.TreeMap;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableMap;
+import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 
 public class JsonGenesisConfigOptions implements GenesisConfigOptions {
 
@@ -39,25 +40,31 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   private static final String CLIQUE_CONFIG_KEY = "clique";
   private static final String TRANSITIONS_CONFIG_KEY = "transitions";
   private final ObjectNode configRoot;
-  private final Map<String, String> configOverrides = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  private final Map<String, String> configOverrides =
+      new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
   private final TransitionsConfigOptions transitions;
 
-  public static JsonGenesisConfigOptions fromJsonObject(final ObjectNode configRoot) {
+  public static JsonGenesisConfigOptions
+  fromJsonObject(final ObjectNode configRoot) {
     return fromJsonObjectWithOverrides(configRoot, emptyMap());
   }
 
-  static JsonGenesisConfigOptions fromJsonObjectWithOverrides(
-      final ObjectNode configRoot, final Map<String, String> configOverrides) {
+  static JsonGenesisConfigOptions
+  fromJsonObjectWithOverrides(final ObjectNode configRoot,
+                              final Map<String, String> configOverrides) {
     final TransitionsConfigOptions transitionsConfigOptions;
     try {
       transitionsConfigOptions = loadTransitionsFrom(configRoot);
     } catch (final JsonProcessingException e) {
-      throw new RuntimeException("Transitions section of genesis file failed to decode.", e);
+      throw new RuntimeException(
+          "Transitions section of genesis file failed to decode.", e);
     }
-    return new JsonGenesisConfigOptions(configRoot, configOverrides, transitionsConfigOptions);
+    return new JsonGenesisConfigOptions(configRoot, configOverrides,
+                                        transitionsConfigOptions);
   }
 
-  private static TransitionsConfigOptions loadTransitionsFrom(final ObjectNode parentNode)
+  private static TransitionsConfigOptions
+  loadTransitionsFrom(final ObjectNode parentNode)
       throws JsonProcessingException {
 
     final Optional<ObjectNode> transitionsNode =
@@ -69,16 +76,17 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
     return new TransitionsConfigOptions(transitionsNode.get());
   }
 
-  private JsonGenesisConfigOptions(
-      final ObjectNode maybeConfig, final TransitionsConfigOptions transitionsConfig) {
+  private JsonGenesisConfigOptions(final ObjectNode maybeConfig,
+                                   final TransitionsConfigOptions
+                                       transitionsConfig) {
     this(maybeConfig, Collections.emptyMap(), transitionsConfig);
   }
 
-  JsonGenesisConfigOptions(
-      final ObjectNode maybeConfig,
-      final Map<String, String> configOverrides,
-      final TransitionsConfigOptions transitionsConfig) {
-    this.configRoot = isNull(maybeConfig) ? JsonUtil.createEmptyObjectNode() : maybeConfig;
+  JsonGenesisConfigOptions(final ObjectNode maybeConfig,
+                           final Map<String, String> configOverrides,
+                           final TransitionsConfigOptions transitionsConfig) {
+    this.configRoot =
+        isNull(maybeConfig) ? JsonUtil.createEmptyObjectNode() : maybeConfig;
     if (configOverrides != null) {
       this.configOverrides.putAll(configOverrides);
     }
@@ -204,13 +212,15 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
 
   @Override
   public OptionalLong getBerlinBlockNumber() {
-    return ExperimentalEIPs.berlinEnabled ? getOptionalLong("berlinblock") : OptionalLong.empty();
+    return ExperimentalEIPs.berlinEnabled ? getOptionalLong("berlinblock")
+                                          : OptionalLong.empty();
   }
 
   @Override
   // TODO EIP-1559 change for the actual fork name when known
   public OptionalLong getEIP1559BlockNumber() {
-    return ExperimentalEIPs.eip1559Enabled ? getOptionalLong("eip1559block") : OptionalLong.empty();
+    return ExperimentalEIPs.eip1559Enabled ? getOptionalLong("eip1559block")
+                                           : OptionalLong.empty();
   }
 
   @Override
@@ -273,30 +283,27 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
     final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     getChainId().ifPresent(chainId -> builder.put("chainId", chainId));
     getHomesteadBlockNumber().ifPresent(l -> builder.put("homesteadBlock", l));
-    getDaoForkBlock()
-        .ifPresent(
-            l -> {
-              builder.put("daoForkBlock", l);
-              builder.put("daoForkSupport", Boolean.TRUE);
-            });
-    getTangerineWhistleBlockNumber()
-        .ifPresent(
-            l -> {
-              builder.put("eip150Block", l);
-              getOptionalString("eip150hash")
-                  .ifPresent(eip150hash -> builder.put("eip150Hash", eip150hash));
-            });
-    getSpuriousDragonBlockNumber()
-        .ifPresent(
-            l -> {
-              builder.put("eip155Block", l);
-              builder.put("eip158Block", l);
-            });
+    getDaoForkBlock().ifPresent(l -> {
+      builder.put("daoForkBlock", l);
+      builder.put("daoForkSupport", Boolean.TRUE);
+    });
+    getTangerineWhistleBlockNumber().ifPresent(l -> {
+      builder.put("eip150Block", l);
+      getOptionalString("eip150hash")
+          .ifPresent(eip150hash -> builder.put("eip150Hash", eip150hash));
+    });
+    getSpuriousDragonBlockNumber().ifPresent(l -> {
+      builder.put("eip155Block", l);
+      builder.put("eip158Block", l);
+    });
     getByzantiumBlockNumber().ifPresent(l -> builder.put("byzantiumBlock", l));
-    getConstantinopleBlockNumber().ifPresent(l -> builder.put("constantinopleBlock", l));
-    getConstantinopleFixBlockNumber().ifPresent(l -> builder.put("constantinopleFixBlock", l));
+    getConstantinopleBlockNumber().ifPresent(
+        l -> builder.put("constantinopleBlock", l));
+    getConstantinopleFixBlockNumber().ifPresent(
+        l -> builder.put("constantinopleFixBlock", l));
     getIstanbulBlockNumber().ifPresent(l -> builder.put("istanbulBlock", l));
-    getMuirGlacierBlockNumber().ifPresent(l -> builder.put("muirGlacierBlock", l));
+    getMuirGlacierBlockNumber().ifPresent(
+        l -> builder.put("muirGlacierBlock", l));
     getBerlinBlockNumber().ifPresent(l -> builder.put("berlinBlock", l));
     getEIP1559BlockNumber().ifPresent(l -> builder.put("eip1559Block", l));
     getContractSizeLimit().ifPresent(l -> builder.put("contractSizeLimit", l));
@@ -319,7 +326,8 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   private Optional<String> getOptionalString(final String key) {
     if (configOverrides.containsKey(key)) {
       final String value = configOverrides.get(key);
-      return value == null || value.isEmpty() ? Optional.empty() : Optional.of(value);
+      return value == null || value.isEmpty() ? Optional.empty()
+                                              : Optional.of(value);
     } else {
       return JsonUtil.getString(configRoot, key);
     }
@@ -354,7 +362,8 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
           ? Optional.empty()
           : Optional.of(new BigInteger(value));
     } else {
-      return JsonUtil.getValueAsString(configRoot, key).map(s -> new BigInteger(s, 10));
+      return JsonUtil.getValueAsString(configRoot, key)
+          .map(s -> new BigInteger(s, 10));
     }
   }
 }

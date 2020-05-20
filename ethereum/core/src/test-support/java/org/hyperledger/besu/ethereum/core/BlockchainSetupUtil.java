@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,14 @@ import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createI
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -36,16 +47,6 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.testutil.BlockTestUtil;
 import org.hyperledger.besu.testutil.BlockTestUtil.ChainResources;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
 import org.junit.rules.TemporaryFolder;
 
 public class BlockchainSetupUtil<C> {
@@ -59,15 +60,14 @@ public class BlockchainSetupUtil<C> {
   private final EthScheduler scheduler;
   private long maxBlockNumber;
 
-  private BlockchainSetupUtil(
-      final GenesisState genesisState,
-      final MutableBlockchain blockchain,
-      final ProtocolContext<C> protocolContext,
-      final ProtocolSchedule<C> protocolSchedule,
-      final WorldStateArchive worldArchive,
-      final TransactionPool transactionPool,
-      final List<Block> blocks,
-      final EthScheduler scheduler) {
+  private BlockchainSetupUtil(final GenesisState genesisState,
+                              final MutableBlockchain blockchain,
+                              final ProtocolContext<C> protocolContext,
+                              final ProtocolSchedule<C> protocolSchedule,
+                              final WorldStateArchive worldArchive,
+                              final TransactionPool transactionPool,
+                              final List<Block> blocks,
+                              final EthScheduler scheduler) {
     this.genesisState = genesisState;
     this.blockchain = blockchain;
     this.protocolContext = protocolContext;
@@ -96,13 +96,9 @@ public class BlockchainSetupUtil<C> {
     return blocks.get(index);
   }
 
-  public List<Block> getBlocks() {
-    return blocks;
-  }
+  public List<Block> getBlocks() { return blocks; }
 
-  public int blockCount() {
-    return blocks.size();
-  }
+  public int blockCount() { return blocks.size(); }
 
   public static BlockchainSetupUtil<Void> forTesting() {
     return createForEthashChain(BlockTestUtil.getTestChainResources());
@@ -120,40 +116,46 @@ public class BlockchainSetupUtil<C> {
     return createForEthashChain(BlockTestUtil.getUpgradedForkResources());
   }
 
-  public static BlockchainSetupUtil<Void> createForEthashChain(
-      final ChainResources chainResources) {
-    return create(
-        chainResources,
-        BlockchainSetupUtil::mainnetProtocolScheduleProvider,
-        BlockchainSetupUtil::mainnetProtocolContextProvider,
-        new EthScheduler(1, 1, 1, 1, new NoOpMetricsSystem()));
+  public static BlockchainSetupUtil<Void>
+  createForEthashChain(final ChainResources chainResources) {
+    return create(chainResources,
+                  BlockchainSetupUtil::mainnetProtocolScheduleProvider,
+                  BlockchainSetupUtil::mainnetProtocolContextProvider,
+                  new EthScheduler(1, 1, 1, 1, new NoOpMetricsSystem()));
   }
 
-  private static ProtocolSchedule<Void> mainnetProtocolScheduleProvider(
-      final GenesisConfigFile genesisConfigFile) {
-    return MainnetProtocolSchedule.fromConfig(genesisConfigFile.getConfigOptions());
+  private static ProtocolSchedule<Void>
+  mainnetProtocolScheduleProvider(final GenesisConfigFile genesisConfigFile) {
+    return MainnetProtocolSchedule.fromConfig(
+        genesisConfigFile.getConfigOptions());
   }
 
-  private static ProtocolContext<Void> mainnetProtocolContextProvider(
-      final MutableBlockchain blockchain, final WorldStateArchive worldStateArchive) {
+  private static ProtocolContext<Void>
+  mainnetProtocolContextProvider(final MutableBlockchain blockchain,
+                                 final WorldStateArchive worldStateArchive) {
     return new ProtocolContext<>(blockchain, worldStateArchive, null);
   }
 
-  private static <T> BlockchainSetupUtil<T> create(
-      final ChainResources chainResources,
-      final ProtocolScheduleProvider<T> protocolScheduleProvider,
-      final ProtocolContextProvider<T> protocolContextProvider,
-      final EthScheduler scheduler) {
+  private static <T> BlockchainSetupUtil<T>
+  create(final ChainResources chainResources,
+         final ProtocolScheduleProvider<T> protocolScheduleProvider,
+         final ProtocolContextProvider<T> protocolContextProvider,
+         final EthScheduler scheduler) {
     final TemporaryFolder temp = new TemporaryFolder();
     try {
       temp.create();
-      final String genesisJson = Resources.toString(chainResources.getGenesisURL(), Charsets.UTF_8);
+      final String genesisJson =
+          Resources.toString(chainResources.getGenesisURL(), Charsets.UTF_8);
 
-      final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisJson);
-      final ProtocolSchedule<T> protocolSchedule = protocolScheduleProvider.get(genesisConfigFile);
+      final GenesisConfigFile genesisConfigFile =
+          GenesisConfigFile.fromConfig(genesisJson);
+      final ProtocolSchedule<T> protocolSchedule =
+          protocolScheduleProvider.get(genesisConfigFile);
 
-      final GenesisState genesisState = GenesisState.fromJson(genesisJson, protocolSchedule);
-      final MutableBlockchain blockchain = createInMemoryBlockchain(genesisState.getBlock());
+      final GenesisState genesisState =
+          GenesisState.fromJson(genesisJson, protocolSchedule);
+      final MutableBlockchain blockchain =
+          createInMemoryBlockchain(genesisState.getBlock());
       final WorldStateArchive worldArchive = createInMemoryWorldStateArchive();
       final TransactionPool transactionPool = mock(TransactionPool.class);
 
@@ -165,22 +167,16 @@ public class BlockchainSetupUtil<C> {
       final List<Block> blocks = new ArrayList<>();
       final BlockHeaderFunctions blockHeaderFunctions =
           ScheduleBasedBlockHeaderFunctions.create(protocolSchedule);
-      try (final RawBlockIterator iterator =
-          new RawBlockIterator(
-              blocksPath, rlp -> BlockHeader.readFrom(rlp, blockHeaderFunctions))) {
+      try (final RawBlockIterator iterator = new RawBlockIterator(
+               blocksPath,
+               rlp -> BlockHeader.readFrom(rlp, blockHeaderFunctions))) {
         while (iterator.hasNext()) {
           blocks.add(iterator.next());
         }
       }
       return new BlockchainSetupUtil<T>(
-          genesisState,
-          blockchain,
-          protocolContext,
-          protocolSchedule,
-          worldArchive,
-          transactionPool,
-          blocks,
-          scheduler);
+          genesisState, blockchain, protocolContext, protocolSchedule,
+          worldArchive, transactionPool, blocks, scheduler);
     } catch (final IOException | URISyntaxException ex) {
       throw new IllegalStateException(ex);
     } finally {
@@ -188,37 +184,21 @@ public class BlockchainSetupUtil<C> {
     }
   }
 
-  public long getMaxBlockNumber() {
-    return maxBlockNumber;
-  }
+  public long getMaxBlockNumber() { return maxBlockNumber; }
 
-  public GenesisState getGenesisState() {
-    return genesisState;
-  }
+  public GenesisState getGenesisState() { return genesisState; }
 
-  public MutableBlockchain getBlockchain() {
-    return blockchain;
-  }
+  public MutableBlockchain getBlockchain() { return blockchain; }
 
-  public ProtocolContext<C> getProtocolContext() {
-    return protocolContext;
-  }
+  public ProtocolContext<C> getProtocolContext() { return protocolContext; }
 
-  public ProtocolSchedule<C> getProtocolSchedule() {
-    return protocolSchedule;
-  }
+  public ProtocolSchedule<C> getProtocolSchedule() { return protocolSchedule; }
 
-  public WorldStateArchive getWorldArchive() {
-    return worldArchive;
-  }
+  public WorldStateArchive getWorldArchive() { return worldArchive; }
 
-  public EthScheduler getScheduler() {
-    return scheduler;
-  }
+  public EthScheduler getScheduler() { return scheduler; }
 
-  public TransactionPool getTransactionPool() {
-    return transactionPool;
-  }
+  public TransactionPool getTransactionPool() { return transactionPool; }
 
   private void importBlocks(final List<Block> blocks) {
     for (final Block block : blocks) {
@@ -228,10 +208,11 @@ public class BlockchainSetupUtil<C> {
       final ProtocolSpec<C> protocolSpec =
           protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
       final BlockImporter<C> blockImporter = protocolSpec.getBlockImporter();
-      final boolean result =
-          blockImporter.importBlock(protocolContext, block, HeaderValidationMode.FULL);
+      final boolean result = blockImporter.importBlock(
+          protocolContext, block, HeaderValidationMode.FULL);
       if (!result) {
-        throw new IllegalStateException("Unable to import block " + block.getHeader().getNumber());
+        throw new IllegalStateException("Unable to import block " +
+                                        block.getHeader().getNumber());
       }
     }
     this.maxBlockNumber = blockchain.getChainHeadBlockNumber();
@@ -242,6 +223,7 @@ public class BlockchainSetupUtil<C> {
   }
 
   private interface ProtocolContextProvider<T> {
-    ProtocolContext<T> get(MutableBlockchain blockchain, WorldStateArchive worldStateArchive);
+    ProtocolContext<T> get(MutableBlockchain blockchain,
+                           WorldStateArchive worldStateArchive);
   }
 }

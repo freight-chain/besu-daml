@@ -1,19 +1,30 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.privacy;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -38,22 +49,11 @@ import org.hyperledger.besu.ethereum.vm.OperationTracer;
 import org.hyperledger.besu.ethereum.vm.operations.ReturnStack;
 import org.hyperledger.besu.ethereum.worldstate.DefaultMutablePrivateWorldStateUpdater;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-
 public class PrivateTransactionProcessor {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  @SuppressWarnings("unused")
-  private final GasCalculator gasCalculator;
+  @SuppressWarnings("unused") private final GasCalculator gasCalculator;
 
   @SuppressWarnings("unused")
   private final TransactionValidator transactionValidator;
@@ -78,44 +78,39 @@ public class PrivateTransactionProcessor {
 
     private final Bytes output;
 
-    private final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult;
+    private final ValidationResult<
+        TransactionValidator.TransactionInvalidReason> validationResult;
     private final Optional<Bytes> revertReason;
 
     public static Result invalid(
-        final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult) {
-      return new Result(
-          Status.INVALID, new ArrayList<>(), -1, Bytes.EMPTY, validationResult, Optional.empty());
+        final ValidationResult<TransactionValidator.TransactionInvalidReason>
+            validationResult) {
+      return new Result(Status.INVALID, new ArrayList<>(), -1, Bytes.EMPTY,
+                        validationResult, Optional.empty());
     }
 
-    public static Result failed(
-        final long gasRemaining,
-        final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult,
-        final Optional<Bytes> revertReason) {
-      return new Result(
-          Status.FAILED,
-          new ArrayList<>(),
-          gasRemaining,
-          Bytes.EMPTY,
-          validationResult,
-          revertReason);
+    public static Result
+    failed(final long gasRemaining,
+           final ValidationResult<TransactionValidator.TransactionInvalidReason>
+               validationResult,
+           final Optional<Bytes> revertReason) {
+      return new Result(Status.FAILED, new ArrayList<>(), gasRemaining,
+                        Bytes.EMPTY, validationResult, revertReason);
     }
 
     public static Result successful(
-        final List<Log> logs,
-        final long gasRemaining,
-        final Bytes output,
-        final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult) {
-      return new Result(
-          Status.SUCCESSFUL, logs, gasRemaining, output, validationResult, Optional.empty());
+        final List<Log> logs, final long gasRemaining, final Bytes output,
+        final ValidationResult<TransactionValidator.TransactionInvalidReason>
+            validationResult) {
+      return new Result(Status.SUCCESSFUL, logs, gasRemaining, output,
+                        validationResult, Optional.empty());
     }
 
-    Result(
-        final Status status,
-        final List<Log> logs,
-        final long gasRemaining,
-        final Bytes output,
-        final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult,
-        final Optional<Bytes> revertReason) {
+    Result(final Status status, final List<Log> logs, final long gasRemaining,
+           final Bytes output,
+           final ValidationResult<TransactionValidator.TransactionInvalidReason>
+               validationResult,
+           final Optional<Bytes> revertReason) {
       this.status = status;
       this.logs = logs;
       this.gasRemaining = gasRemaining;
@@ -145,7 +140,8 @@ public class PrivateTransactionProcessor {
     }
 
     @Override
-    public ValidationResult<TransactionValidator.TransactionInvalidReason> getValidationResult() {
+    public ValidationResult<TransactionValidator.TransactionInvalidReason>
+    getValidationResult() {
       return validationResult;
     }
 
@@ -155,16 +151,14 @@ public class PrivateTransactionProcessor {
     }
   }
 
-  @SuppressWarnings("unused")
-  private final boolean clearEmptyAccounts;
+  @SuppressWarnings("unused") private final boolean clearEmptyAccounts;
 
   public PrivateTransactionProcessor(
       final GasCalculator gasCalculator,
       final TransactionValidator transactionValidator,
       final AbstractMessageProcessor contractCreationProcessor,
       final AbstractMessageProcessor messageCallProcessor,
-      final boolean clearEmptyAccounts,
-      final int maxStackSize,
+      final boolean clearEmptyAccounts, final int maxStackSize,
       final int createContractAccountVersion,
       final PrivateTransactionValidator privateTransactionValidator) {
     this.gasCalculator = gasCalculator;
@@ -179,115 +173,111 @@ public class PrivateTransactionProcessor {
 
   @SuppressWarnings("unused")
   public Result processTransaction(
-      final Blockchain blockchain,
-      final WorldUpdater publicWorldState,
+      final Blockchain blockchain, final WorldUpdater publicWorldState,
       final WorldUpdater privateWorldState,
-      final ProcessableBlockHeader blockHeader,
-      final Hash pmtHash,
-      final PrivateTransaction transaction,
-      final Address miningBeneficiary,
+      final ProcessableBlockHeader blockHeader, final Hash pmtHash,
+      final PrivateTransaction transaction, final Address miningBeneficiary,
       final OperationTracer operationTracer,
-      final BlockHashLookup blockHashLookup,
-      final Bytes privacyGroupId) {
+      final BlockHashLookup blockHashLookup, final Bytes privacyGroupId) {
     LOG.trace("Starting private execution of {}", transaction);
 
     final Address senderAddress = transaction.getSender();
-    final DefaultEvmAccount maybePrivateSender = privateWorldState.getAccount(senderAddress);
+    final DefaultEvmAccount maybePrivateSender =
+        privateWorldState.getAccount(senderAddress);
     final MutableAccount sender =
         maybePrivateSender != null
             ? maybePrivateSender.getMutable()
-            : privateWorldState.createAccount(senderAddress, 0, Wei.ZERO).getMutable();
+            : privateWorldState.createAccount(senderAddress, 0, Wei.ZERO)
+                  .getMutable();
 
-    final ValidationResult<TransactionValidator.TransactionInvalidReason> validationResult =
-        privateTransactionValidator.validate(transaction, sender.getNonce(), false);
+    final ValidationResult<TransactionValidator.TransactionInvalidReason>
+        validationResult = privateTransactionValidator.validate(
+            transaction, sender.getNonce(), false);
     if (!validationResult.isValid()) {
       return Result.invalid(validationResult);
     }
 
     final long previousNonce = sender.incrementNonce();
-    LOG.trace(
-        "Incremented private sender {} nonce ({} -> {})",
-        senderAddress,
-        previousNonce,
-        sender.getNonce());
+    LOG.trace("Incremented private sender {} nonce ({} -> {})", senderAddress,
+              previousNonce, sender.getNonce());
 
     final MessageFrame initialFrame;
     final Deque<MessageFrame> messageFrameStack = new ArrayDeque<>();
 
     final WorldUpdater mutablePrivateWorldStateUpdater =
-        new DefaultMutablePrivateWorldStateUpdater(publicWorldState, privateWorldState);
+        new DefaultMutablePrivateWorldStateUpdater(publicWorldState,
+                                                   privateWorldState);
 
-    final ReturnStack returnStack = new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
+    final ReturnStack returnStack =
+        new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
 
     if (transaction.isContractCreation()) {
-      final Address privateContractAddress =
-          Address.privateContractAddress(senderAddress, previousNonce, privacyGroupId);
+      final Address privateContractAddress = Address.privateContractAddress(
+          senderAddress, previousNonce, privacyGroupId);
 
       LOG.debug(
           "Calculated contract address {} from sender {} with nonce {} and privacy group {}",
-          privateContractAddress.toString(),
-          senderAddress,
-          previousNonce,
+          privateContractAddress.toString(), senderAddress, previousNonce,
           privacyGroupId.toString());
 
-      initialFrame =
-          MessageFrame.builder()
-              .type(MessageFrame.Type.CONTRACT_CREATION)
-              .messageFrameStack(messageFrameStack)
-              .returnStack(returnStack)
-              .blockchain(blockchain)
-              .worldState(mutablePrivateWorldStateUpdater)
-              .address(privateContractAddress)
-              .originator(senderAddress)
-              .contract(privateContractAddress)
-              .contractAccountVersion(createContractAccountVersion)
-              .initialGas(Gas.MAX_VALUE)
-              .gasPrice(transaction.getGasPrice())
-              .inputData(Bytes.EMPTY)
-              .sender(senderAddress)
-              .value(transaction.getValue())
-              .apparentValue(transaction.getValue())
-              .code(new Code(transaction.getPayload()))
-              .blockHeader(blockHeader)
-              .depth(0)
-              .completer(c -> {})
-              .miningBeneficiary(miningBeneficiary)
-              .blockHashLookup(blockHashLookup)
-              .maxStackSize(maxStackSize)
-              .transactionHash(pmtHash)
-              .build();
+      initialFrame = MessageFrame.builder()
+                         .type(MessageFrame.Type.CONTRACT_CREATION)
+                         .messageFrameStack(messageFrameStack)
+                         .returnStack(returnStack)
+                         .blockchain(blockchain)
+                         .worldState(mutablePrivateWorldStateUpdater)
+                         .address(privateContractAddress)
+                         .originator(senderAddress)
+                         .contract(privateContractAddress)
+                         .contractAccountVersion(createContractAccountVersion)
+                         .initialGas(Gas.MAX_VALUE)
+                         .gasPrice(transaction.getGasPrice())
+                         .inputData(Bytes.EMPTY)
+                         .sender(senderAddress)
+                         .value(transaction.getValue())
+                         .apparentValue(transaction.getValue())
+                         .code(new Code(transaction.getPayload()))
+                         .blockHeader(blockHeader)
+                         .depth(0)
+                         .completer(c -> {})
+                         .miningBeneficiary(miningBeneficiary)
+                         .blockHashLookup(blockHashLookup)
+                         .maxStackSize(maxStackSize)
+                         .transactionHash(pmtHash)
+                         .build();
 
     } else {
       final Address to = transaction.getTo().get();
       final Account contract = privateWorldState.get(to);
 
-      initialFrame =
-          MessageFrame.builder()
-              .type(MessageFrame.Type.MESSAGE_CALL)
-              .messageFrameStack(messageFrameStack)
-              .returnStack(returnStack)
-              .blockchain(blockchain)
-              .worldState(mutablePrivateWorldStateUpdater)
-              .address(to)
-              .originator(senderAddress)
-              .contract(to)
-              .contractAccountVersion(
-                  contract != null ? contract.getVersion() : Account.DEFAULT_VERSION)
-              .initialGas(Gas.MAX_VALUE)
-              .gasPrice(transaction.getGasPrice())
-              .inputData(transaction.getPayload())
-              .sender(senderAddress)
-              .value(transaction.getValue())
-              .apparentValue(transaction.getValue())
-              .code(new Code(contract != null ? contract.getCode() : Bytes.EMPTY))
-              .blockHeader(blockHeader)
-              .depth(0)
-              .completer(c -> {})
-              .miningBeneficiary(miningBeneficiary)
-              .blockHashLookup(blockHashLookup)
-              .maxStackSize(maxStackSize)
-              .transactionHash(pmtHash)
-              .build();
+      initialFrame = MessageFrame.builder()
+                         .type(MessageFrame.Type.MESSAGE_CALL)
+                         .messageFrameStack(messageFrameStack)
+                         .returnStack(returnStack)
+                         .blockchain(blockchain)
+                         .worldState(mutablePrivateWorldStateUpdater)
+                         .address(to)
+                         .originator(senderAddress)
+                         .contract(to)
+                         .contractAccountVersion(contract != null
+                                                     ? contract.getVersion()
+                                                     : Account.DEFAULT_VERSION)
+                         .initialGas(Gas.MAX_VALUE)
+                         .gasPrice(transaction.getGasPrice())
+                         .inputData(transaction.getPayload())
+                         .sender(senderAddress)
+                         .value(transaction.getValue())
+                         .apparentValue(transaction.getValue())
+                         .code(new Code(contract != null ? contract.getCode()
+                                                         : Bytes.EMPTY))
+                         .blockHeader(blockHeader)
+                         .depth(0)
+                         .completer(c -> {})
+                         .miningBeneficiary(miningBeneficiary)
+                         .blockHashLookup(blockHashLookup)
+                         .maxStackSize(maxStackSize)
+                         .transactionHash(pmtHash)
+                         .build();
     }
 
     messageFrameStack.addFirst(initialFrame);
@@ -301,45 +291,52 @@ public class PrivateTransactionProcessor {
     }
 
     if (initialFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
-      return Result.successful(
-          initialFrame.getLogs(), 0, initialFrame.getOutputData(), ValidationResult.valid());
+      return Result.successful(initialFrame.getLogs(), 0,
+                               initialFrame.getOutputData(),
+                               ValidationResult.valid());
     } else {
       return Result.failed(
           0,
-          ValidationResult.invalid(
-              TransactionValidator.TransactionInvalidReason.PRIVATE_TRANSACTION_FAILED),
+          ValidationResult.invalid(TransactionValidator.TransactionInvalidReason
+                                       .PRIVATE_TRANSACTION_FAILED),
           initialFrame.getRevertReason());
     }
   }
 
   @SuppressWarnings("unused")
   private static void clearEmptyAccounts(final WorldUpdater worldState) {
-    worldState.getTouchedAccounts().stream()
+    worldState.getTouchedAccounts()
+        .stream()
         .filter(Account::isEmpty)
         .forEach(a -> worldState.deleteAccount(a.getAddress()));
   }
 
-  private void process(final MessageFrame frame, final OperationTracer operationTracer) {
-    final AbstractMessageProcessor executor = getMessageProcessor(frame.getType());
+  private void process(final MessageFrame frame,
+                       final OperationTracer operationTracer) {
+    final AbstractMessageProcessor executor =
+        getMessageProcessor(frame.getType());
 
     executor.process(frame, operationTracer);
   }
 
-  private AbstractMessageProcessor getMessageProcessor(final MessageFrame.Type type) {
+  private AbstractMessageProcessor
+  getMessageProcessor(final MessageFrame.Type type) {
     switch (type) {
-      case MESSAGE_CALL:
-        return messageCallProcessor;
-      case CONTRACT_CREATION:
-        return contractCreationProcessor;
-      default:
-        throw new IllegalStateException("Request for unsupported message processor type " + type);
+    case MESSAGE_CALL:
+      return messageCallProcessor;
+    case CONTRACT_CREATION:
+      return contractCreationProcessor;
+    default:
+      throw new IllegalStateException(
+          "Request for unsupported message processor type " + type);
     }
   }
 
   @SuppressWarnings("unused")
-  private static Gas refunded(
-      final Transaction transaction, final Gas gasRemaining, final Gas gasRefund) {
-    // Integer truncation takes care of the the floor calculation needed after the divide.
+  private static Gas refunded(final Transaction transaction,
+                              final Gas gasRemaining, final Gas gasRefund) {
+    // Integer truncation takes care of the the floor calculation needed after
+    // the divide.
     final Gas maxRefundAllowance =
         Gas.of(transaction.getGasLimit()).minus(gasRemaining).dividedBy(2);
     final Gas refundAllowance = maxRefundAllowance.min(gasRefund);

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,7 +31,6 @@ import org.hyperledger.besu.ethereum.core.fees.CoinbaseFeePriceCalculator;
 import org.hyperledger.besu.ethereum.core.fees.TransactionPriceCalculator;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,21 +58,16 @@ public class MainnetTransactionProcessorTest {
 
   @Before
   public void before() {
-    transactionProcessor =
-        new MainnetTransactionProcessor(
-            gasCalculator,
-            transactionValidator,
-            contractCreationProcessor,
-            messageCallProcessor,
-            false,
-            MAX_STACK_SIZE,
-            Account.DEFAULT_VERSION,
-            TransactionPriceCalculator.frontier(),
-            CoinbaseFeePriceCalculator.frontier());
+    transactionProcessor = new MainnetTransactionProcessor(
+        gasCalculator, transactionValidator, contractCreationProcessor,
+        messageCallProcessor, false, MAX_STACK_SIZE, Account.DEFAULT_VERSION,
+        TransactionPriceCalculator.frontier(),
+        CoinbaseFeePriceCalculator.frontier());
   }
 
   @Test
-  public void shouldCallTransactionValidatorWithExpectedTransactionValidationParams() {
+  public void
+  shouldCallTransactionValidatorWithExpectedTransactionValidationParams() {
     final ArgumentCaptor<TransactionValidationParams> txValidationParamCaptor =
         transactionValidationParamCaptor();
 
@@ -78,28 +75,25 @@ public class MainnetTransactionProcessorTest {
         new TransactionValidationParams.Builder().build();
 
     transactionProcessor.processTransaction(
-        blockchain,
-        worldState,
-        blockHeader,
-        transaction,
-        Address.fromHexString("1"),
-        blockHashLookup,
-        false,
+        blockchain, worldState, blockHeader, transaction,
+        Address.fromHexString("1"), blockHashLookup, false,
         new TransactionValidationParams.Builder().build());
 
     assertThat(txValidationParamCaptor.getValue())
         .isEqualToComparingFieldByField(expectedValidationParams);
   }
 
-  private ArgumentCaptor<TransactionValidationParams> transactionValidationParamCaptor() {
+  private ArgumentCaptor<TransactionValidationParams>
+  transactionValidationParamCaptor() {
     final ArgumentCaptor<TransactionValidationParams> txValidationParamCaptor =
         ArgumentCaptor.forClass(TransactionValidationParams.class);
-    when(transactionValidator.validate(any())).thenReturn(ValidationResult.valid());
+    when(transactionValidator.validate(any()))
+        .thenReturn(ValidationResult.valid());
     // returning invalid transaction to halt method execution
-    when(transactionValidator.validateForSender(any(), any(), txValidationParamCaptor.capture()))
-        .thenReturn(
-            ValidationResult.invalid(
-                TransactionValidator.TransactionInvalidReason.INCORRECT_NONCE));
+    when(transactionValidator.validateForSender(
+             any(), any(), txValidationParamCaptor.capture()))
+        .thenReturn(ValidationResult.invalid(
+            TransactionValidator.TransactionInvalidReason.INCORRECT_NONCE));
     return txValidationParamCaptor;
   }
 }

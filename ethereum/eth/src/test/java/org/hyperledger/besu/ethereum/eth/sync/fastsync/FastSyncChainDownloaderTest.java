@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,8 @@ import static org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMes
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.LockSupport;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
@@ -36,17 +41,14 @@ import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.locks.LockSupport;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class FastSyncChainDownloaderTest {
 
-  private final FastSyncValidationPolicy validationPolicy = mock(FastSyncValidationPolicy.class);
+  private final FastSyncValidationPolicy validationPolicy =
+      mock(FastSyncValidationPolicy.class);
 
   protected ProtocolSchedule<Void> protocolSchedule;
   protected EthProtocolManager ethProtocolManager;
@@ -60,20 +62,22 @@ public class FastSyncChainDownloaderTest {
 
   @Before
   public void setup() {
-    when(validationPolicy.getValidationModeForNextBlock()).thenReturn(LIGHT_SKIP_DETACHED);
-    final BlockchainSetupUtil<Void> localBlockchainSetup = BlockchainSetupUtil.forTesting();
+    when(validationPolicy.getValidationModeForNextBlock())
+        .thenReturn(LIGHT_SKIP_DETACHED);
+    final BlockchainSetupUtil<Void> localBlockchainSetup =
+        BlockchainSetupUtil.forTesting();
     localBlockchain = localBlockchainSetup.getBlockchain();
     otherBlockchainSetup = BlockchainSetupUtil.forTesting();
     otherBlockchain = otherBlockchainSetup.getBlockchain();
 
     protocolSchedule = localBlockchainSetup.getProtocolSchedule();
     protocolContext = localBlockchainSetup.getProtocolContext();
-    ethProtocolManager =
-        EthProtocolManagerTestUtil.create(
-            localBlockchain, new EthScheduler(1, 1, 1, 1, new NoOpMetricsSystem()));
+    ethProtocolManager = EthProtocolManagerTestUtil.create(
+        localBlockchain, new EthScheduler(1, 1, 1, 1, new NoOpMetricsSystem()));
 
     ethContext = ethProtocolManager.ethContext();
-    syncState = new SyncState(protocolContext.getBlockchain(), ethContext.getEthPeers());
+    syncState = new SyncState(protocolContext.getBlockchain(),
+                              ethContext.getEthPeers());
   }
 
   @After
@@ -81,14 +85,10 @@ public class FastSyncChainDownloaderTest {
     ethProtocolManager.stop();
   }
 
-  private ChainDownloader downloader(
-      final SynchronizerConfiguration syncConfig, final long pivotBlockNumber) {
+  private ChainDownloader downloader(final SynchronizerConfiguration syncConfig,
+                                     final long pivotBlockNumber) {
     return FastSyncChainDownloader.create(
-        syncConfig,
-        protocolSchedule,
-        protocolContext,
-        ethContext,
-        syncState,
+        syncConfig, protocolSchedule, protocolContext, ethContext, syncState,
         new NoOpMetricsSystem(),
         otherBlockchain.getBlockHeader(pivotBlockNumber).get());
   }
@@ -97,8 +97,8 @@ public class FastSyncChainDownloaderTest {
   public void shouldSyncToPivotBlockInMultipleSegments() {
     otherBlockchainSetup.importFirstBlocks(30);
 
-    final RespondingEthPeer peer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, otherBlockchain);
+    final RespondingEthPeer peer = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, otherBlockchain);
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(otherBlockchain);
 
@@ -114,7 +114,8 @@ public class FastSyncChainDownloaderTest {
     peer.respondWhileOtherThreadsWork(responder, () -> !result.isDone());
 
     assertThat(result).isCompleted();
-    assertThat(localBlockchain.getChainHeadBlockNumber()).isEqualTo(pivotBlockNumber);
+    assertThat(localBlockchain.getChainHeadBlockNumber())
+        .isEqualTo(pivotBlockNumber);
     assertThat(localBlockchain.getChainHeadHeader())
         .isEqualTo(otherBlockchain.getBlockHeader(pivotBlockNumber).get());
   }
@@ -123,52 +124,56 @@ public class FastSyncChainDownloaderTest {
   public void shouldSyncToPivotBlockInSingleSegment() {
     otherBlockchainSetup.importFirstBlocks(30);
 
-    final RespondingEthPeer peer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, otherBlockchain);
+    final RespondingEthPeer peer = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, otherBlockchain);
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(otherBlockchain);
 
     final long pivotBlockNumber = 5;
-    final SynchronizerConfiguration syncConfig = SynchronizerConfiguration.builder().build();
+    final SynchronizerConfiguration syncConfig =
+        SynchronizerConfiguration.builder().build();
     final ChainDownloader downloader = downloader(syncConfig, pivotBlockNumber);
     final CompletableFuture<Void> result = downloader.start();
 
     peer.respondWhileOtherThreadsWork(responder, () -> !result.isDone());
 
     assertThat(result).isCompleted();
-    assertThat(localBlockchain.getChainHeadBlockNumber()).isEqualTo(pivotBlockNumber);
+    assertThat(localBlockchain.getChainHeadBlockNumber())
+        .isEqualTo(pivotBlockNumber);
     assertThat(localBlockchain.getChainHeadHeader())
         .isEqualTo(otherBlockchain.getBlockHeader(pivotBlockNumber).get());
   }
 
   @Test
   public void recoversFromSyncTargetDisconnect() {
-    final BlockchainSetupUtil<Void> shorterChainUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil<Void> shorterChainUtil =
+        BlockchainSetupUtil.forTesting();
     final MutableBlockchain shorterChain = shorterChainUtil.getBlockchain();
 
     otherBlockchainSetup.importFirstBlocks(30);
     shorterChainUtil.importFirstBlocks(28);
 
-    final RespondingEthPeer bestPeer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, otherBlockchain);
+    final RespondingEthPeer bestPeer = EthProtocolManagerTestUtil.createPeer(
+        ethProtocolManager, otherBlockchain);
     final RespondingEthPeer secondBestPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, shorterChain);
     final RespondingEthPeer.Responder shorterResponder =
         RespondingEthPeer.blockchainResponder(shorterChain);
-    // Doesn't respond to requests for checkpoints unless it's starting from geneis
-    // So the import can only make it as far as block 15 (3 checkpoints 5 blocks apart)
+    // Doesn't respond to requests for checkpoints unless it's starting from
+    // geneis So the import can only make it as far as block 15 (3 checkpoints 5
+    // blocks apart)
     final RespondingEthPeer.Responder shorterLimitedRangeResponder =
-        RespondingEthPeer.targetedResponder(
-            (cap, msg) -> {
-              if (msg.getCode() == EthPV62.GET_BLOCK_HEADERS) {
-                final GetBlockHeadersMessage request = GetBlockHeadersMessage.readFrom(msg);
-                return request.skip() == 0
-                    || (request.hash().equals(localBlockchain.getBlockHashByNumber(0)));
-              } else {
-                return true;
-              }
-            },
-            (cap, msg) -> shorterResponder.respond(cap, msg).get());
+        RespondingEthPeer.targetedResponder((cap, msg) -> {
+          if (msg.getCode() == EthPV62.GET_BLOCK_HEADERS) {
+            final GetBlockHeadersMessage request =
+                GetBlockHeadersMessage.readFrom(msg);
+            return request.skip() == 0 ||
+                (request.hash().equals(
+                    localBlockchain.getBlockHashByNumber(0)));
+          } else {
+            return true;
+          }
+        }, (cap, msg) -> shorterResponder.respond(cap, msg).get());
 
     final SynchronizerConfiguration syncConfig =
         SynchronizerConfiguration.builder()
@@ -189,12 +194,15 @@ public class FastSyncChainDownloaderTest {
     assertThat(localBlockchain.getChainHeadBlockNumber()).isEqualTo(15);
     assertThat(result).isNotCompleted();
 
-    ethProtocolManager.handleDisconnect(bestPeer.getPeerConnection(), TOO_MANY_PEERS, true);
+    ethProtocolManager.handleDisconnect(bestPeer.getPeerConnection(),
+                                        TOO_MANY_PEERS, true);
 
-    secondBestPeer.respondWhileOtherThreadsWork(shorterResponder, () -> !result.isDone());
+    secondBestPeer.respondWhileOtherThreadsWork(shorterResponder,
+                                                () -> !result.isDone());
 
     assertThat(result).isCompleted();
-    assertThat(localBlockchain.getChainHeadBlockNumber()).isEqualTo(pivotBlockNumber);
+    assertThat(localBlockchain.getChainHeadBlockNumber())
+        .isEqualTo(pivotBlockNumber);
     assertThat(localBlockchain.getChainHeadHeader())
         .isEqualTo(otherBlockchain.getBlockHeader(pivotBlockNumber).get());
   }

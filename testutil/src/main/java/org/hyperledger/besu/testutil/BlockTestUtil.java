@@ -1,19 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.testutil;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -24,10 +30,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.function.Supplier;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Suppliers;
-import com.google.common.io.Resources;
 
 public final class BlockTestUtil {
 
@@ -71,61 +73,58 @@ public final class BlockTestUtil {
   }
 
   private static ChainResources supplyTestChainResources() {
-    final URL genesisURL =
-        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource("testGenesis.json"));
+    final URL genesisURL = ensureFileUrl(
+        BlockTestUtil.class.getClassLoader().getResource("testGenesis.json"));
     final URL blocksURL =
-        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource("testBlockchain.blocks"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "testBlockchain.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 
   private static ChainResources supplyMainnetChainResources() {
     final URL genesisURL =
-        ensureFileUrl(
-            BlockTestUtil.class.getClassLoader().getResource("mainnet-data/mainnet.json"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "mainnet-data/mainnet.json"));
     final URL blocksURL =
-        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource("mainnet-data/1000.blocks"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "mainnet-data/1000.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 
   private static ChainResources supplyBadPowChainResources() {
     final URL genesisURL =
-        ensureFileUrl(
-            BlockTestUtil.class.getClassLoader().getResource("mainnet-data/mainnet.json"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "mainnet-data/mainnet.json"));
     final URL blocksURL =
-        ensureFileUrl(
-            BlockTestUtil.class.getClassLoader().getResource("mainnet-data/badpow.blocks"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "mainnet-data/badpow.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 
   private static ChainResources supplyOutdatedForkResources() {
     final URL genesisURL =
-        ensureFileUrl(
-            BlockTestUtil.class
-                .getClassLoader()
-                .getResource("fork-chain-data/genesis-outdated.json"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "fork-chain-data/genesis-outdated.json"));
     final URL blocksURL =
-        ensureFileUrl(
-            BlockTestUtil.class
-                .getClassLoader()
-                .getResource("fork-chain-data/fork-outdated.blocks"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "fork-chain-data/fork-outdated.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 
   private static ChainResources supplyUpgradedForkResources() {
     final URL genesisURL =
-        ensureFileUrl(
-            BlockTestUtil.class
-                .getClassLoader()
-                .getResource("fork-chain-data/genesis-upgraded.json"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "fork-chain-data/genesis-upgraded.json"));
     final URL blocksURL =
-        ensureFileUrl(
-            BlockTestUtil.class
-                .getClassLoader()
-                .getResource("fork-chain-data/fork-upgraded.blocks"));
+        ensureFileUrl(BlockTestUtil.class.getClassLoader().getResource(
+            "fork-chain-data/fork-upgraded.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 
-  /** Take a resource URL and if needed copy it to a temp file and return that URL. */
+  /**
+   * Take a resource URL and if needed copy it to a temp file and return that
+   * URL.
+   */
   private static URL ensureFileUrl(final URL resource) {
     Preconditions.checkNotNull(resource);
     try {
@@ -134,7 +133,8 @@ public final class BlockTestUtil {
       } catch (final FileSystemNotFoundException e) {
         final Path target = Files.createTempFile("besu", null);
         target.toFile().deleteOnExit();
-        Files.copy(resource.openStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(resource.openStream(), target,
+                   StandardCopyOption.REPLACE_EXISTING);
         return target.toUri().toURL();
       }
     } catch (final IOException | URISyntaxException e) {
@@ -151,10 +151,8 @@ public final class BlockTestUtil {
   public static void write1000Blocks(final Path target) {
     try {
       Files.write(
-          target,
-          Resources.toByteArray(getMainnetResources().getBlocksURL()),
-          StandardOpenOption.CREATE,
-          StandardOpenOption.TRUNCATE_EXISTING);
+          target, Resources.toByteArray(getMainnetResources().getBlocksURL()),
+          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     } catch (final IOException ex) {
       throw new IllegalStateException(ex);
     }
@@ -168,10 +166,8 @@ public final class BlockTestUtil {
   public static void writeBadPowBlocks(final Path target) {
     try {
       Files.write(
-          target,
-          Resources.toByteArray(getBadPowResources().getBlocksURL()),
-          StandardOpenOption.CREATE,
-          StandardOpenOption.TRUNCATE_EXISTING);
+          target, Resources.toByteArray(getBadPowResources().getBlocksURL()),
+          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     } catch (final IOException ex) {
       throw new IllegalStateException(ex);
     }
@@ -186,12 +182,8 @@ public final class BlockTestUtil {
       this.blocksURL = blocksURL;
     }
 
-    public URL getGenesisURL() {
-      return genesisURL;
-    }
+    public URL getGenesisURL() { return genesisURL; }
 
-    public URL getBlocksURL() {
-      return blocksURL;
-    }
+    public URL getBlocksURL() { return blocksURL; }
   }
 }

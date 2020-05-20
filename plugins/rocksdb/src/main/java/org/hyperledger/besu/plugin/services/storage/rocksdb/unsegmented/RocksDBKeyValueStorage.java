@@ -1,19 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.plugin.services.storage.rocksdb.unsegmented;
 
+import com.google.common.collect.Sets;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
@@ -24,15 +34,6 @@ import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBMetricsFactor
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDbUtil;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBConfiguration;
 import org.hyperledger.besu.services.kvstore.KeyValueStorageTransactionTransitionValidatorDecorator;
-
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
-
-import com.google.common.collect.Sets;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.LRUCache;
 import org.rocksdb.Options;
@@ -45,9 +46,7 @@ import org.rocksdb.WriteOptions;
 
 public class RocksDBKeyValueStorage implements KeyValueStorage {
 
-  static {
-    RocksDbUtil.loadNativeLibrary();
-  }
+  static { RocksDbUtil.loadNativeLibrary(); }
 
   private static final Logger LOG = LogManager.getLogger();
 
@@ -57,10 +56,10 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final RocksDBMetrics rocksDBMetrics;
 
-  public RocksDBKeyValueStorage(
-      final RocksDBConfiguration configuration,
-      final MetricsSystem metricsSystem,
-      final RocksDBMetricsFactory rocksDBMetricsFactory) {
+  public RocksDBKeyValueStorage(final RocksDBConfiguration configuration,
+                                final MetricsSystem metricsSystem,
+                                final RocksDBMetricsFactory
+                                    rocksDBMetricsFactory) {
 
     try {
       final Statistics stats = new Statistics();
@@ -69,13 +68,17 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
               .setCreateIfMissing(true)
               .setMaxOpenFiles(configuration.getMaxOpenFiles())
               .setTableFormatConfig(createBlockBasedTableConfig(configuration))
-              .setMaxBackgroundCompactions(configuration.getMaxBackgroundCompactions())
+              .setMaxBackgroundCompactions(
+                  configuration.getMaxBackgroundCompactions())
               .setStatistics(stats);
-      options.getEnv().setBackgroundThreads(configuration.getBackgroundThreadCount());
+      options.getEnv().setBackgroundThreads(
+          configuration.getBackgroundThreadCount());
 
       txOptions = new TransactionDBOptions();
-      db = TransactionDB.open(options, txOptions, configuration.getDatabaseDir().toString());
-      rocksDBMetrics = rocksDBMetricsFactory.create(metricsSystem, configuration, db, stats);
+      db = TransactionDB.open(options, txOptions,
+                              configuration.getDatabaseDir().toString());
+      rocksDBMetrics =
+          rocksDBMetricsFactory.create(metricsSystem, configuration, db, stats);
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
@@ -109,7 +112,7 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
     throwIfClosed();
 
     try (final OperationTimer.TimingContext ignored =
-        rocksDBMetrics.getReadLatency().startTimer()) {
+             rocksDBMetrics.getReadLatency().startTimer()) {
       return Optional.ofNullable(db.get(key));
     } catch (final RocksDBException e) {
       throw new StorageException(e);
@@ -117,10 +120,12 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
   }
 
   @Override
-  public long removeAllKeysUnless(final Predicate<byte[]> retainCondition) throws StorageException {
+  public long removeAllKeysUnless(final Predicate<byte[]> retainCondition)
+      throws StorageException {
     long removedNodeCounter = 0;
     try (final RocksIterator rocksIterator = db.newIterator()) {
-      for (rocksIterator.seekToFirst(); rocksIterator.isValid(); rocksIterator.next()) {
+      for (rocksIterator.seekToFirst(); rocksIterator.isValid();
+           rocksIterator.next()) {
         final byte[] key = rocksIterator.key();
         if (!retainCondition.test(key)) {
           removedNodeCounter++;
@@ -137,7 +142,8 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
   public Set<byte[]> getAllKeysThat(final Predicate<byte[]> returnCondition) {
     final Set<byte[]> returnedKeys = Sets.newIdentityHashSet();
     try (final RocksIterator rocksIterator = db.newIterator()) {
-      for (rocksIterator.seekToFirst(); rocksIterator.isValid(); rocksIterator.next()) {
+      for (rocksIterator.seekToFirst(); rocksIterator.isValid();
+           rocksIterator.next()) {
         final byte[] key = rocksIterator.key();
         if (returnCondition.test(key)) {
           returnedKeys.add(key);
@@ -152,7 +158,8 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
     throwIfClosed();
     final WriteOptions options = new WriteOptions();
     return new KeyValueStorageTransactionTransitionValidatorDecorator(
-        new RocksDBTransaction(db.beginTransaction(options), options, rocksDBMetrics));
+        new RocksDBTransaction(db.beginTransaction(options), options,
+                               rocksDBMetrics));
   }
 
   @Override
@@ -164,7 +171,8 @@ public class RocksDBKeyValueStorage implements KeyValueStorage {
     }
   }
 
-  private BlockBasedTableConfig createBlockBasedTableConfig(final RocksDBConfiguration config) {
+  private BlockBasedTableConfig
+  createBlockBasedTableConfig(final RocksDBConfiguration config) {
     final LRUCache cache = new LRUCache(config.getCacheCapacity());
     return new BlockBasedTableConfig().setBlockCache(cache);
   }

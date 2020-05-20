@@ -1,29 +1,33 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet.headervalidationrules;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.fees.EIP1559;
 import org.hyperledger.besu.ethereum.core.fees.FeeMarket;
 import org.hyperledger.besu.ethereum.mainnet.DetachedBlockHeaderValidationRule;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-public class EIP1559BlockHeaderGasLimitValidationRule implements DetachedBlockHeaderValidationRule {
-  private final Logger LOG = LogManager.getLogger(EIP1559BlockHeaderGasLimitValidationRule.class);
+public class EIP1559BlockHeaderGasLimitValidationRule
+    implements DetachedBlockHeaderValidationRule {
+  private final Logger LOG =
+      LogManager.getLogger(EIP1559BlockHeaderGasLimitValidationRule.class);
   private final EIP1559 eip1559;
   private final FeeMarket feeMarket = FeeMarket.eip1559();
 
@@ -40,8 +44,7 @@ public class EIP1559BlockHeaderGasLimitValidationRule implements DetachedBlockHe
       if (header.getGasLimit() != feeMarket.getMaxGas()) {
         LOG.trace(
             "Invalid block header: gas limit {} does not equal expected gas limit {}",
-            header.getGasLimit(),
-            feeMarket.getMaxGas());
+            header.getGasLimit(), feeMarket.getMaxGas());
         return false;
       } else {
         return true;
@@ -50,12 +53,12 @@ public class EIP1559BlockHeaderGasLimitValidationRule implements DetachedBlockHe
 
     final long numberOfIncrements = header.getNumber() - eip1559.getForkBlock();
     final long expectedGasLimit =
-        (feeMarket.getMaxGas() / 2) + (numberOfIncrements * feeMarket.getGasIncrementAmount());
+        (feeMarket.getMaxGas() / 2) +
+        (numberOfIncrements * feeMarket.getGasIncrementAmount());
     if (header.getGasLimit() != expectedGasLimit) {
       LOG.trace(
           "Invalid block header: gas limit {} does not equal expected gas limit {}",
-          header.getGasLimit(),
-          expectedGasLimit);
+          header.getGasLimit(), expectedGasLimit);
       return false;
     }
 

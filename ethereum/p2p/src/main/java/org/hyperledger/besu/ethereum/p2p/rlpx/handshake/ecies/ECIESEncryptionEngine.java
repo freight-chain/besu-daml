@@ -1,23 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.rlpx.handshake.ecies;
 
 import static com.google.common.base.Preconditions.checkArgument;
-
-import org.hyperledger.besu.crypto.NodeKey;
-import org.hyperledger.besu.crypto.SECP256K1;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.crypto.BufferedBlockCipher;
@@ -38,16 +38,20 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.Pack;
+import org.hyperledger.besu.crypto.NodeKey;
+import org.hyperledger.besu.crypto.SECP256K1;
 
 /**
- * An <a href="https://en.wikipedia.org/wiki/Integrated_Encryption_Scheme">Integrated Encryption
- * Scheme</a> engine that implements the encryption and decryption logic behind the ECIES crypto
- * handshake during the RLPx connection establishment.
+ * An <a
+ * href="https://en.wikipedia.org/wiki/Integrated_Encryption_Scheme">Integrated
+ * Encryption Scheme</a> engine that implements the encryption and decryption
+ * logic behind the ECIES crypto handshake during the RLPx connection
+ * establishment.
  *
- * <p>This class has been inspired by the <code>IESEngine</code> implementation in Bouncy Castle. It
- * has been modified heavily to accommodate our usage, yet the core logic remains unchanged. It
- * implements a peculiarity of the Ethereum encryption protocol: updating the encryption MAC with
- * the IV.
+ * <p>This class has been inspired by the <code>IESEngine</code> implementation
+ * in Bouncy Castle. It has been modified heavily to accommodate our usage, yet
+ * the core logic remains unchanged. It implements a peculiarity of the Ethereum
+ * encryption protocol: updating the encryption MAC with the IV.
  */
 public class ECIESEncryptionEngine {
 
@@ -59,8 +63,8 @@ public class ECIESEncryptionEngine {
   private static final short CIPHER_KEY_SIZE_BITS = CIPHER_BLOCK_SIZE * 8;
 
   private static final IESWithCipherParameters PARAM =
-      new IESWithCipherParameters(
-          IES_DERIVATION, IES_ENCODING, CIPHER_KEY_SIZE_BITS, CIPHER_KEY_SIZE_BITS);
+      new IESWithCipherParameters(IES_DERIVATION, IES_ENCODING,
+                                  CIPHER_KEY_SIZE_BITS, CIPHER_KEY_SIZE_BITS);
   private static final int CIPHER_KEY_SIZE = PARAM.getCipherKeySize();
   private static final int CIPHER_MAC_KEY_SIZE = PARAM.getMacKeySize();
 
@@ -74,13 +78,15 @@ public class ECIESEncryptionEngine {
   private final SECP256K1.PublicKey ephPubKey;
   private final byte[] iv;
 
-  private ECIESEncryptionEngine(
-      final Bytes agreedSecret, final SECP256K1.PublicKey ephPubKey, final byte[] iv) {
+  private ECIESEncryptionEngine(final Bytes agreedSecret,
+                                final SECP256K1.PublicKey ephPubKey,
+                                final byte[] iv) {
     this.ephPubKey = ephPubKey;
     this.iv = iv;
 
     // Initialise the KDF.
-    this.kdf.init(new KDFParameters(agreedSecret.toArrayUnsafe(), PARAM.getDerivationV()));
+    this.kdf.init(new KDFParameters(agreedSecret.toArrayUnsafe(),
+                                    PARAM.getDerivationV()));
   }
 
   /**
@@ -91,8 +97,9 @@ public class ECIESEncryptionEngine {
    * @param iv The initialization vector extracted from the raw message.
    * @return An engine prepared for decryption.
    */
-  public static ECIESEncryptionEngine forDecryption(
-      final NodeKey nodeKey, final SECP256K1.PublicKey ephPubKey, final Bytes iv) {
+  public static ECIESEncryptionEngine
+  forDecryption(final NodeKey nodeKey, final SECP256K1.PublicKey ephPubKey,
+                final Bytes iv) {
     final byte[] ivb = iv.toArray();
 
     // Create parameters.
@@ -104,14 +111,17 @@ public class ECIESEncryptionEngine {
   /**
    * Creates a new engine for encryption.
    *
-   * <p>The generated IV and ephemeral public key are available via getters {@link #getIv()} and
+   * <p>The generated IV and ephemeral public key are available via getters
+   * {@link #getIv()} and
    * {@link #getEphPubKey()}.
    *
    * @param pubKey The public key of the receiver.
    * @return An engine prepared for encryption.
    */
-  public static ECIESEncryptionEngine forEncryption(final SECP256K1.PublicKey pubKey) {
-    // Create an ephemeral key pair for IES whose public key we can later append in the message.
+  public static ECIESEncryptionEngine
+  forEncryption(final SECP256K1.PublicKey pubKey) {
+    // Create an ephemeral key pair for IES whose public key we can later append
+    // in the message.
     final SECP256K1.KeyPair ephKeyPair = SECP256K1.KeyPair.generate();
 
     // Create random iv.
@@ -119,8 +129,7 @@ public class ECIESEncryptionEngine {
 
     return new ECIESEncryptionEngine(
         SECP256K1.calculateECDHKeyAgreement(ephKeyPair.getPrivateKey(), pubKey),
-        ephKeyPair.getPublicKey(),
-        ivb);
+        ephKeyPair.getPublicKey(), ivb);
   }
 
   /**
@@ -128,17 +137,20 @@ public class ECIESEncryptionEngine {
    *
    * @param in The plaintext.
    * @return The ciphertext.
-   * @throws InvalidCipherTextException Thrown if an error occured during encryption.
+   * @throws InvalidCipherTextException Thrown if an error occured during
+   *     encryption.
    */
   public Bytes encrypt(final Bytes in) throws InvalidCipherTextException {
     return Bytes.wrap(encrypt(in.toArray(), 0, in.size(), null));
   }
 
-  public Bytes encrypt(final Bytes in, final byte[] macData) throws InvalidCipherTextException {
+  public Bytes encrypt(final Bytes in, final byte[] macData)
+      throws InvalidCipherTextException {
     return Bytes.wrap(encrypt(in.toArray(), 0, in.size(), macData));
   }
 
-  private byte[] encrypt(final byte[] in, final int inOff, final int inLen, final byte[] macData)
+  private byte[] encrypt(final byte[] in, final int inOff, final int inLen,
+                         final byte[] macData)
       throws InvalidCipherTextException {
     final byte[] C;
     final byte[] K;
@@ -200,18 +212,20 @@ public class ECIESEncryptionEngine {
    *
    * @param in The ciphertext.
    * @return The plaintext.
-   * @throws InvalidCipherTextException Thrown if an error occured during decryption.
+   * @throws InvalidCipherTextException Thrown if an error occured during
+   *     decryption.
    */
   public Bytes decrypt(final Bytes in) throws InvalidCipherTextException {
     return Bytes.wrap(decrypt(in.toArray(), 0, in.size(), null));
   }
 
-  public Bytes decrypt(final Bytes in, final byte[] commonMac) throws InvalidCipherTextException {
+  public Bytes decrypt(final Bytes in, final byte[] commonMac)
+      throws InvalidCipherTextException {
     return Bytes.wrap(decrypt(in.toArray(), 0, in.size(), commonMac));
   }
 
-  private byte[] decrypt(
-      final byte[] inEnc, final int inOff, final int inLen, final byte[] commonMac)
+  private byte[] decrypt(final byte[] inEnc, final int inOff, final int inLen,
+                         final byte[] commonMac)
       throws InvalidCipherTextException {
     final byte[] M;
     final byte[] K;
@@ -222,7 +236,8 @@ public class ECIESEncryptionEngine {
 
     // Ensure that the length of the input is greater than the MAC in bytes
     if (inLen <= (CIPHER_MAC_KEY_SIZE / 8)) {
-      throw new InvalidCipherTextException("Length of input must be greater than the MAC");
+      throw new InvalidCipherTextException(
+          "Length of input must be greater than the MAC");
     }
 
     // Block cipher mode.
@@ -279,35 +294,33 @@ public class ECIESEncryptionEngine {
   /**
    * Returns the initialization vector.
    *
-   * <p>When encrypting a payload this value is automatically generated and accessible via this
-   * getter.
+   * <p>When encrypting a payload this value is automatically generated and
+   * accessible via this getter.
    *
    * @return The initialization vector in use.
    */
-  public Bytes getIv() {
-    return Bytes.wrap(iv);
-  }
+  public Bytes getIv() { return Bytes.wrap(iv); }
 
   /**
    * Returns the ephemeral public key.
    *
-   * <p>When encrypting a payload this value is automatically generated and accessible via this
-   * getter.
+   * <p>When encrypting a payload this value is automatically generated and
+   * accessible via this getter.
    *
    * @return The ephemeral public key.
    */
-  public SECP256K1.PublicKey getEphPubKey() {
-    return ephPubKey;
-  }
+  public SECP256K1.PublicKey getEphPubKey() { return ephPubKey; }
 
   /**
-   * Key generation function as defined in NIST SP 800-56A, but swapping the order of the digested
-   * values (counter first, shared secret second) to comply with Ethereum's approach.
+   * Key generation function as defined in NIST SP 800-56A, but swapping the
+   * order of the digested values (counter first, shared secret second) to
+   * comply with Ethereum's approach.
    *
-   * <p>This class has been adapted from the <code>BaseKDFBytesGenerator</code> implementation of
-   * Bouncy Castle.
+   * <p>This class has been adapted from the <code>BaseKDFBytesGenerator</code>
+   * implementation of Bouncy Castle.
    */
-  private static class ECIESHandshakeKDFFunction implements DigestDerivationFunction {
+  private static class ECIESHandshakeKDFFunction
+      implements DigestDerivationFunction {
 
     private static final int COUNTER_START = 1;
     private final Digest digest = new SHA256Digest();
@@ -317,9 +330,10 @@ public class ECIESEncryptionEngine {
 
     @Override
     public void init(final DerivationParameters param) {
-      checkArgument(param instanceof KDFParameters, "unexpected expected KDF params type");
+      checkArgument(param instanceof KDFParameters,
+                    "unexpected expected KDF params type");
 
-      final KDFParameters p = (KDFParameters) param;
+      final KDFParameters p = (KDFParameters)param;
       shared = p.getSharedSecret();
       iv = p.getIV();
     }
@@ -335,10 +349,11 @@ public class ECIESEncryptionEngine {
     }
 
     /**
-     * Fills <code>len</code> bytes of the output buffer with bytes generated from the derivation
-     * function.
+     * Fills <code>len</code> bytes of the output buffer with bytes generated
+     * from the derivation function.
      *
-     * @throws IllegalArgumentException If the size of the request will cause an overflow.
+     * @throws IllegalArgumentException If the size of the request will cause an
+     *     overflow.
      * @throws DataLengthException If the out buffer is too small.
      */
     @Override
@@ -359,9 +374,9 @@ public class ECIESEncryptionEngine {
       int length = len;
 
       for (int i = 0; i < cThreshold; i++) {
-        // Ethereum peculiarity: Ethereum requires digesting the counter and the shared secret is
-        // inverse order
-        // that of the standard BaseKDFBytesGenerator in Bouncy Castle.
+        // Ethereum peculiarity: Ethereum requires digesting the counter and the
+        // shared secret is inverse order that of the standard
+        // BaseKDFBytesGenerator in Bouncy Castle.
         digest.update(C, 0, C.length);
         digest.update(shared, 0, shared.length);
 

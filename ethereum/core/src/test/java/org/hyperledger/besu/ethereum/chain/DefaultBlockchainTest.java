@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,14 @@ package org.hyperledger.besu.ethereum.chain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator.BlockOptions;
@@ -33,16 +44,6 @@ import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.metrics.prometheus.PrometheusMetricsSystem;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
 import org.hyperledger.besu.services.kvstore.InMemoryKeyValueStorage;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.Lists;
 import org.junit.Test;
 
 public class DefaultBlockchainTest {
@@ -53,7 +54,8 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     assertBlockDataIsStored(blockchain, genesisBlock, Collections.emptyList());
     assertBlockIsHead(blockchain, genesisBlock);
@@ -71,7 +73,8 @@ public class DefaultBlockchainTest {
     createMutableBlockchain(kvStore, genesisBlock);
 
     // Initialize a new blockchain store with kvStore that already contains data
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     assertBlockDataIsStored(blockchain, genesisBlock, Collections.emptyList());
     assertBlockIsHead(blockchain, genesisBlock);
@@ -88,12 +91,15 @@ public class DefaultBlockchainTest {
     final Block genesisBlock = gen.genesisBlock();
     createMutableBlockchain(kvStore, genesisBlock);
 
-    // Initialize a new blockchain store with same kvStore, but different genesis block
-    assertThatThrownBy(() -> createMutableBlockchain(kvStore, gen.genesisBlock()))
+    // Initialize a new blockchain store with same kvStore, but different
+    // genesis block
+    assertThatThrownBy(
+        () -> createMutableBlockchain(kvStore, gen.genesisBlock()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining(
             "Supplied genesis block does not match stored chain data.\n"
-                + "Please specify a different data directory with --data-path or specify the original genesis file with --genesis-file.");
+            +
+            "Please specify a different data directory with --data-path or specify the original genesis file with --genesis-file.");
   }
 
   @Test
@@ -118,11 +124,13 @@ public class DefaultBlockchainTest {
     final BlockDataGenerator gen = new BlockDataGenerator();
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final List<Block> blocks = gen.blockSequence(10);
-    final List<List<TransactionReceipt>> blockReceipts = new ArrayList<>(blocks.size());
+    final List<List<TransactionReceipt>> blockReceipts =
+        new ArrayList<>(blocks.size());
     blockReceipts.add(Collections.emptyList());
 
     // Write small chain to storage
-    final MutableBlockchain mutableBlockchain = createMutableBlockchain(kvStore, blocks.get(0));
+    final MutableBlockchain mutableBlockchain =
+        createMutableBlockchain(kvStore, blocks.get(0));
     for (int i = 1; i < blocks.size(); i++) {
       final Block block = blocks.get(i);
       final List<TransactionReceipt> receipts = gen.receipts(block);
@@ -144,15 +152,18 @@ public class DefaultBlockchainTest {
   @Test
   public void initializeReadOnly_withGiantDifficultyAndLiveMetrics() {
     final BlockDataGenerator gen = new BlockDataGenerator();
-    gen.setBlockOptionsSupplier(
-        () -> BlockOptions.create().setDifficulty(Difficulty.of(Long.MAX_VALUE)));
+    gen.setBlockOptionsSupplier(()
+                                    -> BlockOptions.create().setDifficulty(
+                                        Difficulty.of(Long.MAX_VALUE)));
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final List<Block> blocks = gen.blockSequence(10);
-    final List<List<TransactionReceipt>> blockReceipts = new ArrayList<>(blocks.size());
+    final List<List<TransactionReceipt>> blockReceipts =
+        new ArrayList<>(blocks.size());
     blockReceipts.add(Collections.emptyList());
 
     // Write small chain to storage
-    final MutableBlockchain mutableBlockchain = createMutableBlockchain(kvStore, blocks.get(0));
+    final MutableBlockchain mutableBlockchain =
+        createMutableBlockchain(kvStore, blocks.get(0));
     for (int i = 1; i < blocks.size(); i++) {
       final Block block = blocks.get(i);
       final List<TransactionReceipt> receipts = gen.receipts(block);
@@ -161,10 +172,10 @@ public class DefaultBlockchainTest {
     }
 
     // Create read only chain
-    final Blockchain blockchain =
-        DefaultBlockchain.create(
-            createStorage(kvStore),
-            PrometheusMetricsSystem.init(MetricsConfiguration.builder().enabled(true).build()));
+    final Blockchain blockchain = DefaultBlockchain.create(
+        createStorage(kvStore),
+        PrometheusMetricsSystem.init(
+            MetricsConfiguration.builder().enabled(true).build()));
 
     for (int i = 0; i < blocks.size(); i++) {
       assertBlockDataIsStored(blockchain, blocks.get(i), blockReceipts.get(i));
@@ -189,7 +200,8 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final BlockDataGenerator.BlockOptions options =
         new BlockDataGenerator.BlockOptions()
@@ -199,8 +211,8 @@ public class DefaultBlockchainTest {
     final Block newBlock = gen.block(options);
     final List<TransactionReceipt> receipts = gen.receipts(newBlock);
     blockchain.observeBlockAdded(
-        (event ->
-            assertThat(event.getLogsWithMetadata())
+        (event
+         -> assertThat(event.getLogsWithMetadata())
                 .containsExactly(
                     LogWithMetadata.generate(newBlock, receipts, false)
                         .toArray(new LogWithMetadata[] {}))));
@@ -217,10 +229,12 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final BlockDataGenerator.BlockOptions options =
-        new BlockDataGenerator.BlockOptions().setBlockNumber(1L).setParentHash(Hash.ZERO);
+        new BlockDataGenerator.BlockOptions().setBlockNumber(1L).setParentHash(
+            Hash.ZERO);
     final Block newBlock = gen.block(options);
     final List<TransactionReceipt> receipts = gen.receipts(newBlock);
     blockchain.appendBlock(newBlock, receipts);
@@ -232,12 +246,12 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final BlockDataGenerator.BlockOptions options =
-        new BlockDataGenerator.BlockOptions()
-            .setBlockNumber(1L)
-            .setParentHash(genesisBlock.getHash());
+        new BlockDataGenerator.BlockOptions().setBlockNumber(1L).setParentHash(
+            genesisBlock.getHash());
     final Block newBlock = gen.block(options);
     final List<TransactionReceipt> receipts = gen.receipts(newBlock);
     receipts.add(gen.receipt());
@@ -252,7 +266,8 @@ public class DefaultBlockchainTest {
         chain.stream().map(gen::receipts).collect(Collectors.toList());
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
     }
@@ -277,11 +292,13 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
 
     // Listen to block events and add the Logs here
     List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
-    blockchain.observeBlockAdded(event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
+    blockchain.observeBlockAdded(
+        event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
     List<LogWithMetadata> expectedLogsWithMetadata = new ArrayList<>();
 
     // Add initial blocks
@@ -300,10 +317,12 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkBlock)
-            .setDifficulty(chain.get(forkBlock).getHeader().getDifficulty().add(10L));
+            .setDifficulty(
+                chain.get(forkBlock).getHeader().getDifficulty().add(10L));
     final Block fork = gen.block(options);
     final List<TransactionReceipt> forkReceipts = gen.receipts(fork);
-    final List<Block> reorgedChain = new ArrayList<>(chain.subList(0, forkBlock));
+    final List<Block> reorgedChain =
+        new ArrayList<>(chain.subList(0, forkBlock));
     reorgedChain.add(fork);
     final List<List<TransactionReceipt>> reorgedReceipts =
         new ArrayList<>(blockReceipts.subList(0, forkBlock));
@@ -314,7 +333,8 @@ public class DefaultBlockchainTest {
 
     // Check chain has reorganized
     for (int i = 0; i < reorgedChain.size(); i++) {
-      assertBlockDataIsStored(blockchain, reorgedChain.get(i), reorgedReceipts.get(i));
+      assertBlockDataIsStored(blockchain, reorgedChain.get(i),
+                              reorgedReceipts.get(i));
     }
     // Check old transactions have been removed
     for (final Transaction tx : originalHead.getBody().getTransactions()) {
@@ -323,25 +343,29 @@ public class DefaultBlockchainTest {
 
     // LogWithMetadata reflecting removal of originalHead's logs
     final List<LogWithMetadata> removedLogs =
-        Lists.reverse(
-            LogWithMetadata.generate(
-                originalHead, blockchain.getTxReceipts(originalHead.getHash()).get(), true));
+        Lists.reverse(LogWithMetadata.generate(
+            originalHead,
+            blockchain.getTxReceipts(originalHead.getHash()).get(), true));
     expectedLogsWithMetadata.addAll(removedLogs);
     // LogWithMetadata reflecting addition of originalHead's logs
-    expectedLogsWithMetadata.addAll(LogWithMetadata.generate(fork, forkReceipts, false));
+    expectedLogsWithMetadata.addAll(
+        LogWithMetadata.generate(fork, forkReceipts, false));
 
     assertBlockIsHead(blockchain, fork);
     assertTotalDifficultiesAreConsistent(blockchain, fork);
     // Old chain head should now be tracked as a fork.
     final Set<Hash> forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(1);
-    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash()))).isTrue();
+    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash())))
+        .isTrue();
     // Old chain should not be on canonical chain.
     for (int i = commonAncestor + 1; i < chainLength; i++) {
-      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash())).isFalse();
+      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash()))
+          .isFalse();
     }
     assertThat(logsWithMetadata)
-        .containsExactly(expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
+        .containsExactly(
+            expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
   }
 
   @Test
@@ -354,10 +378,12 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     // Listen to block events and add the Logs here
     List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
-    blockchain.observeBlockAdded(event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
+    blockchain.observeBlockAdded(
+        event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
     List<LogWithMetadata> expectedLogsWithMetadata = new ArrayList<>();
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
@@ -375,27 +401,27 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkStart)
-            .setDifficulty(chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
+            .setDifficulty(
+                chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
     forkBlocks.add(gen.block(options));
     // Generate second block
     final Difficulty remainingDifficultyToOutpace =
-        chain
-            .get(forkStart + 1)
+        chain.get(forkStart + 1)
             .getHeader()
             .getDifficulty()
             .add(chain.get(forkStart + 2).getHeader().getDifficulty());
-    options =
-        new BlockDataGenerator.BlockOptions()
-            .setParentHash(forkBlocks.get(0).getHash())
-            .setBlockNumber(forkStart + 1)
-            .setDifficulty(remainingDifficultyToOutpace.add(10L));
+    options = new BlockDataGenerator.BlockOptions()
+                  .setParentHash(forkBlocks.get(0).getHash())
+                  .setBlockNumber(forkStart + 1)
+                  .setDifficulty(remainingDifficultyToOutpace.add(10L));
     forkBlocks.add(gen.block(options));
     // Generate corresponding receipts
     final List<List<TransactionReceipt>> forkReceipts =
         forkBlocks.stream().map(gen::receipts).collect(Collectors.toList());
 
     // Collect fork data
-    final List<Block> reorgedChain = new ArrayList<>(chain.subList(0, forkStart));
+    final List<Block> reorgedChain =
+        new ArrayList<>(chain.subList(0, forkStart));
     reorgedChain.addAll(forkBlocks);
     final List<List<TransactionReceipt>> reorgedReceipts =
         new ArrayList<>(blockReceipts.subList(0, forkStart));
@@ -414,16 +440,20 @@ public class DefaultBlockchainTest {
       assertThat(blockchain.getTransactionByHash(tx.getHash())).isNotPresent();
     }
     // Appended block should be tracked as a fork
-    assertThat(blockchain.blockIsOnCanonicalChain(forkBlocks.get(0).getHash())).isFalse();
+    assertThat(blockchain.blockIsOnCanonicalChain(forkBlocks.get(0).getHash()))
+        .isFalse();
     Set<Hash> forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(1);
-    assertThat(forks.stream().anyMatch(f -> f.equals(forkBlocks.get(0).getHash()))).isTrue();
+    assertThat(
+        forks.stream().anyMatch(f -> f.equals(forkBlocks.get(0).getHash())))
+        .isTrue();
 
     // Add second block in fork, which should cause a reorg
     blockchain.appendBlock(forkBlocks.get(1), forkReceipts.get(1));
     // Check chain has reorganized
     for (int i = 0; i < reorgedChain.size(); i++) {
-      assertBlockDataIsStored(blockchain, reorgedChain.get(i), reorgedReceipts.get(i));
+      assertBlockDataIsStored(blockchain, reorgedChain.get(i),
+                              reorgedReceipts.get(i));
     }
     assertBlockIsHead(blockchain, forkBlocks.get(1));
     assertTotalDifficultiesAreConsistent(blockchain, forkBlocks.get(1));
@@ -438,29 +468,32 @@ public class DefaultBlockchainTest {
     // LogWithMetadata reflecting removal of logs
     for (int i = originalChainLength - 1; i >= forkStart; i--) {
       final Block currentBlock = chain.get(i);
-      expectedLogsWithMetadata.addAll(
-          Lists.reverse(
-              LogWithMetadata.generate(
-                  currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(), true)));
+      expectedLogsWithMetadata.addAll(Lists.reverse(LogWithMetadata.generate(
+          currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(),
+          true)));
     }
     // LogWithMetadata reflecting addition of logs
     for (int i = 0; i < forkBlocks.size(); i++) {
-      expectedLogsWithMetadata.addAll(
-          LogWithMetadata.generate(forkBlocks.get(i), forkReceipts.get(i), false));
+      expectedLogsWithMetadata.addAll(LogWithMetadata.generate(
+          forkBlocks.get(i), forkReceipts.get(i), false));
     }
 
     // Check that blockNumber index for previous chain head has been removed
-    assertThat(blockchain.getBlockHashByNumber(originalChainLength - 1)).isNotPresent();
+    assertThat(blockchain.getBlockHashByNumber(originalChainLength - 1))
+        .isNotPresent();
     // Old chain head should now be tracked as a fork.
     forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(1);
-    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash()))).isTrue();
+    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash())))
+        .isTrue();
     // Old chain should not be on canonical chain.
     for (int i = commonAncestor + 1; i < originalChainLength; i++) {
-      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash())).isFalse();
+      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash()))
+          .isFalse();
     }
     assertThat(logsWithMetadata)
-        .containsExactly(expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
+        .containsExactly(
+            expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
   }
 
   @Test
@@ -473,10 +506,12 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     // Listen to block events and add the Logs here
     List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
-    blockchain.observeBlockAdded(event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
+    blockchain.observeBlockAdded(
+        event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
     List<LogWithMetadata> expectedLogsWithMetadata = new ArrayList<>();
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
@@ -494,21 +529,22 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkStart)
-            .setDifficulty(chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
+            .setDifficulty(
+                chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
     forkBlocks.add(gen.block(options));
     // Generate second block
-    options =
-        new BlockDataGenerator.BlockOptions()
-            .setParentHash(forkBlocks.get(0).getHash())
-            .setBlockNumber(forkStart + 1)
-            .setDifficulty(Difficulty.of(10L));
+    options = new BlockDataGenerator.BlockOptions()
+                  .setParentHash(forkBlocks.get(0).getHash())
+                  .setBlockNumber(forkStart + 1)
+                  .setDifficulty(Difficulty.of(10L));
     forkBlocks.add(gen.block(options));
     // Generate corresponding receipts
     final List<List<TransactionReceipt>> forkReceipts =
         forkBlocks.stream().map(gen::receipts).collect(Collectors.toList());
 
     // Collect fork data
-    final List<Block> reorgedChain = new ArrayList<>(chain.subList(0, forkStart));
+    final List<Block> reorgedChain =
+        new ArrayList<>(chain.subList(0, forkStart));
     reorgedChain.addAll(forkBlocks);
     final List<List<TransactionReceipt>> reorgedReceipts =
         new ArrayList<>(blockReceipts.subList(0, forkStart));
@@ -527,16 +563,20 @@ public class DefaultBlockchainTest {
       assertThat(blockchain.getTransactionByHash(tx.getHash())).isNotPresent();
     }
     // Appended block should be tracked as a fork
-    assertThat(blockchain.blockIsOnCanonicalChain(forkBlocks.get(0).getHash())).isFalse();
+    assertThat(blockchain.blockIsOnCanonicalChain(forkBlocks.get(0).getHash()))
+        .isFalse();
     Set<Hash> forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(1);
-    assertThat(forks.stream().anyMatch(f -> f.equals(forkBlocks.get(0).getHash()))).isTrue();
+    assertThat(
+        forks.stream().anyMatch(f -> f.equals(forkBlocks.get(0).getHash())))
+        .isTrue();
 
     // Add second block in fork, which should cause a reorg
     blockchain.appendBlock(forkBlocks.get(1), forkReceipts.get(1));
     // Check chain has reorganized
     for (int i = 0; i < reorgedChain.size(); i++) {
-      assertBlockDataIsStored(blockchain, reorgedChain.get(i), reorgedReceipts.get(i));
+      assertBlockDataIsStored(blockchain, reorgedChain.get(i),
+                              reorgedReceipts.get(i));
     }
     assertBlockIsHead(blockchain, forkBlocks.get(1));
     assertTotalDifficultiesAreConsistent(blockchain, forkBlocks.get(1));
@@ -551,26 +591,28 @@ public class DefaultBlockchainTest {
     // LogWithMetadata reflecting removal of logs
     for (int i = originalChainLength - 1; i >= forkStart; i--) {
       final Block currentBlock = chain.get(i);
-      expectedLogsWithMetadata.addAll(
-          Lists.reverse(
-              LogWithMetadata.generate(
-                  currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(), true)));
+      expectedLogsWithMetadata.addAll(Lists.reverse(LogWithMetadata.generate(
+          currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(),
+          true)));
     }
     // LogWithMetadata reflecting addition of logs
     for (int i = 0; i < forkBlocks.size(); i++) {
-      expectedLogsWithMetadata.addAll(
-          LogWithMetadata.generate(forkBlocks.get(i), forkReceipts.get(i), false));
+      expectedLogsWithMetadata.addAll(LogWithMetadata.generate(
+          forkBlocks.get(i), forkReceipts.get(i), false));
     }
     // Old chain head should now be tracked as a fork.
     forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(1);
-    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash()))).isTrue();
+    assertThat(forks.stream().anyMatch(f -> f.equals(originalHead.getHash())))
+        .isTrue();
     // Old chain should not be on canonical chain.
     for (int i = commonAncestor + 1; i < originalChainLength; i++) {
-      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash())).isFalse();
+      assertThat(blockchain.blockIsOnCanonicalChain(chain.get(i).getHash()))
+          .isFalse();
     }
     assertThat(logsWithMetadata)
-        .containsExactly(expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
+        .containsExactly(
+            expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
   }
 
   @Test
@@ -583,17 +625,20 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     // Listen to block events and add the Logs here
     List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
-    blockchain.observeBlockAdded(event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
+    blockchain.observeBlockAdded(
+        event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
     List<LogWithMetadata> expectedLogsWithMetadata = new ArrayList<>();
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
       expectedLogsWithMetadata.addAll(
           LogWithMetadata.generate(chain.get(i), blockReceipts.get(i), false));
     }
-    final Transaction overlappingTx = chain.get(chainLength - 1).getBody().getTransactions().get(0);
+    final Transaction overlappingTx =
+        chain.get(chainLength - 1).getBody().getTransactions().get(0);
 
     // Create parallel fork of length 1
     final int forkBlock = 2;
@@ -602,12 +647,14 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkBlock)
-            .setDifficulty(chain.get(forkBlock).getHeader().getDifficulty().add(10L))
+            .setDifficulty(
+                chain.get(forkBlock).getHeader().getDifficulty().add(10L))
             .addTransaction(overlappingTx)
             .addTransaction(gen.transaction());
     final Block fork = gen.block(options);
     final List<TransactionReceipt> forkReceipts = gen.receipts(fork);
-    final List<Block> reorgedChain = new ArrayList<>(chain.subList(0, forkBlock));
+    final List<Block> reorgedChain =
+        new ArrayList<>(chain.subList(0, forkBlock));
     reorgedChain.add(fork);
     final List<List<TransactionReceipt>> reorgedReceipts =
         new ArrayList<>(blockReceipts.subList(0, forkBlock));
@@ -618,12 +665,15 @@ public class DefaultBlockchainTest {
 
     // Check chain has reorganized
     for (int i = 0; i < reorgedChain.size(); i++) {
-      assertBlockDataIsStored(blockchain, reorgedChain.get(i), reorgedReceipts.get(i));
+      assertBlockDataIsStored(blockchain, reorgedChain.get(i),
+                              reorgedReceipts.get(i));
     }
 
     // Check old transactions have been removed
-    for (final Transaction tx : chain.get(chainLength - 1).getBody().getTransactions()) {
-      final Optional<Transaction> actualTransaction = blockchain.getTransactionByHash(tx.getHash());
+    for (final Transaction tx :
+         chain.get(chainLength - 1).getBody().getTransactions()) {
+      final Optional<Transaction> actualTransaction =
+          blockchain.getTransactionByHash(tx.getHash());
       if (tx.equals(overlappingTx)) {
         assertThat(actualTransaction).isPresent();
       } else {
@@ -633,15 +683,16 @@ public class DefaultBlockchainTest {
     // LogWithMetadata reflecting removal of logs
     for (int i = chainLength - 1; i >= forkBlock; i--) {
       final Block currentBlock = chain.get(i);
-      expectedLogsWithMetadata.addAll(
-          Lists.reverse(
-              LogWithMetadata.generate(
-                  currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(), true)));
+      expectedLogsWithMetadata.addAll(Lists.reverse(LogWithMetadata.generate(
+          currentBlock, blockchain.getTxReceipts(currentBlock.getHash()).get(),
+          true)));
     }
     // LogWithMetadata reflecting addition of logs
-    expectedLogsWithMetadata.addAll(LogWithMetadata.generate(fork, forkReceipts, false));
+    expectedLogsWithMetadata.addAll(
+        LogWithMetadata.generate(fork, forkReceipts, false));
     assertThat(logsWithMetadata)
-        .containsExactly(expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
+        .containsExactly(
+            expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
   }
 
   @Test
@@ -654,13 +705,15 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
     }
     final Block originalHead = blockchain.getChainHeadBlock();
     final Block targetHead =
-        blockchain.getBlockByHash(originalHead.getHeader().getParentHash()).get();
+        blockchain.getBlockByHash(originalHead.getHeader().getParentHash())
+            .get();
 
     // rewind it by 1 block
     blockchain.rewindToBlock(targetHead.getHeader().getNumber());
@@ -677,10 +730,12 @@ public class DefaultBlockchainTest {
     }
 
     // Check that blockNumber index for previous chain head has been removed
-    assertThat(blockchain.getBlockHashByNumber(originalHead.getHeader().getNumber()))
+    assertThat(
+        blockchain.getBlockHashByNumber(originalHead.getHeader().getNumber()))
         .isNotPresent();
     // Old chain head should not be tracked.
-    assertThat(blockchain.blockIsOnCanonicalChain(originalHead.getHash())).isFalse();
+    assertThat(blockchain.blockIsOnCanonicalChain(originalHead.getHash()))
+        .isFalse();
   }
 
   @Test
@@ -693,10 +748,12 @@ public class DefaultBlockchainTest {
     final List<List<TransactionReceipt>> blockReceipts =
         chain.stream().map(gen::receipts).collect(Collectors.toList());
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, chain.get(0));
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, chain.get(0));
     // Listen to block events and add the Logs here
     List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
-    blockchain.observeBlockAdded(event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
+    blockchain.observeBlockAdded(
+        event -> logsWithMetadata.addAll(event.getLogsWithMetadata()));
     List<LogWithMetadata> expectedLogsWithMetadata = new ArrayList<>();
     for (int i = 1; i < chain.size(); i++) {
       blockchain.appendBlock(chain.get(i), blockReceipts.get(i));
@@ -714,14 +771,17 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkStart)
-            .setDifficulty(chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
+            .setDifficulty(
+                chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
     forkBlocks.add(gen.block(options));
     // Generate second block
-    options =
-        new BlockDataGenerator.BlockOptions()
-            .setParentHash(forkBlocks.get(0).getHash())
-            .setBlockNumber(forkStart + 1)
-            .setDifficulty(chain.get(forkStart + 1).getHeader().getDifficulty().subtract(5L));
+    options = new BlockDataGenerator.BlockOptions()
+                  .setParentHash(forkBlocks.get(0).getHash())
+                  .setBlockNumber(forkStart + 1)
+                  .setDifficulty(chain.get(forkStart + 1)
+                                     .getHeader()
+                                     .getDifficulty()
+                                     .subtract(5L));
     forkBlocks.add(gen.block(options));
     // Generate corresponding receipts
     final List<List<TransactionReceipt>> forkReceipts =
@@ -739,10 +799,12 @@ public class DefaultBlockchainTest {
       assertTotalDifficultiesAreConsistent(blockchain, originalHead);
       // Check transactions were not indexed
       for (final Transaction tx : forkBlock.getBody().getTransactions()) {
-        assertThat(blockchain.getTransactionByHash(tx.getHash())).isNotPresent();
+        assertThat(blockchain.getTransactionByHash(tx.getHash()))
+            .isNotPresent();
       }
       // Appended block should be tracked as a fork
-      assertThat(blockchain.blockIsOnCanonicalChain(forkBlock.getHash())).isFalse();
+      assertThat(blockchain.blockIsOnCanonicalChain(forkBlock.getHash()))
+          .isFalse();
       final Set<Hash> forks = blockchain.getForks();
       assertThat(forks.size()).isEqualTo(1);
       final Optional<Hash> trackedFork =
@@ -755,12 +817,14 @@ public class DefaultBlockchainTest {
         new BlockDataGenerator.BlockOptions()
             .setParentHash(chain.get(commonAncestor).getHash())
             .setBlockNumber(forkStart)
-            .setDifficulty(chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
+            .setDifficulty(
+                chain.get(forkStart).getHeader().getDifficulty().subtract(5L));
     final Block secondFork = gen.block(options);
     blockchain.appendBlock(secondFork, gen.receipts(secondFork));
 
     // We should now be tracking 2 forks
-    assertThat(blockchain.blockIsOnCanonicalChain(secondFork.getHash())).isFalse();
+    assertThat(blockchain.blockIsOnCanonicalChain(secondFork.getHash()))
+        .isFalse();
     final Set<Hash> forks = blockchain.getForks();
     assertThat(forks.size()).isEqualTo(2);
     final Optional<Hash> trackedFork =
@@ -769,9 +833,11 @@ public class DefaultBlockchainTest {
 
     // Head should not have changed
     assertBlockIsHead(blockchain, originalHead);
-    // We should only have the log events from when we initially created the chain. None from forks.
+    // We should only have the log events from when we initially created the
+    // chain. None from forks.
     assertThat(logsWithMetadata)
-        .containsExactly(expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
+        .containsExactly(
+            expectedLogsWithMetadata.toArray(new LogWithMetadata[] {}));
   }
 
   @Test
@@ -779,7 +845,8 @@ public class DefaultBlockchainTest {
     final BlockDataGenerator gen = new BlockDataGenerator();
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     assertThat(blockchain.removeObserver(7)).isFalse();
   }
@@ -790,7 +857,8 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final long observerId = blockchain.observeBlockAdded(__ -> {});
     assertThat(blockchain.observerCount()).isEqualTo(1);
@@ -805,7 +873,8 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     blockchain.observeBlockAdded(null);
   }
@@ -816,7 +885,8 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final long observerId1 = blockchain.observeBlockAdded(__ -> {});
     assertThat(blockchain.observerCount()).isEqualTo(1);
@@ -843,12 +913,12 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final BlockDataGenerator.BlockOptions options =
-        new BlockDataGenerator.BlockOptions()
-            .setBlockNumber(1L)
-            .setParentHash(genesisBlock.getHash());
+        new BlockDataGenerator.BlockOptions().setBlockNumber(1L).setParentHash(
+            genesisBlock.getHash());
     final Block newBlock = gen.block(options);
     final List<TransactionReceipt> receipts = gen.receipts(newBlock);
 
@@ -866,12 +936,12 @@ public class DefaultBlockchainTest {
 
     final KeyValueStorage kvStore = new InMemoryKeyValueStorage();
     final Block genesisBlock = gen.genesisBlock();
-    final DefaultBlockchain blockchain = createMutableBlockchain(kvStore, genesisBlock);
+    final DefaultBlockchain blockchain =
+        createMutableBlockchain(kvStore, genesisBlock);
 
     final BlockDataGenerator.BlockOptions options =
-        new BlockDataGenerator.BlockOptions()
-            .setBlockNumber(1L)
-            .setParentHash(genesisBlock.getHash());
+        new BlockDataGenerator.BlockOptions().setBlockNumber(1L).setParentHash(
+            genesisBlock.getHash());
     final Block newBlock = gen.block(options);
     final List<TransactionReceipt> receipts = gen.receipts(newBlock);
 
@@ -892,37 +962,45 @@ public class DefaultBlockchainTest {
   }
 
   /*
-   * Check that block header, block body, block number, transaction locations, and receipts for this
-   * block are all stored.
+   * Check that block header, block body, block number, transaction locations,
+   * and receipts for this block are all stored.
    */
-  private void assertBlockDataIsStored(
-      final Blockchain blockchain, final Block block, final List<TransactionReceipt> receipts) {
+  private void
+  assertBlockDataIsStored(final Blockchain blockchain, final Block block,
+                          final List<TransactionReceipt> receipts) {
     final Hash hash = block.getHash();
-    assertThat(blockchain.getBlockHashByNumber(block.getHeader().getNumber()).get())
+    assertThat(
+        blockchain.getBlockHashByNumber(block.getHeader().getNumber()).get())
         .isEqualTo(hash);
     assertThat(blockchain.getBlockHeader(block.getHeader().getNumber()).get())
         .isEqualTo(block.getHeader());
-    assertThat(blockchain.getBlockHeader(hash).get()).isEqualTo(block.getHeader());
+    assertThat(blockchain.getBlockHeader(hash).get())
+        .isEqualTo(block.getHeader());
     assertThat(blockchain.getBlockBody(hash).get()).isEqualTo(block.getBody());
     assertThat(blockchain.blockIsOnCanonicalChain(block.getHash())).isTrue();
 
     final List<Transaction> txs = block.getBody().getTransactions();
     for (int i = 0; i < txs.size(); i++) {
       final Transaction expected = txs.get(i);
-      final Transaction actual = blockchain.getTransactionByHash(expected.getHash()).get();
+      final Transaction actual =
+          blockchain.getTransactionByHash(expected.getHash()).get();
       assertThat(actual).isEqualTo(expected);
     }
-    final List<TransactionReceipt> actualReceipts = blockchain.getTxReceipts(hash).get();
+    final List<TransactionReceipt> actualReceipts =
+        blockchain.getTxReceipts(hash).get();
     assertThat(actualReceipts).isEqualTo(receipts);
   }
 
-  private void assertBlockIsHead(final Blockchain blockchain, final Block head) {
+  private void assertBlockIsHead(final Blockchain blockchain,
+                                 final Block head) {
     assertThat(blockchain.getChainHeadHash()).isEqualTo(head.getHash());
-    assertThat(blockchain.getChainHeadBlockNumber()).isEqualTo(head.getHeader().getNumber());
+    assertThat(blockchain.getChainHeadBlockNumber())
+        .isEqualTo(head.getHeader().getNumber());
     assertThat(blockchain.getChainHead().getHash()).isEqualTo(head.getHash());
   }
 
-  private void assertTotalDifficultiesAreConsistent(final Blockchain blockchain, final Block head) {
+  private void assertTotalDifficultiesAreConsistent(final Blockchain blockchain,
+                                                    final Block head) {
     // Check that total difficulties are summed correctly
     long num = BlockHeader.GENESIS_BLOCK_NUMBER;
     Difficulty td = Difficulty.ZERO;
@@ -930,7 +1008,8 @@ public class DefaultBlockchainTest {
       final Hash curHash = blockchain.getBlockHashByNumber(num).get();
       final BlockHeader curHead = blockchain.getBlockHeader(curHash).get();
       td = td.add(curHead.getDifficulty());
-      assertThat(blockchain.getTotalDifficultyByHash(curHash).get()).isEqualTo(td);
+      assertThat(blockchain.getTotalDifficultyByHash(curHash).get())
+          .isEqualTo(td);
 
       num += 1;
     }
@@ -944,14 +1023,15 @@ public class DefaultBlockchainTest {
         kvStore, new MainnetBlockHeaderFunctions());
   }
 
-  private DefaultBlockchain createMutableBlockchain(
-      final KeyValueStorage kvStore, final Block genesisBlock) {
-    return (DefaultBlockchain)
-        DefaultBlockchain.createMutable(
-            genesisBlock, createStorage(kvStore), new NoOpMetricsSystem());
+  private DefaultBlockchain
+  createMutableBlockchain(final KeyValueStorage kvStore,
+                          final Block genesisBlock) {
+    return (DefaultBlockchain)DefaultBlockchain.createMutable(
+        genesisBlock, createStorage(kvStore), new NoOpMetricsSystem());
   }
 
   private Blockchain createBlockchain(final KeyValueStorage kvStore) {
-    return DefaultBlockchain.create(createStorage(kvStore), new NoOpMetricsSystem());
+    return DefaultBlockchain.create(createStorage(kvStore),
+                                    new NoOpMetricsSystem());
   }
 }

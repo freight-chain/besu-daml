@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +25,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -30,12 +37,6 @@ import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import com.google.common.collect.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -60,12 +61,11 @@ public class FilterManagerTest {
     when(blockchainQueries.getBlockchain()).thenReturn(blockchain);
     this.blockGenerator = new BlockDataGenerator();
     this.currentBlock = blockGenerator.genesisBlock();
-    this.filterManager =
-        new FilterManagerBuilder()
-            .blockchainQueries(blockchainQueries)
-            .transactionPool(transactionPool)
-            .filterRepository(filterRepository)
-            .build();
+    this.filterManager = new FilterManagerBuilder()
+                             .blockchainQueries(blockchainQueries)
+                             .transactionPool(transactionPool)
+                             .filterRepository(filterRepository)
+                             .build();
   }
 
   @Test
@@ -116,28 +116,35 @@ public class FilterManagerTest {
     final Hash blockHash2 = appendBlockToBlockchain();
     expectedHashes1.add(blockHash2);
     final List<Hash> expectedHashes2 = Lists.newArrayList(blockHash2);
-    assertThat(filterManager.blockChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.blockChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.blockChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.blockChanges(filterId2))
+        .isEqualTo(expectedHashes2);
     expectedHashes1.clear();
     expectedHashes2.clear();
 
     // Both filters have been flushed.
-    assertThat(filterManager.blockChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.blockChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.blockChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.blockChanges(filterId2))
+        .isEqualTo(expectedHashes2);
 
     final Hash blockHash3 = appendBlockToBlockchain();
     expectedHashes1.add(blockHash3);
     expectedHashes2.add(blockHash3);
 
     // Flush the first filter.
-    assertThat(filterManager.blockChanges(filterId1)).isEqualTo(expectedHashes1);
+    assertThat(filterManager.blockChanges(filterId1))
+        .isEqualTo(expectedHashes1);
     expectedHashes1.clear();
 
     final Hash blockHash4 = appendBlockToBlockchain();
     expectedHashes1.add(blockHash4);
     expectedHashes2.add(blockHash4);
-    assertThat(filterManager.blockChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.blockChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.blockChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.blockChanges(filterId2))
+        .isEqualTo(expectedHashes2);
   }
 
   @Test
@@ -152,27 +159,32 @@ public class FilterManagerTest {
   @Test
   public void getTransactionChanges_SingleFilter() {
     final String filterId = filterManager.installPendingTransactionFilter();
-    assertThat(filterManager.pendingTransactionChanges(filterId).size()).isEqualTo(0);
+    assertThat(filterManager.pendingTransactionChanges(filterId).size())
+        .isEqualTo(0);
 
     final Hash transactionHash1 = receivePendingTransaction();
     final List<Hash> expectedHashes = Lists.newArrayList(transactionHash1);
-    assertThat(filterManager.pendingTransactionChanges(filterId)).isEqualTo(expectedHashes);
+    assertThat(filterManager.pendingTransactionChanges(filterId))
+        .isEqualTo(expectedHashes);
 
     // Check that changes have been flushed.
     expectedHashes.clear();
-    assertThat(filterManager.pendingTransactionChanges(filterId)).isEqualTo(expectedHashes);
+    assertThat(filterManager.pendingTransactionChanges(filterId))
+        .isEqualTo(expectedHashes);
 
     final Hash transactionHash2 = receivePendingTransaction();
     expectedHashes.add(transactionHash2);
     final Hash transactionHash3 = receivePendingTransaction();
     expectedHashes.add(transactionHash3);
-    assertThat(filterManager.pendingTransactionChanges(filterId)).isEqualTo(expectedHashes);
+    assertThat(filterManager.pendingTransactionChanges(filterId))
+        .isEqualTo(expectedHashes);
   }
 
   @Test
   public void getPendingTransactionChanges_MultipleFilters() {
     final String filterId1 = filterManager.installPendingTransactionFilter();
-    assertThat(filterManager.pendingTransactionChanges(filterId1).size()).isEqualTo(0);
+    assertThat(filterManager.pendingTransactionChanges(filterId1).size())
+        .isEqualTo(0);
 
     final Hash transactionHash1 = receivePendingTransaction();
     final List<Hash> expectedHashes1 = Lists.newArrayList(transactionHash1);
@@ -181,28 +193,35 @@ public class FilterManagerTest {
     final Hash transactionHash2 = receivePendingTransaction();
     expectedHashes1.add(transactionHash2);
     final List<Hash> expectedHashes2 = Lists.newArrayList(transactionHash2);
-    assertThat(filterManager.pendingTransactionChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.pendingTransactionChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.pendingTransactionChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.pendingTransactionChanges(filterId2))
+        .isEqualTo(expectedHashes2);
     expectedHashes1.clear();
     expectedHashes2.clear();
 
     // Both filters have been flushed.
-    assertThat(filterManager.pendingTransactionChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.pendingTransactionChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.pendingTransactionChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.pendingTransactionChanges(filterId2))
+        .isEqualTo(expectedHashes2);
 
     final Hash transactionHash3 = receivePendingTransaction();
     expectedHashes1.add(transactionHash3);
     expectedHashes2.add(transactionHash3);
 
     // Flush the first filter.
-    assertThat(filterManager.pendingTransactionChanges(filterId1)).isEqualTo(expectedHashes1);
+    assertThat(filterManager.pendingTransactionChanges(filterId1))
+        .isEqualTo(expectedHashes1);
     expectedHashes1.clear();
 
     final Hash transactionHash4 = receivePendingTransaction();
     expectedHashes1.add(transactionHash4);
     expectedHashes2.add(transactionHash4);
-    assertThat(filterManager.pendingTransactionChanges(filterId1)).isEqualTo(expectedHashes1);
-    assertThat(filterManager.pendingTransactionChanges(filterId2)).isEqualTo(expectedHashes2);
+    assertThat(filterManager.pendingTransactionChanges(filterId1))
+        .isEqualTo(expectedHashes1);
+    assertThat(filterManager.pendingTransactionChanges(filterId2))
+        .isEqualTo(expectedHashes2);
   }
 
   @Test
@@ -219,7 +238,8 @@ public class FilterManagerTest {
 
   @Test
   public void getPendingTransactionsChangesShouldResetFilterExpireDate() {
-    final PendingTransactionFilter filter = spy(new PendingTransactionFilter("foo"));
+    final PendingTransactionFilter filter =
+        spy(new PendingTransactionFilter("foo"));
     doReturn(Optional.of(filter))
         .when(filterRepository)
         .getFilter(eq("foo"), eq(PendingTransactionFilter.class));
@@ -233,11 +253,12 @@ public class FilterManagerTest {
     final long blockNumber = currentBlock.getHeader().getNumber() + 1;
     final Hash parentHash = currentBlock.getHash();
     final BlockDataGenerator.BlockOptions options =
-        new BlockDataGenerator.BlockOptions().setBlockNumber(blockNumber).setParentHash(parentHash);
+        new BlockDataGenerator.BlockOptions()
+            .setBlockNumber(blockNumber)
+            .setParentHash(parentHash);
     currentBlock = blockGenerator.block(options);
-    filterManager.recordBlockEvent(
-        BlockAddedEvent.createForHeadAdvancement(
-            currentBlock, Collections.emptyList(), Collections.emptyList()));
+    filterManager.recordBlockEvent(BlockAddedEvent.createForHeadAdvancement(
+        currentBlock, Collections.emptyList(), Collections.emptyList()));
     return currentBlock.getHash();
   }
 

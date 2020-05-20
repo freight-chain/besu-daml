@@ -1,19 +1,27 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.blockheaders;
 
+import com.google.common.base.Suppliers;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Supplier;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.BlockResult;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.BlockResultFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
@@ -24,13 +32,6 @@ import org.hyperledger.besu.ethereum.chain.BlockAddedObserver;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.Hash;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Supplier;
-
-import com.google.common.base.Suppliers;
-
 public class NewBlockHeadersSubscriptionService implements BlockAddedObserver {
 
   private final SubscriptionManager subscriptionManager;
@@ -38,7 +39,8 @@ public class NewBlockHeadersSubscriptionService implements BlockAddedObserver {
   private final BlockResultFactory blockResult = new BlockResultFactory();
 
   public NewBlockHeadersSubscriptionService(
-      final SubscriptionManager subscriptionManager, final BlockchainQueries blockchainQueries) {
+      final SubscriptionManager subscriptionManager,
+      final BlockchainQueries blockchainQueries) {
     this.subscriptionManager = subscriptionManager;
     this.blockchainQueries = blockchainQueries;
   }
@@ -53,10 +55,11 @@ public class NewBlockHeadersSubscriptionService implements BlockAddedObserver {
         blocks.add(blockPtr);
 
         blockPtr =
-            blockchainQueries
-                .getBlockchain()
+            blockchainQueries.getBlockchain()
                 .getBlockByHash(blockPtr.getHeader().getParentHash())
-                .orElseThrow(() -> new IllegalStateException("The block was on a orphaned chain."));
+                .orElseThrow(()
+                                 -> new IllegalStateException(
+                                     "The block was on a orphaned chain."));
       }
 
       Collections.reverse(blocks);
@@ -66,31 +69,33 @@ public class NewBlockHeadersSubscriptionService implements BlockAddedObserver {
 
   private void notifySubscribers(final Hash newBlockHash) {
     subscriptionManager.notifySubscribersOnWorkerThread(
-        SubscriptionType.NEW_BLOCK_HEADERS,
-        NewBlockHeadersSubscription.class,
+        SubscriptionType.NEW_BLOCK_HEADERS, NewBlockHeadersSubscription.class,
         subscribers -> {
           // memoize
-          final Supplier<BlockResult> blockWithTx =
-              Suppliers.memoize(() -> blockWithCompleteTransaction(newBlockHash));
+          final Supplier<BlockResult> blockWithTx = Suppliers.memoize(
+              () -> blockWithCompleteTransaction(newBlockHash));
           final Supplier<BlockResult> blockWithoutTx =
               Suppliers.memoize(() -> blockWithTransactionHash(newBlockHash));
 
           for (final NewBlockHeadersSubscription subscription : subscribers) {
-            final BlockResult newBlock =
-                subscription.getIncludeTransactions() ? blockWithTx.get() : blockWithoutTx.get();
+            final BlockResult newBlock = subscription.getIncludeTransactions()
+                                             ? blockWithTx.get()
+                                             : blockWithoutTx.get();
 
-            subscriptionManager.sendMessage(subscription.getSubscriptionId(), newBlock);
+            subscriptionManager.sendMessage(subscription.getSubscriptionId(),
+                                            newBlock);
           }
         });
   }
 
   private BlockResult blockWithCompleteTransaction(final Hash hash) {
-    return blockchainQueries.blockByHash(hash).map(blockResult::transactionComplete).orElse(null);
+    return blockchainQueries.blockByHash(hash)
+        .map(blockResult::transactionComplete)
+        .orElse(null);
   }
 
   private BlockResult blockWithTransactionHash(final Hash hash) {
-    return blockchainQueries
-        .blockByHashWithTxHashes(hash)
+    return blockchainQueries.blockByHashWithTxHashes(hash)
         .map(blockResult::transactionHash)
         .orElse(null);
   }

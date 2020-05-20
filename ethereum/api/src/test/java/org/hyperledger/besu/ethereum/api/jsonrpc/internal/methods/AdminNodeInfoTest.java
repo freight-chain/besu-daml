@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,13 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.config.StubGenesisConfigOptions;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
@@ -39,15 +49,6 @@ import org.hyperledger.besu.nat.NatService;
 import org.hyperledger.besu.nat.core.domain.NatPortMapping;
 import org.hyperledger.besu.nat.core.domain.NatServiceType;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
-
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
-import com.google.common.collect.ImmutableMap;
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,41 +65,37 @@ public class AdminNodeInfoTest {
 
   private AdminNodeInfo method;
 
-  private final Bytes nodeId =
-      Bytes.fromHexString(
-          "0x0f1b319e32017c3fcb221841f0f978701b4e9513fe6a567a2db43d43381a9c7e3dfe7cae13cbc2f56943400bacaf9082576ab087cd51983b17d729ae796f6807");
-  private final ChainHead testChainHead = new ChainHead(Hash.EMPTY, Difficulty.ONE, 1L);
+  private final Bytes nodeId = Bytes.fromHexString(
+      "0x0f1b319e32017c3fcb221841f0f978701b4e9513fe6a567a2db43d43381a9c7e3dfe7cae13cbc2f56943400bacaf9082576ab087cd51983b17d729ae796f6807");
+  private final ChainHead testChainHead =
+      new ChainHead(Hash.EMPTY, Difficulty.ONE, 1L);
   private final GenesisConfigOptions genesisConfigOptions =
       new StubGenesisConfigOptions().chainId(BigInteger.valueOf(2019));
   private final DefaultPeer defaultPeer =
-      DefaultPeer.fromEnodeURL(
-          EnodeURL.builder()
-              .nodeId(nodeId)
-              .ipAddress("1.2.3.4")
-              .discoveryPort(7890)
-              .listeningPort(30303)
-              .build());
+      DefaultPeer.fromEnodeURL(EnodeURL.builder()
+                                   .nodeId(nodeId)
+                                   .ipAddress("1.2.3.4")
+                                   .discoveryPort(7890)
+                                   .listeningPort(30303)
+                                   .build());
 
   @Before
   public void setup() {
     when(blockchainQueries.getBlockchain()).thenReturn(blockchain);
-    when(blockchainQueries.getBlockHashByNumber(anyLong())).thenReturn(Optional.of(Hash.EMPTY));
+    when(blockchainQueries.getBlockHashByNumber(anyLong()))
+        .thenReturn(Optional.of(Hash.EMPTY));
     when(blockchain.getChainHead()).thenReturn(testChainHead);
     when(natService.queryExternalIPAddress(anyString())).thenReturn("1.2.3.4");
-    method =
-        new AdminNodeInfo(
-            "testnet/1.0/this/that",
-            BigInteger.valueOf(2018),
-            genesisConfigOptions,
-            p2pNetwork,
-            blockchainQueries,
-            natService);
+    method = new AdminNodeInfo("testnet/1.0/this/that",
+                               BigInteger.valueOf(2018), genesisConfigOptions,
+                               p2pNetwork, blockchainQueries, natService);
   }
 
   @Test
   public void shouldReturnCorrectResult() {
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
-    when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(defaultPeer.getEnodeURL()));
+    when(p2pNetwork.getLocalEnode())
+        .thenReturn(Optional.of(defaultPeer.getEnodeURL()));
     final JsonRpcRequestContext request = adminNodeInfo();
 
     final Map<String, Object> expected = new HashMap<>();
@@ -111,44 +108,38 @@ public class AdminNodeInfoTest {
     expected.put("ip", "1.2.3.4");
     expected.put("listenAddr", "1.2.3.4:30303");
     expected.put("name", "testnet/1.0/this/that");
-    expected.put("ports", ImmutableMap.of("discovery", 7890, "listener", 30303));
+    expected.put("ports",
+                 ImmutableMap.of("discovery", 7890, "listener", 30303));
     expected.put(
         "protocols",
-        ImmutableMap.of(
-            "eth",
-            ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                BigInteger.ONE,
-                "genesis",
-                Hash.EMPTY.toString(),
-                "head",
-                Hash.EMPTY.toString(),
-                "network",
-                BigInteger.valueOf(2018))));
+        ImmutableMap.of("eth",
+                        ImmutableMap.of("config", genesisConfigOptions.asMap(),
+                                        "difficulty", BigInteger.ONE, "genesis",
+                                        Hash.EMPTY.toString(), "head",
+                                        Hash.EMPTY.toString(), "network",
+                                        BigInteger.valueOf(2018))));
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
-    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse) response;
+    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse)response;
     assertThat(actual.getResult()).isEqualTo(expected);
   }
 
   @Test
   public void shouldReturnCorrectResultWhenIsNatEnvironment() {
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
-    when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(defaultPeer.getEnodeURL()));
+    when(p2pNetwork.getLocalEnode())
+        .thenReturn(Optional.of(defaultPeer.getEnodeURL()));
 
     when(natService.queryExternalIPAddress("1.2.3.4")).thenReturn("3.4.5.6");
-    when(natService.getPortMapping(NatServiceType.DISCOVERY, NetworkProtocol.UDP))
-        .thenReturn(
-            Optional.of(
-                new NatPortMapping(
-                    NatServiceType.DISCOVERY, NetworkProtocol.UDP, "", "", 8080, 8080)));
+    when(natService.getPortMapping(NatServiceType.DISCOVERY,
+                                   NetworkProtocol.UDP))
+        .thenReturn(Optional.of(new NatPortMapping(NatServiceType.DISCOVERY,
+                                                   NetworkProtocol.UDP, "", "",
+                                                   8080, 8080)));
     when(natService.getPortMapping(NatServiceType.RLPX, NetworkProtocol.TCP))
-        .thenReturn(
-            Optional.of(
-                new NatPortMapping(NatServiceType.RLPX, NetworkProtocol.TCP, "", "", 8081, 8081)));
+        .thenReturn(Optional.of(new NatPortMapping(
+            NatServiceType.RLPX, NetworkProtocol.TCP, "", "", 8081, 8081)));
 
     final JsonRpcRequestContext request = adminNodeInfo();
 
@@ -165,34 +156,26 @@ public class AdminNodeInfoTest {
     expected.put("ports", ImmutableMap.of("discovery", 8080, "listener", 8081));
     expected.put(
         "protocols",
-        ImmutableMap.of(
-            "eth",
-            ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                BigInteger.ONE,
-                "genesis",
-                Hash.EMPTY.toString(),
-                "head",
-                Hash.EMPTY.toString(),
-                "network",
-                BigInteger.valueOf(2018))));
+        ImmutableMap.of("eth",
+                        ImmutableMap.of("config", genesisConfigOptions.asMap(),
+                                        "difficulty", BigInteger.ONE, "genesis",
+                                        Hash.EMPTY.toString(), "head",
+                                        Hash.EMPTY.toString(), "network",
+                                        BigInteger.valueOf(2018))));
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
-    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse) response;
+    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse)response;
     assertThat(actual.getResult()).isEqualTo(expected);
   }
 
   @Test
   public void handlesLocalEnodeWithListeningAndDiscoveryDisabled() {
-    final EnodeURL localEnode =
-        EnodeURL.builder()
-            .nodeId(nodeId)
-            .ipAddress("1.2.3.4")
-            .discoveryAndListeningPorts(0)
-            .build();
+    final EnodeURL localEnode = EnodeURL.builder()
+                                    .nodeId(nodeId)
+                                    .ipAddress("1.2.3.4")
+                                    .discoveryAndListeningPorts(0)
+                                    .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
@@ -210,35 +193,27 @@ public class AdminNodeInfoTest {
     expected.put("ports", Collections.emptyMap());
     expected.put(
         "protocols",
-        ImmutableMap.of(
-            "eth",
-            ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                BigInteger.ONE,
-                "genesis",
-                Hash.EMPTY.toString(),
-                "head",
-                Hash.EMPTY.toString(),
-                "network",
-                BigInteger.valueOf(2018))));
+        ImmutableMap.of("eth",
+                        ImmutableMap.of("config", genesisConfigOptions.asMap(),
+                                        "difficulty", BigInteger.ONE, "genesis",
+                                        Hash.EMPTY.toString(), "head",
+                                        Hash.EMPTY.toString(), "network",
+                                        BigInteger.valueOf(2018))));
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
-    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse) response;
+    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse)response;
     assertThat(actual.getResult()).isEqualTo(expected);
   }
 
   @Test
   public void handlesLocalEnodeWithListeningDisabled() {
-    final EnodeURL localEnode =
-        EnodeURL.builder()
-            .nodeId(nodeId)
-            .ipAddress("1.2.3.4")
-            .discoveryAndListeningPorts(0)
-            .discoveryPort(7890)
-            .build();
+    final EnodeURL localEnode = EnodeURL.builder()
+                                    .nodeId(nodeId)
+                                    .ipAddress("1.2.3.4")
+                                    .discoveryAndListeningPorts(0)
+                                    .discoveryPort(7890)
+                                    .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
@@ -256,35 +231,27 @@ public class AdminNodeInfoTest {
     expected.put("ports", ImmutableMap.of("discovery", 7890));
     expected.put(
         "protocols",
-        ImmutableMap.of(
-            "eth",
-            ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                BigInteger.ONE,
-                "genesis",
-                Hash.EMPTY.toString(),
-                "head",
-                Hash.EMPTY.toString(),
-                "network",
-                BigInteger.valueOf(2018))));
+        ImmutableMap.of("eth",
+                        ImmutableMap.of("config", genesisConfigOptions.asMap(),
+                                        "difficulty", BigInteger.ONE, "genesis",
+                                        Hash.EMPTY.toString(), "head",
+                                        Hash.EMPTY.toString(), "network",
+                                        BigInteger.valueOf(2018))));
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
-    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse) response;
+    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse)response;
     assertThat(actual.getResult()).isEqualTo(expected);
   }
 
   @Test
   public void handlesLocalEnodeWithDiscoveryDisabled() {
-    final EnodeURL localEnode =
-        EnodeURL.builder()
-            .nodeId(nodeId)
-            .ipAddress("1.2.3.4")
-            .discoveryAndListeningPorts(0)
-            .listeningPort(7890)
-            .build();
+    final EnodeURL localEnode = EnodeURL.builder()
+                                    .nodeId(nodeId)
+                                    .ipAddress("1.2.3.4")
+                                    .discoveryAndListeningPorts(0)
+                                    .listeningPort(7890)
+                                    .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
@@ -303,23 +270,16 @@ public class AdminNodeInfoTest {
     expected.put("ports", ImmutableMap.of("listener", 7890));
     expected.put(
         "protocols",
-        ImmutableMap.of(
-            "eth",
-            ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                BigInteger.ONE,
-                "genesis",
-                Hash.EMPTY.toString(),
-                "head",
-                Hash.EMPTY.toString(),
-                "network",
-                BigInteger.valueOf(2018))));
+        ImmutableMap.of("eth",
+                        ImmutableMap.of("config", genesisConfigOptions.asMap(),
+                                        "difficulty", BigInteger.ONE, "genesis",
+                                        Hash.EMPTY.toString(), "head",
+                                        Hash.EMPTY.toString(), "network",
+                                        BigInteger.valueOf(2018))));
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
-    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse) response;
+    final JsonRpcSuccessResponse actual = (JsonRpcSuccessResponse)response;
     assertThat(actual.getResult()).isEqualTo(expected);
   }
 
@@ -328,8 +288,8 @@ public class AdminNodeInfoTest {
     when(p2pNetwork.isP2pEnabled()).thenReturn(false);
     final JsonRpcRequestContext request = adminNodeInfo();
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.P2P_DISABLED);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.P2P_DISABLED);
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcErrorResponse.class);
@@ -342,9 +302,8 @@ public class AdminNodeInfoTest {
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.empty());
     final JsonRpcRequestContext request = adminNodeInfo();
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
 
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcErrorResponse.class);
@@ -352,6 +311,7 @@ public class AdminNodeInfoTest {
   }
 
   private JsonRpcRequestContext adminNodeInfo() {
-    return new JsonRpcRequestContext(new JsonRpcRequest("2.0", "admin_nodeInfo", new Object[] {}));
+    return new JsonRpcRequestContext(
+        new JsonRpcRequest("2.0", "admin_nodeInfo", new Object[] {}));
   }
 }

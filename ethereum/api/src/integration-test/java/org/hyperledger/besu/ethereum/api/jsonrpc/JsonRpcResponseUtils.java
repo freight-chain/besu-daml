@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,6 +38,14 @@ import static org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcResponseKey.TRANS
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.BlockResult;
@@ -52,29 +63,20 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
-
 public class JsonRpcResponseUtils {
 
   /** Hex is base 16 */
   private static final int HEX_RADIX = 16;
 
   /** @param values hex encoded values. */
-  public JsonRpcResponse response(final Map<JsonRpcResponseKey, String> values) {
+  public JsonRpcResponse
+  response(final Map<JsonRpcResponseKey, String> values) {
     return response(values, new ArrayList<>());
   }
 
   /** @param values hex encoded values. */
-  public JsonRpcResponse response(
-      final Map<JsonRpcResponseKey, String> values, final List<TransactionResult> transactions) {
+  public JsonRpcResponse response(final Map<JsonRpcResponseKey, String> values,
+                                  final List<TransactionResult> transactions) {
 
     final Hash mixHash = hash(values.get(MIX_HASH));
     final Hash parentHash = hash(values.get(PARENT_HASH));
@@ -84,42 +86,32 @@ public class JsonRpcResponseUtils {
     final Hash transactionsRoot = hash(values.get(TRANSACTION_ROOT));
     final Hash receiptsRoot = hash(values.get(RECEIPTS_ROOT));
     final LogsBloomFilter logsBloom = logsBloom(values.get(LOGS_BLOOM));
-    final Difficulty difficulty = Difficulty.of(unsignedInt256(values.get(DIFFICULTY)));
+    final Difficulty difficulty =
+        Difficulty.of(unsignedInt256(values.get(DIFFICULTY)));
     final Bytes extraData = bytes(values.get(EXTRA_DATA));
-    final BlockHeaderFunctions blockHeaderFunctions = new MainnetBlockHeaderFunctions();
+    final BlockHeaderFunctions blockHeaderFunctions =
+        new MainnetBlockHeaderFunctions();
     final long number = unsignedLong(values.get(NUMBER));
     final long gasLimit = unsignedLong(values.get(GAS_LIMIT));
     final long gasUsed = unsignedLong(values.get(GAS_USED));
     final long timestamp = unsignedLong(values.get(TIMESTAMP));
     final long nonce = unsignedLong(values.get(NONCE));
-    final Long baseFee = values.containsKey(BASEFEE) ? unsignedLong(values.get(BASEFEE)) : null;
-    final Difficulty totalDifficulty = Difficulty.of(unsignedInt256(values.get(TOTAL_DIFFICULTY)));
+    final Long baseFee =
+        values.containsKey(BASEFEE) ? unsignedLong(values.get(BASEFEE)) : null;
+    final Difficulty totalDifficulty =
+        Difficulty.of(unsignedInt256(values.get(TOTAL_DIFFICULTY)));
     final int size = unsignedInt(values.get(SIZE));
 
     final List<JsonNode> ommers = new ArrayList<>();
 
-    final BlockHeader header =
-        new BlockHeader(
-            parentHash,
-            ommersHash,
-            coinbase,
-            stateRoot,
-            transactionsRoot,
-            receiptsRoot,
-            logsBloom,
-            difficulty,
-            number,
-            gasLimit,
-            gasUsed,
-            timestamp,
-            extraData,
-            baseFee,
-            mixHash,
-            nonce,
-            blockHeaderFunctions);
+    final BlockHeader header = new BlockHeader(
+        parentHash, ommersHash, coinbase, stateRoot, transactionsRoot,
+        receiptsRoot, logsBloom, difficulty, number, gasLimit, gasUsed,
+        timestamp, extraData, baseFee, mixHash, nonce, blockHeaderFunctions);
 
     return new JsonRpcSuccessResponse(
-        null, new BlockResult(header, transactions, ommers, totalDifficulty, size));
+        null,
+        new BlockResult(header, transactions, ommers, totalDifficulty, size));
   }
 
   public List<TransactionResult> transactions(final String... values) {
@@ -132,7 +124,8 @@ public class JsonRpcResponseUtils {
     return nodes;
   }
 
-  public List<TransactionResult> transactions(final TransactionResult... transactions) {
+  public List<TransactionResult>
+  transactions(final TransactionResult... transactions) {
     final List<TransactionResult> list = new ArrayList<>(transactions.length);
 
     for (final TransactionResult transaction : transactions) {
@@ -142,21 +135,13 @@ public class JsonRpcResponseUtils {
     return list;
   }
 
-  public TransactionResult transaction(
-      final String blockHash,
-      final String blockNumber,
-      final String fromAddress,
-      final String gas,
-      final String gasPrice,
-      final String hash,
-      final String input,
-      final String nonce,
-      final String toAddress,
-      final String transactionIndex,
-      final String value,
-      final String v,
-      final String r,
-      final String s) {
+  public TransactionResult
+  transaction(final String blockHash, final String blockNumber,
+              final String fromAddress, final String gas, final String gasPrice,
+              final String hash, final String input, final String nonce,
+              final String toAddress, final String transactionIndex,
+              final String value, final String v, final String r,
+              final String s) {
 
     final Transaction transaction = mock(Transaction.class);
     when(transaction.getGasPrice()).thenReturn(Wei.fromHexString(gasPrice));
@@ -165,18 +150,16 @@ public class JsonRpcResponseUtils {
     when(transaction.getR()).thenReturn(bigInteger(r));
     when(transaction.getS()).thenReturn(bigInteger(s));
     when(transaction.getHash()).thenReturn(hash(hash));
-    when(transaction.getTo()).thenReturn(Optional.ofNullable(address(toAddress)));
+    when(transaction.getTo())
+        .thenReturn(Optional.ofNullable(address(toAddress)));
     when(transaction.getSender()).thenReturn(address(fromAddress));
     when(transaction.getPayload()).thenReturn(bytes(input));
     when(transaction.getValue()).thenReturn(wei(value));
     when(transaction.getGasLimit()).thenReturn(unsignedLong(gas));
 
-    return new TransactionCompleteResult(
-        new TransactionWithMetadata(
-            transaction,
-            unsignedLong(blockNumber),
-            Hash.fromHexString(blockHash),
-            unsignedInt(transactionIndex)));
+    return new TransactionCompleteResult(new TransactionWithMetadata(
+        transaction, unsignedLong(blockNumber), Hash.fromHexString(blockHash),
+        unsignedInt(transactionIndex)));
   }
 
   private int unsignedInt(final String value) {
@@ -189,21 +172,18 @@ public class JsonRpcResponseUtils {
     return new BigInteger(hex, HEX_RADIX).longValue();
   }
 
-  private Hash hash(final String hex) {
-    return Hash.fromHexString(hex);
-  }
+  private Hash hash(final String hex) { return Hash.fromHexString(hex); }
 
   private String removeHexPrefix(final String prefixedHex) {
-    return prefixedHex.startsWith("0x") ? prefixedHex.substring(2) : prefixedHex;
+    return prefixedHex.startsWith("0x") ? prefixedHex.substring(2)
+                                        : prefixedHex;
   }
 
   private BigInteger bigInteger(final String hex) {
     return new BigInteger(removeHexPrefix(hex), HEX_RADIX);
   }
 
-  private Wei wei(final String hex) {
-    return Wei.fromHexString(hex);
-  }
+  private Wei wei(final String hex) { return Wei.fromHexString(hex); }
 
   private Address address(final String hex) {
     return Address.fromHexString(hex);
@@ -217,7 +197,5 @@ public class JsonRpcResponseUtils {
     return UInt256.fromHexString(hex);
   }
 
-  private Bytes bytes(final String hex) {
-    return Bytes.fromHexString(hex);
-  }
+  private Bytes bytes(final String hex) { return Bytes.fromHexString(hex); }
 }

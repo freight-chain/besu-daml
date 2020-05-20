@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,10 @@ package org.hyperledger.besu.consensus.ibft.tests;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.consensus.ibft.support.IntegrationTestHelpers.createSignedCommitPayload;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
 import org.hyperledger.besu.consensus.ibft.messagedata.IbftV2;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Commit;
@@ -35,52 +42,47 @@ import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Util;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.RawMessage;
-
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 
 public class SpuriousBehaviourTest {
 
   private final long blockTimeStamp = 100;
-  private final Clock fixedClock =
-      Clock.fixed(Instant.ofEpochSecond(blockTimeStamp), ZoneId.systemDefault());
+  private final Clock fixedClock = Clock.fixed(
+      Instant.ofEpochSecond(blockTimeStamp), ZoneId.systemDefault());
 
-  // Test is configured such that a remote peer is responsible for proposing a block
+  // Test is configured such that a remote peer is responsible for proposing a
+  // block
   private final int NETWORK_SIZE = 5;
 
   // Configuration ensures remote peer will provide proposal for first block
-  private final TestContext context =
-      new TestContextBuilder()
-          .validatorCount(NETWORK_SIZE)
-          .indexOfFirstLocallyProposedBlock(0)
-          .clock(fixedClock)
-          .buildAndStart();
-  private final ConsensusRoundIdentifier roundId = new ConsensusRoundIdentifier(1, 0);
+  private final TestContext context = new TestContextBuilder()
+                                          .validatorCount(NETWORK_SIZE)
+                                          .indexOfFirstLocallyProposedBlock(0)
+                                          .clock(fixedClock)
+                                          .buildAndStart();
+  private final ConsensusRoundIdentifier roundId =
+      new ConsensusRoundIdentifier(1, 0);
   private final RoundSpecificPeers peers = context.roundSpecificPeers(roundId);
 
-  private final Block proposedBlock = context.createBlockForProposalFromChainHead(0, 30);
+  private final Block proposedBlock =
+      context.createBlockForProposalFromChainHead(0, 30);
   private Prepare expectedPrepare;
   private Commit expectedCommit;
 
   @Before
   public void setup() {
 
-    expectedPrepare =
-        context.getLocalNodeMessageFactory().createPrepare(roundId, proposedBlock.getHash());
-    expectedCommit =
-        new Commit(
-            createSignedCommitPayload(
-                roundId, proposedBlock, context.getLocalNodeParams().getNodeKey()));
+    expectedPrepare = context.getLocalNodeMessageFactory().createPrepare(
+        roundId, proposedBlock.getHash());
+    expectedCommit = new Commit(createSignedCommitPayload(
+        roundId, proposedBlock, context.getLocalNodeParams().getNodeKey()));
   }
 
   @Test
   public void badlyFormedRlpDoesNotPreventOngoingIbftOperation() {
-    final MessageData illegalCommitMsg = new RawMessage(IbftV2.PREPARE, Bytes.EMPTY);
+    final MessageData illegalCommitMsg =
+        new RawMessage(IbftV2.PREPARE, Bytes.EMPTY);
     peers.getNonProposing(0).injectMessage(illegalCommitMsg);
 
     peers.getProposer().injectProposal(roundId, proposedBlock);
@@ -88,8 +90,10 @@ public class SpuriousBehaviourTest {
   }
 
   @Test
-  public void messageWithIllegalMessageCodeAreDiscardedAndDoNotPreventOngoingIbftOperation() {
-    final MessageData illegalCommitMsg = new RawMessage(IbftV2.MESSAGE_SPACE, Bytes.EMPTY);
+  public void
+  messageWithIllegalMessageCodeAreDiscardedAndDoNotPreventOngoingIbftOperation() {
+    final MessageData illegalCommitMsg =
+        new RawMessage(IbftV2.MESSAGE_SPACE, Bytes.EMPTY);
     peers.getNonProposing(0).injectMessage(illegalCommitMsg);
 
     peers.getProposer().injectProposal(roundId, proposedBlock);
@@ -99,17 +103,16 @@ public class SpuriousBehaviourTest {
   @Test
   public void nonValidatorsCannotTriggerResponses() {
     final NodeKey nonValidatorNodeKey = NodeKeyUtils.generate();
-    final NodeParams nonValidatorParams =
-        new NodeParams(
-            Util.publicKeyToAddress(nonValidatorNodeKey.getPublicKey()), nonValidatorNodeKey);
+    final NodeParams nonValidatorParams = new NodeParams(
+        Util.publicKeyToAddress(nonValidatorNodeKey.getPublicKey()),
+        nonValidatorNodeKey);
 
-    final ValidatorPeer nonvalidator =
-        new ValidatorPeer(
-            nonValidatorParams,
-            new MessageFactory(nonValidatorParams.getNodeKey()),
-            context.getEventMultiplexer());
+    final ValidatorPeer nonvalidator = new ValidatorPeer(
+        nonValidatorParams, new MessageFactory(nonValidatorParams.getNodeKey()),
+        context.getEventMultiplexer());
 
-    nonvalidator.injectProposal(new ConsensusRoundIdentifier(1, 0), proposedBlock);
+    nonvalidator.injectProposal(new ConsensusRoundIdentifier(1, 0),
+                                proposedBlock);
 
     peers.verifyNoMessagesReceived();
   }

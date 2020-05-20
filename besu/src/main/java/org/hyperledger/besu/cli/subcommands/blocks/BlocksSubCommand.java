@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,21 @@ package org.hyperledger.besu.cli.subcommands.blocks;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.hyperledger.besu.cli.subcommands.blocks.BlocksSubCommand.COMMAND_NAME;
 
+import io.vertx.core.Vertx;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.chainexport.RlpBlockExporter;
 import org.hyperledger.besu.chainimport.JsonBlockImporter;
 import org.hyperledger.besu.chainimport.RlpBlockImporter;
@@ -33,23 +51,6 @@ import org.hyperledger.besu.ethereum.core.MiningParameters;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.metrics.prometheus.MetricsService;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.Optional;
-
-import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExecutionException;
@@ -60,11 +61,10 @@ import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
 /** Blocks related sub-command */
-@Command(
-    name = COMMAND_NAME,
-    description = "This command provides blocks related actions.",
-    mixinStandardHelpOptions = true,
-    subcommands = {ImportSubCommand.class, ExportSubCommand.class})
+@Command(name = COMMAND_NAME,
+         description = "This command provides blocks related actions.",
+         mixinStandardHelpOptions = true,
+         subcommands = {ImportSubCommand.class, ExportSubCommand.class})
 public class BlocksSubCommand implements Runnable {
 
   private static final Logger LOG = LogManager.getLogger();
@@ -73,7 +73,8 @@ public class BlocksSubCommand implements Runnable {
 
   @SuppressWarnings("unused")
   @ParentCommand
-  private BesuCommand parentCommand; // Picocli injects reference to parent command
+  private BesuCommand
+      parentCommand; // Picocli injects reference to parent command
 
   @SuppressWarnings("unused")
   @Spec
@@ -86,11 +87,11 @@ public class BlocksSubCommand implements Runnable {
 
   private final PrintStream out;
 
-  public BlocksSubCommand(
-      final RlpBlockImporter rlpBlockImporter,
-      final JsonBlockImporterFactory jsonBlockImporterFactory,
-      final RlpBlockExporterFactory rlpBlockExporterFactory,
-      final PrintStream out) {
+  public BlocksSubCommand(final RlpBlockImporter rlpBlockImporter,
+                          final JsonBlockImporterFactory
+                              jsonBlockImporterFactory,
+                          final RlpBlockExporterFactory rlpBlockExporterFactory,
+                          final PrintStream out) {
     this.rlpBlockImporter = rlpBlockImporter;
     this.rlpBlockExporterFactory = rlpBlockExporterFactory;
     this.jsonBlockImporterFactory = jsonBlockImporterFactory;
@@ -107,21 +108,19 @@ public class BlocksSubCommand implements Runnable {
    *
    * <p>Imports blocks from a file into the database
    */
-  @Command(
-      name = "import",
-      description = "This command imports blocks from a file into the database.",
-      mixinStandardHelpOptions = true)
+  @Command(name = "import",
+           description =
+               "This command imports blocks from a file into the database.",
+           mixinStandardHelpOptions = true)
   static class ImportSubCommand implements Runnable {
     @SuppressWarnings("unused")
     @ParentCommand
-    private BlocksSubCommand parentCommand; // Picocli injects reference to parent command
+    private BlocksSubCommand
+        parentCommand; // Picocli injects reference to parent command
 
-    @Option(
-        names = "--from",
-        required = true,
-        paramLabel = DefaultCommandValues.MANDATORY_FILE_FORMAT_HELP,
-        description = "File containing blocks to import.",
-        arity = "1..1")
+    @Option(names = "--from", required = true,
+            paramLabel = DefaultCommandValues.MANDATORY_FILE_FORMAT_HELP,
+            description = "File containing blocks to import.", arity = "1..1")
     private final File blocksImportFile = null;
 
     @Option(
@@ -138,14 +137,11 @@ public class BlocksSubCommand implements Runnable {
         arity = "1..1")
     private final Long startTime = System.currentTimeMillis() / 1000;
 
-    @Option(
-        names = "--skip-pow-validation-enabled",
-        description = "Skip proof of work validation when importing.")
+    @Option(names = "--skip-pow-validation-enabled",
+            description = "Skip proof of work validation when importing.")
     private final Boolean skipPow = false;
 
-    @SuppressWarnings("unused")
-    @Spec
-    private CommandSpec spec;
+    @SuppressWarnings("unused") @Spec private CommandSpec spec;
 
     @Override
     public void run() {
@@ -156,31 +152,35 @@ public class BlocksSubCommand implements Runnable {
       checkNotNull(parentCommand.rlpBlockImporter);
       checkNotNull(parentCommand.jsonBlockImporterFactory);
 
-      final Optional<MetricsService> metricsService = initMetrics(parentCommand);
+      final Optional<MetricsService> metricsService =
+          initMetrics(parentCommand);
 
       try {
-        // As blocksImportFile even if initialized as null is injected by PicoCLI and param is
-        // mandatory. So we are sure it's always not null, we can remove the warning.
-        //noinspection ConstantConditions
+        // As blocksImportFile even if initialized as null is injected by
+        // PicoCLI and param is mandatory. So we are sure it's always not null,
+        // we can remove the warning.
+        // noinspection ConstantConditions
         final Path path = blocksImportFile.toPath();
         final BesuController<?> controller = createController();
         switch (format) {
-          case RLP:
-            importRlpBlocks(controller, path);
-            break;
-          case JSON:
-            importJsonBlocks(controller, path);
-            break;
-          default:
-            throw new ParameterException(
-                spec.commandLine(), "Unsupported format: " + format.toString());
+        case RLP:
+          importRlpBlocks(controller, path);
+          break;
+        case JSON:
+          importJsonBlocks(controller, path);
+          break;
+        default:
+          throw new ParameterException(
+              spec.commandLine(), "Unsupported format: " + format.toString());
         }
       } catch (final FileNotFoundException e) {
-        throw new ExecutionException(
-            spec.commandLine(), "Could not find file to import: " + blocksImportFile);
+        throw new ExecutionException(spec.commandLine(),
+                                     "Could not find file to import: " +
+                                         blocksImportFile);
       } catch (final IOException e) {
         throw new ExecutionException(
-            spec.commandLine(), "Unable to import blocks from " + blocksImportFile, e);
+            spec.commandLine(),
+            "Unable to import blocks from " + blocksImportFile, e);
       } finally {
         metricsService.ifPresent(MetricsService::stop);
       }
@@ -194,46 +194,43 @@ public class BlocksSubCommand implements Runnable {
     private BesuController<?> createController() {
       try {
         // Set some defaults
-        return parentCommand
-            .parentCommand
+        return parentCommand.parentCommand
             .getControllerBuilder()
             // set to mainnet genesis block so validation rules won't reject it.
-            .clock(Clock.fixed(Instant.ofEpochSecond(startTime), ZoneOffset.UTC))
+            .clock(
+                Clock.fixed(Instant.ofEpochSecond(startTime), ZoneOffset.UTC))
             .miningParameters(getMiningParameters())
             .build();
       } catch (final Exception e) {
-        throw new ExecutionException(new CommandLine(parentCommand), e.getMessage(), e);
+        throw new ExecutionException(new CommandLine(parentCommand),
+                                     e.getMessage(), e);
       }
     }
 
     private MiningParameters getMiningParameters() {
       final Wei minTransactionGasPrice = Wei.ZERO;
-      // Extradata and coinbase can be configured on a per-block level via the json file
+      // Extradata and coinbase can be configured on a per-block level via the
+      // json file
       final Address coinbase = Address.ZERO;
       final Bytes extraData = Bytes.EMPTY;
       return new MiningParameters(
-          coinbase,
-          minTransactionGasPrice,
-          extraData,
-          false,
-          false,
-          "0.0.0.0",
-          8008,
-          "080c",
-          Optional.of(new IncrementingNonceGenerator(0)));
+          coinbase, minTransactionGasPrice, extraData, false, false, "0.0.0.0",
+          8008, "080c", Optional.of(new IncrementingNonceGenerator(0)));
     }
 
-    private <T> void importJsonBlocks(final BesuController<T> controller, final Path path)
-        throws IOException {
+    private <T> void importJsonBlocks(final BesuController<T> controller,
+                                      final Path path) throws IOException {
 
-      final JsonBlockImporter<T> importer = parentCommand.jsonBlockImporterFactory.get(controller);
+      final JsonBlockImporter<T> importer =
+          parentCommand.jsonBlockImporterFactory.get(controller);
       final String jsonData = Files.readString(path);
       importer.importChain(jsonData);
     }
 
-    private <T> void importRlpBlocks(final BesuController<T> controller, final Path path)
-        throws IOException {
-      parentCommand.rlpBlockImporter.importBlockchain(path, controller, skipPow);
+    private <T> void importRlpBlocks(final BesuController<T> controller,
+                                     final Path path) throws IOException {
+      parentCommand.rlpBlockImporter.importBlockchain(path, controller,
+                                                      skipPow);
     }
   }
 
@@ -244,18 +241,20 @@ public class BlocksSubCommand implements Runnable {
    */
   @Command(
       name = "export",
-      description = "This command exports a specific block, or list of blocks from storage.",
+      description =
+          "This command exports a specific block, or list of blocks from storage.",
       mixinStandardHelpOptions = true)
   static class ExportSubCommand implements Runnable {
     @SuppressWarnings("unused")
     @ParentCommand
-    private BlocksSubCommand parentCommand; // Picocli injects reference to parent command
+    private BlocksSubCommand
+        parentCommand; // Picocli injects reference to parent command
 
-    @Option(
-        names = "--start-block",
-        paramLabel = DefaultCommandValues.MANDATORY_LONG_FORMAT_HELP,
-        description = "The starting index of the block, or block list to export.",
-        arity = "1..1")
+    @Option(names = "--start-block",
+            paramLabel = DefaultCommandValues.MANDATORY_LONG_FORMAT_HELP,
+            description =
+                "The starting index of the block, or block list to export.",
+            arity = "1..1")
     private final Long startBlock = null;
 
     @Option(
@@ -267,32 +266,28 @@ public class BlocksSubCommand implements Runnable {
     private final Long endBlock = null;
 
     @Option(
-        names = "--format",
-        hidden = true,
+        names = "--format", hidden = true,
         description =
             "The format to export, possible values are: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).",
         arity = "1..1")
     private final BlockExportFormat format = BlockExportFormat.RLP;
 
-    @Option(
-        names = "--to",
-        required = true,
-        paramLabel = DefaultCommandValues.MANDATORY_FILE_FORMAT_HELP,
-        description = "File to write the block list to.",
-        arity = "1..1")
+    @Option(names = "--to", required = true,
+            paramLabel = DefaultCommandValues.MANDATORY_FILE_FORMAT_HELP,
+            description = "File to write the block list to.", arity = "1..1")
     private final File blocksExportFile = null;
 
-    @SuppressWarnings("unused")
-    @Spec
-    private CommandSpec spec;
+    @SuppressWarnings("unused") @Spec private CommandSpec spec;
 
     @Override
     public void run() {
       parentCommand.parentCommand.configureLogging(false);
-      LOG.info("Export {} block data to file {}", format, blocksExportFile.toPath());
+      LOG.info("Export {} block data to file {}", format,
+               blocksExportFile.toPath());
 
       checkCommand(this, startBlock, endBlock);
-      final Optional<MetricsService> metricsService = initMetrics(parentCommand);
+      final Optional<MetricsService> metricsService =
+          initMetrics(parentCommand);
 
       final BesuController<?> controller = createBesuController();
       try {
@@ -314,66 +309,54 @@ public class BlocksSubCommand implements Runnable {
       return parentCommand.parentCommand.buildController();
     }
 
-    private void exportRlpFormat(final BesuController<?> controller) throws IOException {
+    private void exportRlpFormat(final BesuController<?> controller)
+        throws IOException {
       final ProtocolContext<?> context = controller.getProtocolContext();
       final RlpBlockExporter exporter =
           parentCommand.rlpBlockExporterFactory.get(context.getBlockchain());
       exporter.exportBlocks(blocksExportFile, getStartBlock(), getEndBlock());
     }
 
-    private void checkCommand(
-        final ExportSubCommand exportSubCommand, final Long startBlock, final Long endBlock) {
+    private void checkCommand(final ExportSubCommand exportSubCommand,
+                              final Long startBlock, final Long endBlock) {
       checkNotNull(exportSubCommand.parentCommand);
 
       final Optional<Long> maybeStartBlock = getStartBlock();
       final Optional<Long> maybeEndBlock = getEndBlock();
 
-      maybeStartBlock
-          .filter(blockNum -> blockNum < 0)
-          .ifPresent(
-              (blockNum) -> {
-                throw new CommandLine.ParameterException(
-                    spec.commandLine(),
-                    "Parameter --start-block ("
-                        + blockNum
-                        + ") must be greater than or equal to zero.");
-              });
+      maybeStartBlock.filter(blockNum -> blockNum < 0).ifPresent((blockNum) -> {
+        throw new CommandLine.ParameterException(
+            spec.commandLine(), "Parameter --start-block (" + blockNum +
+                                    ") must be greater than or equal to zero.");
+      });
 
-      maybeEndBlock
-          .filter(blockNum -> blockNum < 0)
-          .ifPresent(
-              (blockNum) -> {
-                throw new CommandLine.ParameterException(
-                    spec.commandLine(),
-                    "Parameter --end-block ("
-                        + blockNum
-                        + ") must be greater than or equal to zero.");
-              });
+      maybeEndBlock.filter(blockNum -> blockNum < 0).ifPresent((blockNum) -> {
+        throw new CommandLine.ParameterException(
+            spec.commandLine(), "Parameter --end-block (" + blockNum +
+                                    ") must be greater than or equal to zero.");
+      });
 
       if (maybeStartBlock.isPresent() && maybeEndBlock.isPresent()) {
         if (endBlock <= startBlock) {
           throw new CommandLine.ParameterException(
-              spec.commandLine(),
-              "Parameter --end-block ("
-                  + endBlock
-                  + ") must be greater start block ("
-                  + startBlock
-                  + ").");
+              spec.commandLine(), "Parameter --end-block (" + endBlock +
+                                      ") must be greater start block (" +
+                                      startBlock + ").");
         }
       }
 
       // Error if data directory is empty
-      final Path databasePath =
-          Paths.get(
-              parentCommand.parentCommand.dataDir().toAbsolutePath().toString(),
-              BesuController.DATABASE_PATH);
+      final Path databasePath = Paths.get(
+          parentCommand.parentCommand.dataDir().toAbsolutePath().toString(),
+          BesuController.DATABASE_PATH);
       final File databaseDirectory = new File(databasePath.toString());
-      if (!databaseDirectory.isDirectory() || databaseDirectory.list().length == 0) {
+      if (!databaseDirectory.isDirectory() ||
+          databaseDirectory.list().length == 0) {
         // Empty data directory, nothing to export
         throw new CommandLine.ParameterException(
             spec.commandLine(),
-            "Chain is empty.  Unable to export blocks from specified data directory: "
-                + databaseDirectory.toString());
+            "Chain is empty.  Unable to export blocks from specified data directory: " +
+                databaseDirectory.toString());
       }
     }
 
@@ -386,17 +369,16 @@ public class BlocksSubCommand implements Runnable {
     }
   }
 
-  private static Optional<MetricsService> initMetrics(final BlocksSubCommand parentCommand) {
+  private static Optional<MetricsService>
+  initMetrics(final BlocksSubCommand parentCommand) {
     Optional<MetricsService> metricsService = Optional.empty();
     final MetricsConfiguration metricsConfiguration =
         parentCommand.parentCommand.metricsConfiguration();
-    if (metricsConfiguration.isEnabled() || metricsConfiguration.isPushEnabled()) {
-      metricsService =
-          Optional.of(
-              MetricsService.create(
-                  Vertx.vertx(),
-                  metricsConfiguration,
-                  parentCommand.parentCommand.getMetricsSystem()));
+    if (metricsConfiguration.isEnabled() ||
+        metricsConfiguration.isPushEnabled()) {
+      metricsService = Optional.of(MetricsService.create(
+          Vertx.vertx(), metricsConfiguration,
+          parentCommand.parentCommand.getMetricsSystem()));
       metricsService.ifPresent(MetricsService::start);
     }
     return metricsService;

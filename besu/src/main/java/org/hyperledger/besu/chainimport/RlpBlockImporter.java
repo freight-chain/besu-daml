@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,16 @@ package org.hyperledger.besu.chainimport;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.logging.log4j.LogManager.getLogger;
 
+import com.google.common.base.MoreObjects;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
@@ -32,52 +45,44 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.mainnet.ScheduleBasedBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.util.RawBlockIterator;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
-
-import com.google.common.base.MoreObjects;
-import org.apache.logging.log4j.Logger;
-
 /** Tool for importing rlp-encoded block data from files. */
 public class RlpBlockImporter {
   private static final Logger LOG = getLogger();
 
   private final Semaphore blockBacklog = new Semaphore(2);
 
-  private final ExecutorService validationExecutor = Executors.newCachedThreadPool();
-  private final ExecutorService importExecutor = Executors.newSingleThreadExecutor();
+  private final ExecutorService validationExecutor =
+      Executors.newCachedThreadPool();
+  private final ExecutorService importExecutor =
+      Executors.newSingleThreadExecutor();
 
   /**
-   * Imports blocks that are stored as concatenated RLP sections in the given file into Besu's block
-   * storage.
+   * Imports blocks that are stored as concatenated RLP sections in the given
+   * file into Besu's block storage.
    *
    * @param blocks Path to the file containing the blocks
    * @param besuController the BesuController that defines blockchain behavior
-   * @param skipPowValidation Skip proof of work validation (correct mix hash and difficulty)
+   * @param skipPowValidation Skip proof of work validation (correct mix hash
+   *     and difficulty)
    * @param <C> the consensus context type
    * @return the import result
    * @throws IOException On Failure
    */
-  public <C> RlpBlockImporter.ImportResult importBlockchain(
-      final Path blocks, final BesuController<C> besuController, final boolean skipPowValidation)
-      throws IOException {
-    final ProtocolSchedule<C> protocolSchedule = besuController.getProtocolSchedule();
+  public <C> RlpBlockImporter.ImportResult
+  importBlockchain(final Path blocks, final BesuController<C> besuController,
+                   final boolean skipPowValidation) throws IOException {
+    final ProtocolSchedule<C> protocolSchedule =
+        besuController.getProtocolSchedule();
     final ProtocolContext<C> context = besuController.getProtocolContext();
     final MutableBlockchain blockchain = context.getBlockchain();
     int count = 0;
 
-    try (final RawBlockIterator iterator =
-        new RawBlockIterator(
-            blocks,
-            rlp ->
-                BlockHeader.readFrom(
-                    rlp, ScheduleBasedBlockHeaderFunctions.create(protocolSchedule)))) {
+    try (final RawBlockIterator iterator = new RawBlockIterator(
+             blocks,
+             rlp
+             -> BlockHeader.readFrom(
+                 rlp,
+                 ScheduleBasedBlockHeaderFunctions.create(protocolSchedule)))) {
       BlockHeader previousHeader = null;
       CompletableFuture<Void> previousBlockFuture = null;
       while (iterator.hasNext()) {
@@ -95,12 +100,15 @@ public class RlpBlockImporter {
         if (previousHeader == null) {
           previousHeader = lookupPreviousHeader(blockchain, header);
         }
-        final ProtocolSpec<C> protocolSpec = protocolSchedule.getByBlockNumber(header.getNumber());
+        final ProtocolSpec<C> protocolSpec =
+            protocolSchedule.getByBlockNumber(header.getNumber());
         final BlockHeader lastHeader = previousHeader;
 
         final CompletableFuture<Void> validationFuture =
             CompletableFuture.runAsync(
-                () -> validateBlock(protocolSpec, context, lastHeader, header, skipPowValidation),
+                ()
+                    -> validateBlock(protocolSpec, context, lastHeader, header,
+                                     skipPowValidation),
                 validationExecutor);
 
         final CompletableFuture<Void> extractingFuture =
@@ -110,7 +118,8 @@ public class RlpBlockImporter {
         if (previousBlockFuture == null) {
           calculationFutures = extractingFuture;
         } else {
-          calculationFutures = CompletableFuture.allOf(extractingFuture, previousBlockFuture);
+          calculationFutures =
+              CompletableFuture.allOf(extractingFuture, previousBlockFuture);
         }
 
         try {
@@ -119,11 +128,12 @@ public class RlpBlockImporter {
           LOG.error("Interrupted adding to backlog.", e);
           break;
         }
-        previousBlockFuture =
-            validationFuture.runAfterBothAsync(
-                calculationFutures,
-                () -> evaluateBlock(context, block, header, protocolSpec, skipPowValidation),
-                importExecutor);
+        previousBlockFuture = validationFuture.runAfterBothAsync(
+            calculationFutures,
+            ()
+                -> evaluateBlock(context, block, header, protocolSpec,
+                                 skipPowValidation),
+            importExecutor);
 
         ++count;
         previousHeader = header;
@@ -154,68 +164,60 @@ public class RlpBlockImporter {
     final List<CompletableFuture<Void>> futures =
         new ArrayList<>(block.getBody().getTransactions().size());
     for (final Transaction tx : block.getBody().getTransactions()) {
-      futures.add(CompletableFuture.runAsync(tx::getSender, validationExecutor));
+      futures.add(
+          CompletableFuture.runAsync(tx::getSender, validationExecutor));
     }
     for (final CompletableFuture<Void> future : futures) {
       future.join();
     }
   }
 
-  private <C> void validateBlock(
-      final ProtocolSpec<C> protocolSpec,
-      final ProtocolContext<C> context,
-      final BlockHeader previousHeader,
-      final BlockHeader header,
-      final boolean skipPowValidation) {
-    final BlockHeaderValidator<C> blockHeaderValidator = protocolSpec.getBlockHeaderValidator();
-    final boolean validHeader =
-        blockHeaderValidator.validateHeader(
-            header,
-            previousHeader,
-            context,
-            skipPowValidation
-                ? HeaderValidationMode.LIGHT_DETACHED_ONLY
-                : HeaderValidationMode.DETACHED_ONLY);
+  private <C> void validateBlock(final ProtocolSpec<C> protocolSpec,
+                                 final ProtocolContext<C> context,
+                                 final BlockHeader previousHeader,
+                                 final BlockHeader header,
+                                 final boolean skipPowValidation) {
+    final BlockHeaderValidator<C> blockHeaderValidator =
+        protocolSpec.getBlockHeaderValidator();
+    final boolean validHeader = blockHeaderValidator.validateHeader(
+        header, previousHeader, context,
+        skipPowValidation ? HeaderValidationMode.LIGHT_DETACHED_ONLY
+                          : HeaderValidationMode.DETACHED_ONLY);
     if (!validHeader) {
-      throw new IllegalStateException("Invalid header at block number " + header.getNumber() + ".");
+      throw new IllegalStateException("Invalid header at block number " +
+                                      header.getNumber() + ".");
     }
   }
 
-  private <C> void evaluateBlock(
-      final ProtocolContext<C> context,
-      final Block block,
-      final BlockHeader header,
-      final ProtocolSpec<C> protocolSpec,
-      final boolean skipPowValidation) {
+  private <C> void evaluateBlock(final ProtocolContext<C> context,
+                                 final Block block, final BlockHeader header,
+                                 final ProtocolSpec<C> protocolSpec,
+                                 final boolean skipPowValidation) {
     try {
       final BlockImporter<C> blockImporter = protocolSpec.getBlockImporter();
-      final boolean blockImported =
-          blockImporter.importBlock(
-              context,
-              block,
-              skipPowValidation
-                  ? HeaderValidationMode.LIGHT_SKIP_DETACHED
-                  : HeaderValidationMode.SKIP_DETACHED,
-              skipPowValidation ? HeaderValidationMode.LIGHT : HeaderValidationMode.FULL);
+      final boolean blockImported = blockImporter.importBlock(
+          context, block,
+          skipPowValidation ? HeaderValidationMode.LIGHT_SKIP_DETACHED
+                            : HeaderValidationMode.SKIP_DETACHED,
+          skipPowValidation ? HeaderValidationMode.LIGHT
+                            : HeaderValidationMode.FULL);
       if (!blockImported) {
-        throw new IllegalStateException(
-            "Invalid block at block number " + header.getNumber() + ".");
+        throw new IllegalStateException("Invalid block at block number " +
+                                        header.getNumber() + ".");
       }
     } finally {
       blockBacklog.release();
     }
   }
 
-  private BlockHeader lookupPreviousHeader(
-      final MutableBlockchain blockchain, final BlockHeader header) {
-    return blockchain
-        .getBlockHeader(header.getParentHash())
+  private BlockHeader lookupPreviousHeader(final MutableBlockchain blockchain,
+                                           final BlockHeader header) {
+    return blockchain.getBlockHeader(header.getParentHash())
         .orElseThrow(
-            () ->
-                new IllegalStateException(
-                    String.format(
-                        "Block %s does not connect to the existing chain. Current chain head %s",
-                        header.getNumber(), blockchain.getChainHeadBlockNumber())));
+            ()
+                -> new IllegalStateException(String.format(
+                    "Block %s does not connect to the existing chain. Current chain head %s",
+                    header.getNumber(), blockchain.getChainHeadBlockNumber())));
   }
 
   public static final class ImportResult {
@@ -231,7 +233,10 @@ public class RlpBlockImporter {
 
     @Override
     public String toString() {
-      return MoreObjects.toStringHelper(this).add("td", td).add("count", count).toString();
+      return MoreObjects.toStringHelper(this)
+          .add("td", td)
+          .add("count", count)
+          .toString();
     }
   }
 }

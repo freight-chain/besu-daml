@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -49,7 +52,8 @@ public class ProtocolSpec<C> {
 
   private final BlockHeaderFunctions blockHeaderFunctions;
 
-  private final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private final MainnetBlockProcessor
+      .TransactionReceiptFactory transactionReceiptFactory;
 
   private final DifficultyCalculator<C> difficultyCalculator;
 
@@ -69,7 +73,8 @@ public class ProtocolSpec<C> {
    * Creates a new protocol specification instance.
    *
    * @param name the protocol specification name
-   * @param evm the EVM supporting the appropriate operations for this specification
+   * @param evm the EVM supporting the appropriate operations for this
+   *     specification
    * @param transactionValidator the transaction validator to use
    * @param transactionProcessor the transaction processor to use
    * @param privateTransactionProcessor the private transaction processor to use
@@ -83,32 +88,30 @@ public class ProtocolSpec<C> {
    * @param transactionReceiptFactory the transactionReceiptFactory to use
    * @param difficultyCalculator the difficultyCalculator to use
    * @param blockReward the blockReward to use.
-   * @param miningBeneficiaryCalculator determines to whom mining proceeds are paid
+   * @param miningBeneficiaryCalculator determines to whom mining proceeds are
+   *     paid
    * @param precompileContractRegistry all the pre-compiled contracts added
    * @param skipZeroBlockRewards should rewards be skipped if it is zero
    * @param gasCalculator the gas calculator to use.
    * @param transactionPriceCalculator the transaction price calculator to use.
    */
   public ProtocolSpec(
-      final String name,
-      final EVM evm,
+      final String name, final EVM evm,
       final TransactionValidator transactionValidator,
       final TransactionProcessor transactionProcessor,
       final PrivateTransactionProcessor privateTransactionProcessor,
       final BlockHeaderValidator<C> blockHeaderValidator,
       final BlockHeaderValidator<C> ommerHeaderValidator,
       final BlockBodyValidator<C> blockBodyValidator,
-      final BlockProcessor blockProcessor,
-      final BlockImporter<C> blockImporter,
+      final BlockProcessor blockProcessor, final BlockImporter<C> blockImporter,
       final BlockValidator<C> blockValidator,
       final BlockHeaderFunctions blockHeaderFunctions,
-      final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
-      final DifficultyCalculator<C> difficultyCalculator,
-      final Wei blockReward,
+      final MainnetBlockProcessor
+          .TransactionReceiptFactory transactionReceiptFactory,
+      final DifficultyCalculator<C> difficultyCalculator, final Wei blockReward,
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
       final PrecompileContractRegistry precompileContractRegistry,
-      final boolean skipZeroBlockRewards,
-      final GasCalculator gasCalculator,
+      final boolean skipZeroBlockRewards, final GasCalculator gasCalculator,
       final TransactionPriceCalculator transactionPriceCalculator) {
     this.name = name;
     this.evm = evm;
@@ -137,9 +140,7 @@ public class ProtocolSpec<C> {
    *
    * @return the protocol specification name
    */
-  public String getName() {
-    return name;
-  }
+  public String getName() { return name; }
 
   /**
    * Returns the transaction validator used in this specification.
@@ -164,27 +165,21 @@ public class ProtocolSpec<C> {
    *
    * @return the block processor
    */
-  public BlockProcessor getBlockProcessor() {
-    return blockProcessor;
-  }
+  public BlockProcessor getBlockProcessor() { return blockProcessor; }
 
   /**
    * Returns the block importer used in this specification.
    *
    * @return the block importer
    */
-  public BlockImporter<C> getBlockImporter() {
-    return blockImporter;
-  }
+  public BlockImporter<C> getBlockImporter() { return blockImporter; }
 
   /**
    * Returns the block validator used in this specification.
    *
    * @return the block validator
    */
-  public BlockValidator<C> getBlockValidator() {
-    return blockValidator;
-  }
+  public BlockValidator<C> getBlockValidator() { return blockValidator; }
 
   /**
    * Returns the block header validator used in this specification.
@@ -227,16 +222,15 @@ public class ProtocolSpec<C> {
    *
    * @return the EVM
    */
-  public EVM getEvm() {
-    return evm;
-  }
+  public EVM getEvm() { return evm; }
 
   /**
    * Returns the TransctionReceiptFactory used in this specification
    *
    * @return the transaction receipt factory
    */
-  public MainnetBlockProcessor.TransactionReceiptFactory getTransactionReceiptFactory() {
+  public MainnetBlockProcessor.TransactionReceiptFactory
+  getTransactionReceiptFactory() {
     return transactionReceiptFactory;
   }
 
@@ -254,20 +248,17 @@ public class ProtocolSpec<C> {
    *
    * @return the amount to be rewarded for block mining.
    */
-  public Wei getBlockReward() {
-    return blockReward;
-  }
+  public Wei getBlockReward() { return blockReward; }
 
   /**
-   * Sometimes we apply zero block rewards to the Trie (pre EIP158) sometimes we don't (post EIP158
-   * and all clique nets). The initial behavior was to never apply zero rewards. If a zero reward is
-   * applied it could affect the state tree with a "empty" account.
+   * Sometimes we apply zero block rewards to the Trie (pre EIP158) sometimes we
+   * don't (post EIP158 and all clique nets). The initial behavior was to never
+   * apply zero rewards. If a zero reward is applied it could affect the state
+   * tree with a "empty" account.
    *
    * @return If we skip block rewards when the reward is zero.
    */
-  public boolean isSkipZeroBlockRewards() {
-    return skipZeroBlockRewards;
-  }
+  public boolean isSkipZeroBlockRewards() { return skipZeroBlockRewards; }
 
   public MiningBeneficiaryCalculator getMiningBeneficiaryCalculator() {
     return miningBeneficiaryCalculator;
@@ -286,9 +277,7 @@ public class ProtocolSpec<C> {
    *
    * @return the gas calculator
    */
-  public GasCalculator getGasCalculator() {
-    return gasCalculator;
-  }
+  public GasCalculator getGasCalculator() { return gasCalculator; }
 
   /**
    * Returns the transaction price calculator used in this specification.

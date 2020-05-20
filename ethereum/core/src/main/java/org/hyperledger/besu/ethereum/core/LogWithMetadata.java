@@ -2,31 +2,32 @@
  *
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  */
 package org.hyperledger.besu.ethereum.core;
 
-import org.hyperledger.besu.ethereum.privacy.PrivateTransactionReceipt;
-
+import com.google.common.base.MoreObjects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.google.common.base.MoreObjects;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.privacy.PrivateTransactionReceipt;
 
-public class LogWithMetadata extends Log
-    implements org.hyperledger.besu.plugin.data.LogWithMetadata {
+public class LogWithMetadata
+    extends Log implements org.hyperledger.besu.plugin.data.LogWithMetadata {
 
   private final int logIndex;
   private final long blockNumber;
@@ -35,16 +36,11 @@ public class LogWithMetadata extends Log
   private final int transactionIndex;
   private final boolean removed;
 
-  public LogWithMetadata(
-      final int logIndex,
-      final long blockNumber,
-      final Hash blockHash,
-      final Hash transactionHash,
-      final int transactionIndex,
-      final Address address,
-      final Bytes data,
-      final List<LogTopic> topics,
-      final boolean removed) {
+  public LogWithMetadata(final int logIndex, final long blockNumber,
+                         final Hash blockHash, final Hash transactionHash,
+                         final int transactionIndex, final Address address,
+                         final Bytes data, final List<LogTopic> topics,
+                         final boolean removed) {
     super(address, data, topics);
     this.logIndex = logIndex;
     this.blockNumber = blockNumber;
@@ -54,72 +50,53 @@ public class LogWithMetadata extends Log
     this.removed = removed;
   }
 
-  public static List<LogWithMetadata> generate(
-      final TransactionReceipt receipt,
-      final long number,
-      final Hash blockHash,
-      final Hash transactionHash,
-      final int transactionIndex,
-      final boolean removed) {
-    return generate(
-        receipt.getLogs(), number, blockHash, transactionHash, transactionIndex, removed);
+  public static List<LogWithMetadata>
+  generate(final TransactionReceipt receipt, final long number,
+           final Hash blockHash, final Hash transactionHash,
+           final int transactionIndex, final boolean removed) {
+    return generate(receipt.getLogs(), number, blockHash, transactionHash,
+                    transactionIndex, removed);
   }
 
-  public static List<LogWithMetadata> generate(
-      final Block block, final List<TransactionReceipt> receipts, final boolean removed) {
+  public static List<LogWithMetadata>
+  generate(final Block block, final List<TransactionReceipt> receipts,
+           final boolean removed) {
     final List<LogWithMetadata> logsWithMetadata = new ArrayList<>();
     for (int txi = 0; txi < receipts.size(); ++txi) {
-      logsWithMetadata.addAll(
-          generate(
-              receipts.get(txi),
-              block.getHeader().getNumber(),
-              block.getHash(),
-              block.getBody().getTransactions().get(txi).getHash(),
-              txi,
-              removed));
+      logsWithMetadata.addAll(generate(
+          receipts.get(txi), block.getHeader().getNumber(), block.getHash(),
+          block.getBody().getTransactions().get(txi).getHash(), txi, removed));
     }
     return logsWithMetadata;
   }
 
-  public static List<LogWithMetadata> generate(
-      final PrivateTransactionReceipt receipt,
-      final long number,
-      final Hash blockHash,
-      final Hash transactionHash,
-      final int transactionIndex,
-      final boolean removed) {
-    return generate(
-        receipt.getLogs(), number, blockHash, transactionHash, transactionIndex, removed);
+  public static List<LogWithMetadata>
+  generate(final PrivateTransactionReceipt receipt, final long number,
+           final Hash blockHash, final Hash transactionHash,
+           final int transactionIndex, final boolean removed) {
+    return generate(receipt.getLogs(), number, blockHash, transactionHash,
+                    transactionIndex, removed);
   }
 
-  private static List<LogWithMetadata> generate(
-      final List<Log> receiptLogs,
-      final long number,
-      final Hash blockHash,
-      final Hash transactionHash,
-      final int transactionIndex,
-      final boolean removed) {
+  private static List<LogWithMetadata>
+  generate(final List<Log> receiptLogs, final long number, final Hash blockHash,
+           final Hash transactionHash, final int transactionIndex,
+           final boolean removed) {
 
     final List<LogWithMetadata> logs = new ArrayList<>();
     for (int logIndex = 0; logIndex < receiptLogs.size(); ++logIndex) {
-      logs.add(
-          new LogWithMetadata(
-              logIndex,
-              number,
-              blockHash,
-              transactionHash,
-              transactionIndex,
-              receiptLogs.get(logIndex).getLogger(),
-              receiptLogs.get(logIndex).getData(),
-              receiptLogs.get(logIndex).getTopics(),
-              removed));
+      logs.add(new LogWithMetadata(
+          logIndex, number, blockHash, transactionHash, transactionIndex,
+          receiptLogs.get(logIndex).getLogger(),
+          receiptLogs.get(logIndex).getData(),
+          receiptLogs.get(logIndex).getTopics(), removed));
     }
 
     return logs;
   }
 
-  // The index of this log within the entire ordered list of logs associated with the block this log
-  // belongs to.
+  // The index of this log within the entire ordered list of logs associated
+  // with the block this log belongs to.
   @Override
   public int getLogIndex() {
     return logIndex;
@@ -168,14 +145,15 @@ public class LogWithMetadata extends Log
   public static LogWithMetadata fromPlugin(
       final org.hyperledger.besu.plugin.data.LogWithMetadata pluginObject) {
     return new LogWithMetadata(
-        pluginObject.getLogIndex(),
-        pluginObject.getBlockNumber(),
+        pluginObject.getLogIndex(), pluginObject.getBlockNumber(),
         Hash.fromPlugin(pluginObject.getBlockHash()),
         Hash.fromPlugin(pluginObject.getTransactionHash()),
         pluginObject.getTransactionIndex(),
-        Address.fromPlugin(pluginObject.getLogger()),
-        pluginObject.getData(),
-        pluginObject.getTopics().stream().map(LogTopic::create).collect(Collectors.toList()),
+        Address.fromPlugin(pluginObject.getLogger()), pluginObject.getData(),
+        pluginObject.getTopics()
+            .stream()
+            .map(LogTopic::create)
+            .collect(Collectors.toList()),
         pluginObject.isRemoved());
   }
 }

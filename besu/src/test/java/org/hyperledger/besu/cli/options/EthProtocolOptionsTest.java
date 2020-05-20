@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,11 +22,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
 import org.hyperledger.besu.util.number.PositiveNumber;
-
 import org.junit.Test;
 
 public class EthProtocolOptionsTest
-    extends AbstractCLIOptionsTest<EthProtocolConfiguration, EthProtocolOptions> {
+    extends AbstractCLIOptionsTest<EthProtocolConfiguration,
+                                   EthProtocolOptions> {
 
   @Test
   public void parsesValidEwpMaxGetHeadersOptions() {
@@ -122,28 +125,29 @@ public class EthProtocolOptionsTest
   @Override
   EthProtocolConfiguration createCustomizedDomainObject() {
     return EthProtocolConfiguration.builder()
-        .maxGetBlockHeaders(
-            PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_HEADERS + 2))
-        .maxGetBlockBodies(
-            PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_BODIES + 2))
-        .maxGetReceipts(
-            PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_RECEIPTS + 2))
-        .maxGetNodeData(
-            PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_NODE_DATA + 2))
-        .maxGetPooledTransactions(
-            PositiveNumber.fromInt(
-                EthProtocolConfiguration.DEFAULT_MAX_GET_POOLED_TRANSACTIONS + 2))
+        .maxGetBlockHeaders(PositiveNumber.fromInt(
+            EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_HEADERS + 2))
+        .maxGetBlockBodies(PositiveNumber.fromInt(
+            EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_BODIES + 2))
+        .maxGetReceipts(PositiveNumber.fromInt(
+            EthProtocolConfiguration.DEFAULT_MAX_GET_RECEIPTS + 2))
+        .maxGetNodeData(PositiveNumber.fromInt(
+            EthProtocolConfiguration.DEFAULT_MAX_GET_NODE_DATA + 2))
+        .maxGetPooledTransactions(PositiveNumber.fromInt(
+            EthProtocolConfiguration.DEFAULT_MAX_GET_POOLED_TRANSACTIONS + 2))
         .eth65Enabled(!EthProtocolConfiguration.DEFAULT_ETH_65_ENABLED)
         .build();
   }
 
   @Override
-  EthProtocolOptions optionsFromDomainObject(final EthProtocolConfiguration domainObject) {
+  EthProtocolOptions
+  optionsFromDomainObject(final EthProtocolConfiguration domainObject) {
     return EthProtocolOptions.fromConfig(domainObject);
   }
 
   @Override
-  EthProtocolOptions getOptionsFromBesuCommand(final TestBesuCommand besuCommand) {
+  EthProtocolOptions
+  getOptionsFromBesuCommand(final TestBesuCommand besuCommand) {
     return besuCommand.getEthProtocolOptions();
   }
 }

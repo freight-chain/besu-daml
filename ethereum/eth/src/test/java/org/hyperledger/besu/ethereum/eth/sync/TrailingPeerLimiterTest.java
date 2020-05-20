@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +25,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockBody;
@@ -32,11 +38,6 @@ import org.hyperledger.besu.ethereum.eth.manager.ChainState;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,9 +51,10 @@ public class TrailingPeerLimiterTest {
   private final TrailingPeerLimiter trailingPeerLimiter =
       new TrailingPeerLimiter(
           ethPeers,
-          () ->
-              new TrailingPeerRequirements(
-                  CHAIN_HEAD - TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD, MAX_TRAILING_PEERS));
+          ()
+              -> new TrailingPeerRequirements(
+                  CHAIN_HEAD - TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD,
+                  MAX_TRAILING_PEERS));
 
   @Before
   public void setUp() {
@@ -60,7 +62,8 @@ public class TrailingPeerLimiterTest {
   }
 
   @Test
-  public void shouldDisconnectFurthestBehindPeerWhenTrailingPeerLimitExceeded() {
+  public void
+  shouldDisconnectFurthestBehindPeerWhenTrailingPeerLimitExceeded() {
     final EthPeer ethPeer1 = addPeerWithEstimatedHeight(1);
     addPeerWithEstimatedHeight(3);
     addPeerWithEstimatedHeight(2);
@@ -97,8 +100,10 @@ public class TrailingPeerLimiterTest {
     addPeerWithEstimatedHeight(CHAIN_HEAD);
     addPeerWithEstimatedHeight(CHAIN_HEAD);
     addPeerWithEstimatedHeight(CHAIN_HEAD);
-    addPeerWithEstimatedHeight(CHAIN_HEAD - TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD);
-    addPeerWithEstimatedHeight(CHAIN_HEAD - TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD);
+    addPeerWithEstimatedHeight(CHAIN_HEAD -
+                               TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD);
+    addPeerWithEstimatedHeight(CHAIN_HEAD -
+                               TRAILING_PEER_BLOCKS_BEHIND_THRESHOLD);
 
     trailingPeerLimiter.enforceTrailingPeerLimit();
 
@@ -113,11 +118,9 @@ public class TrailingPeerLimiterTest {
 
     final BlockAddedEvent blockAddedEvent =
         BlockAddedEvent.createForHeadAdvancement(
-            new Block(
-                new BlockHeaderTestFixture().number(500).buildHeader(),
-                new BlockBody(emptyList(), emptyList())),
-            Collections.emptyList(),
-            Collections.emptyList());
+            new Block(new BlockHeaderTestFixture().number(500).buildHeader(),
+                      new BlockBody(emptyList(), emptyList())),
+            Collections.emptyList(), Collections.emptyList());
     trailingPeerLimiter.onBlockAdded(blockAddedEvent);
 
     assertDisconnections(ethPeer1);
@@ -131,11 +134,9 @@ public class TrailingPeerLimiterTest {
 
     final BlockAddedEvent blockAddedEvent =
         BlockAddedEvent.createForHeadAdvancement(
-            new Block(
-                new BlockHeaderTestFixture().number(599).buildHeader(),
-                new BlockBody(emptyList(), emptyList())),
-            Collections.emptyList(),
-            Collections.emptyList());
+            new Block(new BlockHeaderTestFixture().number(599).buildHeader(),
+                      new BlockBody(emptyList(), emptyList())),
+            Collections.emptyList(), Collections.emptyList());
     trailingPeerLimiter.onBlockAdded(blockAddedEvent);
 
     assertDisconnections();

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,16 +19,6 @@
 package org.hyperledger.besu.enclave;
 
 import static org.hyperledger.besu.enclave.TlsHelpers.populateFingerprintFile;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import com.google.common.collect.Lists;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -38,6 +31,15 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.PfxOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.apache.tuweni.net.tls.VertxTrustOptions;
 
 class TlsEnabledHttpServerFactory {
@@ -45,24 +47,22 @@ class TlsEnabledHttpServerFactory {
   private final Vertx vertx;
   private final List<HttpServer> serversCreated = Lists.newArrayList();
 
-  TlsEnabledHttpServerFactory() {
-    this.vertx = Vertx.vertx();
-  }
+  TlsEnabledHttpServerFactory() { this.vertx = Vertx.vertx(); }
 
   void shutdown() {
     serversCreated.forEach(HttpServer::close);
     vertx.close();
   }
 
-  HttpServer create(
-      final TlsCertificateDefinition serverCert,
-      final TlsCertificateDefinition acceptedClientCerts,
-      final Path workDir,
-      final boolean tlsEnabled) {
+  HttpServer create(final TlsCertificateDefinition serverCert,
+                    final TlsCertificateDefinition acceptedClientCerts,
+                    final Path workDir, final boolean tlsEnabled) {
     try {
 
-      final Path serverFingerprintFile = workDir.resolve("server_known_clients");
-      populateFingerprintFile(serverFingerprintFile, acceptedClientCerts, Optional.empty());
+      final Path serverFingerprintFile =
+          workDir.resolve("server_known_clients");
+      populateFingerprintFile(serverFingerprintFile, acceptedClientCerts,
+                              Optional.empty());
 
       final HttpServerOptions web3HttpServerOptions = new HttpServerOptions();
       web3HttpServerOptions.setPort(0);
@@ -77,26 +77,25 @@ class TlsEnabledHttpServerFactory {
                 .setPassword(serverCert.getPassword()));
       }
       final Router router = Router.router(vertx);
-      router
-          .route(HttpMethod.GET, "/upcheck")
+      router.route(HttpMethod.GET, "/upcheck")
           .produces(HttpHeaderValues.APPLICATION_JSON.toString())
           .handler(TlsEnabledHttpServerFactory::handleRequest);
 
-      final HttpServer mockOrionHttpServer = vertx.createHttpServer(web3HttpServerOptions);
+      final HttpServer mockOrionHttpServer =
+          vertx.createHttpServer(web3HttpServerOptions);
 
-      final CompletableFuture<Boolean> serverConfigured = new CompletableFuture<>();
-      mockOrionHttpServer.requestHandler(router).listen(result -> serverConfigured.complete(true));
+      final CompletableFuture<Boolean> serverConfigured =
+          new CompletableFuture<>();
+      mockOrionHttpServer.requestHandler(router).listen(
+          result -> serverConfigured.complete(true));
 
       serverConfigured.get();
 
       serversCreated.add(mockOrionHttpServer);
       return mockOrionHttpServer;
-    } catch (final KeyStoreException
-        | NoSuchAlgorithmException
-        | CertificateException
-        | IOException
-        | ExecutionException
-        | InterruptedException e) {
+    } catch (final KeyStoreException | NoSuchAlgorithmException |
+             CertificateException | IOException | ExecutionException |
+             InterruptedException e) {
       throw new RuntimeException("Failed to construct a TLS Enabled Server", e);
     }
   }

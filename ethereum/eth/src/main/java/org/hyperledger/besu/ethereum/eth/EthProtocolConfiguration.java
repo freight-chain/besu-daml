@@ -1,24 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth;
 
-import org.hyperledger.besu.util.number.PositiveNumber;
-
-import java.util.Objects;
-
 import com.google.common.base.MoreObjects;
+import java.util.Objects;
+import org.hyperledger.besu.util.number.PositiveNumber;
 
 public class EthProtocolConfiguration {
 
@@ -36,13 +37,12 @@ public class EthProtocolConfiguration {
   private final int maxGetPooledTransactions;
   private final boolean eth65Enabled;
 
-  public EthProtocolConfiguration(
-      final int maxGetBlockHeaders,
-      final int maxGetBlockBodies,
-      final int maxGetReceipts,
-      final int maxGetNodeData,
-      final int maxGetPooledTransactions,
-      final boolean eth65Enabled) {
+  public EthProtocolConfiguration(final int maxGetBlockHeaders,
+                                  final int maxGetBlockBodies,
+                                  final int maxGetReceipts,
+                                  final int maxGetNodeData,
+                                  final int maxGetPooledTransactions,
+                                  final boolean eth65Enabled) {
     this.maxGetBlockHeaders = maxGetBlockHeaders;
     this.maxGetBlockBodies = maxGetBlockBodies;
     this.maxGetReceipts = maxGetReceipts;
@@ -53,41 +53,24 @@ public class EthProtocolConfiguration {
 
   public static EthProtocolConfiguration defaultConfig() {
     return new EthProtocolConfiguration(
-        DEFAULT_MAX_GET_BLOCK_HEADERS,
-        DEFAULT_MAX_GET_BLOCK_BODIES,
-        DEFAULT_MAX_GET_RECEIPTS,
-        DEFAULT_MAX_GET_NODE_DATA,
-        DEFAULT_MAX_GET_POOLED_TRANSACTIONS,
-        DEFAULT_ETH_65_ENABLED);
+        DEFAULT_MAX_GET_BLOCK_HEADERS, DEFAULT_MAX_GET_BLOCK_BODIES,
+        DEFAULT_MAX_GET_RECEIPTS, DEFAULT_MAX_GET_NODE_DATA,
+        DEFAULT_MAX_GET_POOLED_TRANSACTIONS, DEFAULT_ETH_65_ENABLED);
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
-  public int getMaxGetBlockHeaders() {
-    return maxGetBlockHeaders;
-  }
+  public int getMaxGetBlockHeaders() { return maxGetBlockHeaders; }
 
-  public int getMaxGetBlockBodies() {
-    return maxGetBlockBodies;
-  }
+  public int getMaxGetBlockBodies() { return maxGetBlockBodies; }
 
-  public int getMaxGetReceipts() {
-    return maxGetReceipts;
-  }
+  public int getMaxGetReceipts() { return maxGetReceipts; }
 
-  public int getMaxGetNodeData() {
-    return maxGetNodeData;
-  }
+  public int getMaxGetNodeData() { return maxGetNodeData; }
 
-  public int getMaxGetPooledTransactions() {
-    return maxGetPooledTransactions;
-  }
+  public int getMaxGetPooledTransactions() { return maxGetPooledTransactions; }
 
-  public boolean isEth65Enabled() {
-    return eth65Enabled;
-  }
+  public boolean isEth65Enabled() { return eth65Enabled; }
 
   @Override
   public boolean equals(final Object o) {
@@ -97,17 +80,18 @@ public class EthProtocolConfiguration {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final EthProtocolConfiguration that = (EthProtocolConfiguration) o;
-    return maxGetBlockHeaders == that.maxGetBlockHeaders
-        && maxGetBlockBodies == that.maxGetBlockBodies
-        && maxGetReceipts == that.maxGetReceipts
-        && maxGetNodeData == that.maxGetNodeData
-        && maxGetPooledTransactions == that.maxGetPooledTransactions;
+    final EthProtocolConfiguration that = (EthProtocolConfiguration)o;
+    return maxGetBlockHeaders == that.maxGetBlockHeaders &&
+        maxGetBlockBodies == that.maxGetBlockBodies &&
+        maxGetReceipts == that.maxGetReceipts &&
+        maxGetNodeData == that.maxGetNodeData &&
+        maxGetPooledTransactions == that.maxGetPooledTransactions;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(maxGetBlockHeaders, maxGetBlockBodies, maxGetReceipts, maxGetNodeData);
+    return Objects.hash(maxGetBlockHeaders, maxGetBlockBodies, maxGetReceipts,
+                        maxGetNodeData);
   }
 
   @Override
@@ -122,22 +106,23 @@ public class EthProtocolConfiguration {
   }
 
   public static class Builder {
-    private PositiveNumber maxGetBlockHeaders =
-        PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_HEADERS);
+    private PositiveNumber maxGetBlockHeaders = PositiveNumber.fromInt(
+        EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_HEADERS);
 
-    private PositiveNumber maxGetBlockBodies =
-        PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_BODIES);
+    private PositiveNumber maxGetBlockBodies = PositiveNumber.fromInt(
+        EthProtocolConfiguration.DEFAULT_MAX_GET_BLOCK_BODIES);
 
-    private PositiveNumber maxGetReceipts =
-        PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_RECEIPTS);
+    private PositiveNumber maxGetReceipts = PositiveNumber.fromInt(
+        EthProtocolConfiguration.DEFAULT_MAX_GET_RECEIPTS);
 
-    private PositiveNumber maxGetNodeData =
-        PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_NODE_DATA);
+    private PositiveNumber maxGetNodeData = PositiveNumber.fromInt(
+        EthProtocolConfiguration.DEFAULT_MAX_GET_NODE_DATA);
 
-    private PositiveNumber maxGetPooledTransactions =
-        PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_POOLED_TRANSACTIONS);
+    private PositiveNumber maxGetPooledTransactions = PositiveNumber.fromInt(
+        EthProtocolConfiguration.DEFAULT_MAX_GET_POOLED_TRANSACTIONS);
 
-    private boolean eth65Enabled = EthProtocolConfiguration.DEFAULT_ETH_65_ENABLED;
+    private boolean eth65Enabled =
+        EthProtocolConfiguration.DEFAULT_ETH_65_ENABLED;
 
     public Builder maxGetBlockHeaders(final PositiveNumber maxGetBlockHeaders) {
       this.maxGetBlockHeaders = maxGetBlockHeaders;
@@ -159,7 +144,8 @@ public class EthProtocolConfiguration {
       return this;
     }
 
-    public Builder maxGetPooledTransactions(final PositiveNumber maxGetPooledTransactions) {
+    public Builder
+    maxGetPooledTransactions(final PositiveNumber maxGetPooledTransactions) {
       this.maxGetPooledTransactions = maxGetPooledTransactions;
       return this;
     }
@@ -171,12 +157,9 @@ public class EthProtocolConfiguration {
 
     public EthProtocolConfiguration build() {
       return new EthProtocolConfiguration(
-          maxGetBlockHeaders.getValue(),
-          maxGetBlockBodies.getValue(),
-          maxGetReceipts.getValue(),
-          maxGetNodeData.getValue(),
-          maxGetPooledTransactions.getValue(),
-          eth65Enabled);
+          maxGetBlockHeaders.getValue(), maxGetBlockBodies.getValue(),
+          maxGetReceipts.getValue(), maxGetNodeData.getValue(),
+          maxGetPooledTransactions.getValue(), eth65Enabled);
     }
   }
 }

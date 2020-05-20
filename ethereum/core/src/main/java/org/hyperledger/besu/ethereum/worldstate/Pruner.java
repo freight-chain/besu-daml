@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,21 +19,19 @@ package org.hyperledger.besu.ethereum.worldstate;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
-import org.hyperledger.besu.ethereum.chain.Blockchain;
-import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.core.Hash;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
+import org.hyperledger.besu.ethereum.chain.Blockchain;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.Hash;
 
 public class Pruner {
 
@@ -46,16 +47,15 @@ public class Pruner {
   private volatile BlockHeader markedBlockHeader;
   private final long blockConfirmations;
 
-  private final AtomicReference<State> state = new AtomicReference<>(State.IDLE);
+  private final AtomicReference<State> state =
+      new AtomicReference<>(State.IDLE);
   private final Supplier<ExecutorService> executorServiceSupplier;
   private ExecutorService executorService;
 
   @VisibleForTesting
-  Pruner(
-      final MarkSweepPruner pruningStrategy,
-      final Blockchain blockchain,
-      final PrunerConfiguration prunerConfiguration,
-      final Supplier<ExecutorService> executorServiceSupplier) {
+  Pruner(final MarkSweepPruner pruningStrategy, final Blockchain blockchain,
+         final PrunerConfiguration prunerConfiguration,
+         final Supplier<ExecutorService> executorServiceSupplier) {
     this.pruningStrategy = pruningStrategy;
     this.blockchain = blockchain;
     this.executorServiceSupplier = executorServiceSupplier;
@@ -66,21 +66,21 @@ public class Pruner {
         "blockConfirmations and blocksRetained must be non-negative. blockConfirmations must be less than blockRetained.");
   }
 
-  public Pruner(
-      final MarkSweepPruner pruningStrategy,
-      final Blockchain blockchain,
-      final PrunerConfiguration prunerConfiguration) {
-    this(pruningStrategy, blockchain, prunerConfiguration, getDefaultExecutorSupplier());
+  public Pruner(final MarkSweepPruner pruningStrategy,
+                final Blockchain blockchain,
+                final PrunerConfiguration prunerConfiguration) {
+    this(pruningStrategy, blockchain, prunerConfiguration,
+         getDefaultExecutorSupplier());
   }
 
   private static Supplier<ExecutorService> getDefaultExecutorSupplier() {
-    return () ->
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setPriority(Thread.MIN_PRIORITY)
-                .setNameFormat("StatePruning-%d")
-                .build());
+    return ()
+               -> Executors.newSingleThreadExecutor(
+                   new ThreadFactoryBuilder()
+                       .setDaemon(true)
+                       .setPriority(Thread.MIN_PRIORITY)
+                       .setNameFormat("StatePruning-%d")
+                       .build());
   }
 
   public void start() {
@@ -115,16 +115,20 @@ public class Pruner {
 
     final long blockNumber = event.getBlock().getHeader().getNumber();
     if (pruningPhase.compareAndSet(
-        PruningPhase.IDLE, PruningPhase.MARK_BLOCK_CONFIRMATIONS_AWAITING)) {
+            PruningPhase.IDLE,
+            PruningPhase.MARK_BLOCK_CONFIRMATIONS_AWAITING)) {
       markBlockNumber = blockNumber;
-    } else if (blockNumber >= markBlockNumber + blockConfirmations
-        && pruningPhase.compareAndSet(
-            PruningPhase.MARK_BLOCK_CONFIRMATIONS_AWAITING, PruningPhase.MARKING)) {
+    } else if (blockNumber >= markBlockNumber + blockConfirmations &&
+               pruningPhase.compareAndSet(
+                   PruningPhase.MARK_BLOCK_CONFIRMATIONS_AWAITING,
+                   PruningPhase.MARKING)) {
       markedBlockHeader = blockchain.getBlockHeader(markBlockNumber).get();
       mark(markedBlockHeader);
-    } else if (blockNumber >= markBlockNumber + blocksRetained
-        && blockchain.blockIsOnCanonicalChain(markedBlockHeader.getHash())
-        && pruningPhase.compareAndSet(PruningPhase.MARKING_COMPLETE, PruningPhase.SWEEPING)) {
+    } else if (blockNumber >= markBlockNumber + blocksRetained &&
+               blockchain.blockIsOnCanonicalChain(
+                   markedBlockHeader.getHash()) &&
+               pruningPhase.compareAndSet(PruningPhase.MARKING_COMPLETE,
+                                          PruningPhase.SWEEPING)) {
       sweep();
     }
   }
@@ -133,25 +137,22 @@ public class Pruner {
     final Hash stateRoot = header.getStateRoot();
     LOG.debug(
         "Begin marking used nodes for pruning. Block number: {} State root: {}",
-        markBlockNumber,
-        stateRoot);
-    execute(
-        () -> {
-          pruningStrategy.mark(stateRoot);
-          pruningPhase.compareAndSet(PruningPhase.MARKING, PruningPhase.MARKING_COMPLETE);
-        });
+        markBlockNumber, stateRoot);
+    execute(() -> {
+      pruningStrategy.mark(stateRoot);
+      pruningPhase.compareAndSet(PruningPhase.MARKING,
+                                 PruningPhase.MARKING_COMPLETE);
+    });
   }
 
   private void sweep() {
     LOG.debug(
         "Begin sweeping unused nodes for pruning. Keeping full state for blocks {} to {}",
-        markBlockNumber,
-        markBlockNumber + blocksRetained);
-    execute(
-        () -> {
-          pruningStrategy.sweepBefore(markBlockNumber);
-          pruningPhase.compareAndSet(PruningPhase.SWEEPING, PruningPhase.IDLE);
-        });
+        markBlockNumber, markBlockNumber + blocksRetained);
+    execute(() -> {
+      pruningStrategy.sweepBefore(markBlockNumber);
+      pruningPhase.compareAndSet(PruningPhase.SWEEPING, PruningPhase.IDLE);
+    });
   }
 
   private void execute(final Runnable action) {
@@ -177,9 +178,5 @@ public class Pruner {
     SWEEPING;
   }
 
-  private enum State {
-    IDLE,
-    RUNNING,
-    STOPPED
-  }
+  private enum State { IDLE, RUNNING, STOPPED }
 }

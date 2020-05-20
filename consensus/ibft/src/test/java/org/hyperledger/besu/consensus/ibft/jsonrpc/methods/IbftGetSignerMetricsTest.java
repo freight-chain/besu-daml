@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.LongStream;
 import org.hyperledger.besu.consensus.common.BlockInterface;
 import org.hyperledger.besu.consensus.common.VoteTally;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
@@ -33,14 +42,6 @@ import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.LongStream;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -49,7 +50,9 @@ import org.junit.rules.ExpectedException;
 public class IbftGetSignerMetricsTest {
 
   private static final Address[] VALIDATORS = {
-    Address.fromHexString("0x1"), Address.fromHexString("0x2"), Address.fromHexString("0x3"),
+      Address.fromHexString("0x1"),
+      Address.fromHexString("0x2"),
+      Address.fromHexString("0x3"),
   };
 
   private final String IBFT_METHOD = "ibft_getSignerMetrics";
@@ -67,7 +70,8 @@ public class IbftGetSignerMetricsTest {
     voteTallyCache = mock(VoteTallyCache.class);
     blockchainQueries = mock(BlockchainQueries.class);
     blockInterface = mock(BlockInterface.class);
-    method = new IbftGetSignerMetrics(voteTallyCache, blockInterface, blockchainQueries);
+    method = new IbftGetSignerMetrics(voteTallyCache, blockInterface,
+                                      blockchainQueries);
   }
 
   @Test
@@ -109,13 +113,15 @@ public class IbftGetSignerMetricsTest {
     LongStream.range(startBlock, endBlock)
         .forEach(value -> signerMetricResultList.add(generateBlock(value)));
 
-    signerMetricResultList.add(new SignerMetricResult(VALIDATORS[0])); // missing validator
+    signerMetricResultList.add(
+        new SignerMetricResult(VALIDATORS[0])); // missing validator
 
     final JsonRpcRequestContext request = requestWithParams();
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
@@ -131,13 +137,16 @@ public class IbftGetSignerMetricsTest {
     final List<SignerMetricResult> signerMetricResultList = new ArrayList<>();
 
     // sign a first block with nodekey number 1
-    final SignerMetricResult signerMetricResultFirstNodeKeys = generateBlock(startBlock);
+    final SignerMetricResult signerMetricResultFirstNodeKeys =
+        generateBlock(startBlock);
     signerMetricResultList.add(signerMetricResultFirstNodeKeys);
     // sign a second block with nodekey number 2
-    final SignerMetricResult signerMetricResultSecondNodeKeys = generateBlock(startBlock + 1);
+    final SignerMetricResult signerMetricResultSecondNodeKeys =
+        generateBlock(startBlock + 1);
     signerMetricResultList.add(signerMetricResultSecondNodeKeys);
     // sign a third block with nodekey number 3
-    final SignerMetricResult signerMetricResultThirdNodeKeys = generateBlock(startBlock + 2);
+    final SignerMetricResult signerMetricResultThirdNodeKeys =
+        generateBlock(startBlock + 2);
     signerMetricResultList.add(signerMetricResultThirdNodeKeys);
     // sign the last block with the nodekey number 1
     generateBlock(startBlock + 3);
@@ -146,9 +155,10 @@ public class IbftGetSignerMetricsTest {
 
     final JsonRpcRequestContext request = requestWithParams();
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
@@ -165,16 +175,18 @@ public class IbftGetSignerMetricsTest {
     LongStream.range(startBlock, headBlock)
         .forEach(value -> signerMetricResultList.add(generateBlock(value)));
 
-    signerMetricResultList.add(new SignerMetricResult(VALIDATORS[2])); // missing validator
+    signerMetricResultList.add(
+        new SignerMetricResult(VALIDATORS[2])); // missing validator
 
     final JsonRpcRequestContext request = requestWithParams();
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
     // verify getBlockHeaderByNumber is not called with negative values
     verify(blockchainQueries, never()).getBlockHeaderByNumber(lt(0L));
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
@@ -192,13 +204,16 @@ public class IbftGetSignerMetricsTest {
     LongStream.range(startBlock, endBlock)
         .forEach(value -> signerMetricResultList.add(generateBlock(value)));
 
-    signerMetricResultList.add(new SignerMetricResult(VALIDATORS[0])); // missing validator
+    signerMetricResultList.add(
+        new SignerMetricResult(VALIDATORS[0])); // missing validator
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(startBlock), "latest");
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(startBlock), "latest");
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
@@ -216,13 +231,16 @@ public class IbftGetSignerMetricsTest {
     LongStream.range(startBlock, endBlock)
         .forEach(value -> signerMetricResultList.add(generateBlock(value)));
 
-    signerMetricResultList.add(new SignerMetricResult(VALIDATORS[0])); // missing validator
+    signerMetricResultList.add(
+        new SignerMetricResult(VALIDATORS[0])); // missing validator
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(startBlock), "pending");
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(startBlock), "pending");
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
@@ -240,29 +258,37 @@ public class IbftGetSignerMetricsTest {
     LongStream.range(startBlock, endBlock)
         .forEach(value -> signerMetricResultList.add(generateBlock(value)));
 
-    final JsonRpcRequestContext request = requestWithParams("earliest", String.valueOf(endBlock));
+    final JsonRpcRequestContext request =
+        requestWithParams("earliest", String.valueOf(endBlock));
 
-    final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
+    final JsonRpcSuccessResponse response =
+        (JsonRpcSuccessResponse)method.response(request);
 
-    assertThat((Collection<SignerMetricResult>) response.getResult())
+    assertThat((Collection<SignerMetricResult>)response.getResult())
         .containsExactlyInAnyOrderElementsOf(signerMetricResultList);
   }
 
   private JsonRpcRequestContext requestWithParams(final Object... params) {
-    return new JsonRpcRequestContext(new JsonRpcRequest(JSON_RPC_VERSION, IBFT_METHOD, params));
+    return new JsonRpcRequestContext(
+        new JsonRpcRequest(JSON_RPC_VERSION, IBFT_METHOD, params));
   }
 
   private SignerMetricResult generateBlock(final long number) {
-    final Address proposerAddressBlock = VALIDATORS[(int) (number % VALIDATORS.length)];
+    final Address proposerAddressBlock =
+        VALIDATORS[(int)(number % VALIDATORS.length)];
 
-    final BlockHeader header = new BlockHeaderTestFixture().number(number).buildHeader();
+    final BlockHeader header =
+        new BlockHeaderTestFixture().number(number).buildHeader();
 
-    when(blockchainQueries.getBlockHeaderByNumber(number)).thenReturn(Optional.of(header));
-    when(blockInterface.getProposerOfBlock(header)).thenReturn(proposerAddressBlock);
+    when(blockchainQueries.getBlockHeaderByNumber(number))
+        .thenReturn(Optional.of(header));
+    when(blockInterface.getProposerOfBlock(header))
+        .thenReturn(proposerAddressBlock);
     when(voteTallyCache.getVoteTallyAfterBlock(header))
         .thenReturn(new VoteTally(Arrays.asList(VALIDATORS)));
 
-    final SignerMetricResult signerMetricResult = new SignerMetricResult(proposerAddressBlock);
+    final SignerMetricResult signerMetricResult =
+        new SignerMetricResult(proposerAddressBlock);
     signerMetricResult.incrementeNbBlock();
     signerMetricResult.setLastProposedBlockNumber(number);
 

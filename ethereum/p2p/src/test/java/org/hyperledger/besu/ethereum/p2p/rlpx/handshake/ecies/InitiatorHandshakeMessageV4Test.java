@@ -1,31 +1,32 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.rlpx.handshake.ecies;
 
-import org.hyperledger.besu.crypto.KeyPairUtil;
-import org.hyperledger.besu.crypto.NodeKeyUtils;
-import org.hyperledger.besu.crypto.SECP256K1;
-
+import com.google.common.io.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-
-import com.google.common.io.Resources;
 import org.apache.tuweni.bytes.Bytes;
 import org.assertj.core.api.Assertions;
+import org.hyperledger.besu.crypto.KeyPairUtil;
+import org.hyperledger.besu.crypto.NodeKeyUtils;
+import org.hyperledger.besu.crypto.SECP256K1;
 import org.junit.Test;
 
 /** Tests for {@link InitiatorHandshakeMessageV4}. */
@@ -37,19 +38,19 @@ public final class InitiatorHandshakeMessageV4Test {
 
   static {
     try {
-      EXAMPLE_KEYPAIR =
-          KeyPairUtil.load(
-              new File(InitiatorHandshakeMessageV4.class.getResource("test.keypair").toURI()));
+      EXAMPLE_KEYPAIR = KeyPairUtil.load(
+          new File(InitiatorHandshakeMessageV4.class.getResource("test.keypair")
+                       .toURI()));
     } catch (final URISyntaxException ex) {
       throw new IllegalStateException(ex);
     }
     try {
-      EXAMPLE_MESSAGE =
-          Bytes.fromHexString(
-              Resources.readLines(
-                      InitiatorHandshakeMessageV4Test.class.getResource("test.initiatormessage"),
-                      StandardCharsets.UTF_8)
-                  .get(0));
+      EXAMPLE_MESSAGE = Bytes.fromHexString(
+          Resources
+              .readLines(InitiatorHandshakeMessageV4Test.class.getResource(
+                             "test.initiatormessage"),
+                         StandardCharsets.UTF_8)
+              .get(0));
     } catch (final IOException ex) {
       throw new IllegalStateException(ex);
     }
@@ -61,6 +62,7 @@ public final class InitiatorHandshakeMessageV4Test {
         InitiatorHandshakeMessageV4.decode(
             EXAMPLE_MESSAGE, NodeKeyUtils.createFrom(EXAMPLE_KEYPAIR));
     final Bytes encoded = initial.encode();
-    Assertions.assertThat(encoded).isEqualTo(EXAMPLE_MESSAGE.slice(0, encoded.size()));
+    Assertions.assertThat(encoded).isEqualTo(
+        EXAMPLE_MESSAGE.slice(0, encoded.size()));
   }
 }

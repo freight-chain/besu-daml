@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,13 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.DefaultBlockchain;
@@ -58,15 +68,6 @@ import org.hyperledger.besu.plugin.data.SyncStatus;
 import org.hyperledger.besu.plugin.data.Transaction;
 import org.hyperledger.besu.services.kvstore.InMemoryKeyValueStorage;
 import org.hyperledger.besu.testutil.TestClock;
-
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -77,8 +78,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class BesuEventsImplTest {
 
   private static final KeyPair KEY_PAIR1 = KeyPair.generate();
-  private static final org.hyperledger.besu.ethereum.core.Transaction TX1 = createTransaction(1);
-  private static final org.hyperledger.besu.ethereum.core.Transaction TX2 = createTransaction(2);
+  private static final org.hyperledger.besu.ethereum.core.Transaction TX1 =
+      createTransaction(1);
+  private static final org.hyperledger.besu.ethereum.core.Transaction TX2 =
+      createTransaction(2);
 
   @Mock private ProtocolSchedule<Void> mockProtocolSchedule;
   @Mock private ProtocolContext<Void> mockProtocolContext;
@@ -99,12 +102,11 @@ public class BesuEventsImplTest {
 
   @Before
   public void setUp() {
-    blockchain =
-        DefaultBlockchain.createMutable(
-            gen.genesisBlock(),
-            new KeyValueStoragePrefixedKeyBlockchainStorage(
-                new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions()),
-            new NoOpMetricsSystem());
+    blockchain = DefaultBlockchain.createMutable(
+        gen.genesisBlock(),
+        new KeyValueStoragePrefixedKeyBlockchainStorage(
+            new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions()),
+        new NoOpMetricsSystem());
 
     when(mockEthContext.getEthMessages()).thenReturn(mockEthMessages);
     when(mockEthContext.getEthPeers()).thenReturn(mockEthPeers);
@@ -115,38 +117,37 @@ public class BesuEventsImplTest {
         .thenReturn(Stream.empty())
         .thenReturn(Stream.empty());
     when(mockProtocolContext.getBlockchain()).thenReturn(blockchain);
-    when(mockProtocolContext.getWorldStateArchive()).thenReturn(mockWorldStateArchive);
-    when(mockProtocolSchedule.getByBlockNumber(anyLong())).thenReturn(mockProtocolSpec);
-    when(mockProtocolSpec.getTransactionValidator()).thenReturn(mockTransactionValidator);
-    when(mockTransactionValidator.validate(any())).thenReturn(ValidationResult.valid());
+    when(mockProtocolContext.getWorldStateArchive())
+        .thenReturn(mockWorldStateArchive);
+    when(mockProtocolSchedule.getByBlockNumber(anyLong()))
+        .thenReturn(mockProtocolSpec);
+    when(mockProtocolSpec.getTransactionValidator())
+        .thenReturn(mockTransactionValidator);
+    when(mockTransactionValidator.validate(any()))
+        .thenReturn(ValidationResult.valid());
     when(mockTransactionValidator.validateForSender(any(), any(), any()))
         .thenReturn(ValidationResult.valid());
-    when(mockWorldStateArchive.get(any())).thenReturn(Optional.of(mockWorldState));
+    when(mockWorldStateArchive.get(any()))
+        .thenReturn(Optional.of(mockWorldState));
 
     blockBroadcaster = new BlockBroadcaster(mockEthContext);
     syncState = new SyncState(blockchain, mockEthPeers);
     TransactionPoolConfiguration txPoolConfig =
         TransactionPoolConfiguration.builder().txPoolMaxSize(1).build();
 
-    transactionPool =
-        TransactionPoolFactory.createTransactionPool(
-            mockProtocolSchedule,
-            mockProtocolContext,
-            mockEthContext,
-            TestClock.fixed(),
-            new NoOpMetricsSystem(),
-            syncState,
-            Wei.ZERO,
-            txPoolConfig,
-            true,
-            Optional.empty());
+    transactionPool = TransactionPoolFactory.createTransactionPool(
+        mockProtocolSchedule, mockProtocolContext, mockEthContext,
+        TestClock.fixed(), new NoOpMetricsSystem(), syncState, Wei.ZERO,
+        txPoolConfig, true, Optional.empty());
 
-    serviceImpl = new BesuEventsImpl(blockchain, blockBroadcaster, transactionPool, syncState);
+    serviceImpl = new BesuEventsImpl(blockchain, blockBroadcaster,
+                                     transactionPool, syncState);
   }
 
   @Test
   public void syncStatusEventFiresAfterSubscribe() {
-    final AtomicReference<Optional<SyncStatus>> result = new AtomicReference<>();
+    final AtomicReference<Optional<SyncStatus>> result =
+        new AtomicReference<>();
     serviceImpl.addSyncStatusListener(result::set);
 
     assertThat(result.get()).isNull();
@@ -162,7 +163,8 @@ public class BesuEventsImplTest {
 
   @Test
   public void syncStatusEventDoesNotFireAfterUnsubscribe() {
-    final AtomicReference<Optional<SyncStatus>> result = new AtomicReference<>();
+    final AtomicReference<Optional<SyncStatus>> result =
+        new AtomicReference<>();
     final long id = serviceImpl.addSyncStatusListener(result::set);
 
     assertThat(result.get()).isNull();
@@ -179,19 +181,18 @@ public class BesuEventsImplTest {
   }
 
   private void setSyncTarget() {
-    syncState.setSyncTarget(
-        mock(EthPeer.class),
-        new org.hyperledger.besu.ethereum.core.BlockHeader(
-            null, null, null, null, null, null, null, null, 1, 1, 1, 1, null, null, null, 1, null));
+    syncState.setSyncTarget(mock(EthPeer.class),
+                            new org.hyperledger.besu.ethereum.core.BlockHeader(
+                                null, null, null, null, null, null, null, null,
+                                1, 1, 1, 1, null, null, null, 1, null));
   }
 
-  private void clearSyncTarget() {
-    syncState.clearSyncTarget();
-  }
+  private void clearSyncTarget() { syncState.clearSyncTarget(); }
 
   @Test
   public void newBlockEventFiresAfterSubscribe() {
-    final AtomicReference<PropagatedBlockContext> result = new AtomicReference<>();
+    final AtomicReference<PropagatedBlockContext> result =
+        new AtomicReference<>();
     serviceImpl.addBlockPropagatedListener(result::set);
     final Block block = generateBlock();
     assertThat(result.get()).isNull();
@@ -199,12 +200,14 @@ public class BesuEventsImplTest {
 
     assertThat(result.get()).isNotNull();
     assertThat(result.get().getBlockHeader()).isEqualTo(block.getHeader());
-    assertThat(result.get().getTotalDifficulty().toBigInteger()).isEqualTo(BigInteger.ONE);
+    assertThat(result.get().getTotalDifficulty().toBigInteger())
+        .isEqualTo(BigInteger.ONE);
   }
 
   @Test
   public void newBlockEventDoesNotFireAfterUnsubscribe() {
-    final AtomicReference<PropagatedBlockContext> result = new AtomicReference<>();
+    final AtomicReference<PropagatedBlockContext> result =
+        new AtomicReference<>();
     final long id = serviceImpl.addBlockPropagatedListener(result::set);
 
     assertThat(result.get()).isNull();
@@ -213,7 +216,8 @@ public class BesuEventsImplTest {
 
     assertThat(result.get()).isNotNull();
     assertThat(result.get().getBlockHeader()).isEqualTo(block.getHeader());
-    assertThat(result.get().getTotalDifficulty().toBigInteger()).isEqualTo(BigInteger.valueOf(2L));
+    assertThat(result.get().getTotalDifficulty().toBigInteger())
+        .isEqualTo(BigInteger.valueOf(2L));
     serviceImpl.removeBlockPropagatedListener(id);
     result.set(null);
 
@@ -239,14 +243,14 @@ public class BesuEventsImplTest {
     assertThat(result.get()).isNull();
 
     final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash()));
+        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(
+            blockchain.getGenesisBlock().getHash()));
     List<TransactionReceipt> transactionReceipts = gen.receipts(block);
     blockchain.appendBlock(block, transactionReceipts);
     assertThat(result.get()).isNotNull();
     assertThat(result.get().getBlockHeader()).isEqualTo(block.getHeader());
-    assertThat(result.get().getTransactionReceipts()).isEqualTo(transactionReceipts);
+    assertThat(result.get().getTransactionReceipts())
+        .isEqualTo(transactionReceipts);
   }
 
   @Test
@@ -259,9 +263,8 @@ public class BesuEventsImplTest {
     result.set(null);
 
     final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash()));
+        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(
+            blockchain.getGenesisBlock().getHash()));
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result.get()).isNull();
   }
@@ -269,9 +272,8 @@ public class BesuEventsImplTest {
   @Test
   public void additionWithoutSubscriptionsCompletes() {
     final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash()));
+        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(
+            blockchain.getGenesisBlock().getHash()));
     blockchain.appendBlock(block, gen.receipts(block));
   }
 
@@ -287,24 +289,25 @@ public class BesuEventsImplTest {
     serviceImpl.addBlockReorgListener(result::set);
     assertThat(result.get()).isNull();
 
-    final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    final var block = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 1));
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result.get()).isNull();
 
-    final var reorgBlock =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 2));
+    final var reorgBlock = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 2));
     List<TransactionReceipt> transactionReceipts = gen.receipts(reorgBlock);
     blockchain.appendBlock(reorgBlock, transactionReceipts);
     assertThat(result.get()).isNotNull();
     assertThat(result.get().getBlockHeader()).isEqualTo(reorgBlock.getHeader());
-    assertThat(result.get().getTransactionReceipts()).isEqualTo(transactionReceipts);
+    assertThat(result.get().getTransactionReceipts())
+        .isEqualTo(transactionReceipts);
   }
 
   @Test
@@ -316,37 +319,37 @@ public class BesuEventsImplTest {
     serviceImpl.removeBlockReorgListener(id);
     result.set(null);
 
-    final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    final var block = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 1));
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result.get()).isNull();
 
-    final var reorgBlock =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    final var reorgBlock = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 1));
     blockchain.appendBlock(reorgBlock, gen.receipts(reorgBlock));
     assertThat(result.get()).isNull();
   }
 
   @Test
   public void reorgWithoutSubscriptionsCompletes() {
-    final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    final var block = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 1));
     blockchain.appendBlock(block, gen.receipts(block));
 
-    final var reorgBlock =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    final var reorgBlock = gen.block(
+        new BlockDataGenerator.BlockOptions()
+            .setParentHash(blockchain.getGenesisBlock().getHash())
+            .setBlockNumber(
+                blockchain.getGenesisBlock().getHeader().getNumber() + 1));
     List<TransactionReceipt> transactionReceipts = gen.receipts(reorgBlock);
     blockchain.appendBlock(reorgBlock, transactionReceipts);
   }
@@ -396,7 +399,8 @@ public class BesuEventsImplTest {
     serviceImpl.addTransactionDroppedListener(result::set);
 
     assertThat(result.get()).isNull();
-    // The max pool size is configured to 1 so adding two transactions should trigger a drop
+    // The max pool size is configured to 1 so adding two transactions should
+    // trigger a drop
     transactionPool.addLocalTransaction(TX1);
     transactionPool.addLocalTransaction(TX2);
 
@@ -427,9 +431,8 @@ public class BesuEventsImplTest {
 
     assertThat(result).isEmpty();
     final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash()));
+        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(
+            blockchain.getGenesisBlock().getHash()));
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result).hasSize(4);
   }
@@ -441,29 +444,29 @@ public class BesuEventsImplTest {
 
     assertThat(result).isEmpty();
     final var block =
-        gen.block(
-            new BlockDataGenerator.BlockOptions()
-                .setParentHash(blockchain.getGenesisBlock().getHash()));
+        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(
+            blockchain.getGenesisBlock().getHash()));
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result).hasSize(4);
 
     result.clear();
 
     serviceImpl.removeLogListener(id);
-    final var block2 =
-        gen.block(new BlockDataGenerator.BlockOptions().setParentHash(block.getHash()));
+    final var block2 = gen.block(
+        new BlockDataGenerator.BlockOptions().setParentHash(block.getHash()));
     blockchain.appendBlock(block2, gen.receipts(block2));
 
     assertThat(result).isEmpty();
   }
 
   private Block generateBlock() {
-    final BlockBody body = new BlockBody(Collections.emptyList(), Collections.emptyList());
+    final BlockBody body =
+        new BlockBody(Collections.emptyList(), Collections.emptyList());
     return new Block(new BlockHeaderTestFixture().buildHeader(), body);
   }
 
-  private static org.hyperledger.besu.ethereum.core.Transaction createTransaction(
-      final int transactionNumber) {
+  private static org.hyperledger.besu.ethereum.core.Transaction
+  createTransaction(final int transactionNumber) {
     return new TransactionTestFixture()
         .nonce(transactionNumber)
         .gasLimit(0)

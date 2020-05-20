@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,14 @@ package org.hyperledger.besu.ethereum.eth.sync;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.hyperledger.besu.util.FutureUtils.exceptionallyCompose;
 
+import java.time.Duration;
+import java.util.Optional;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.manager.exceptions.EthTaskException;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
@@ -29,16 +40,6 @@ import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 import org.hyperledger.besu.services.pipeline.Pipeline;
 import org.hyperledger.besu.util.ExceptionUtils;
-
-import java.time.Duration;
-import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class PipelineChainDownloader<C> implements ChainDownloader {
   private static final Logger LOG = LogManager.getLogger();
@@ -55,11 +56,9 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
   private Pipeline<?> currentDownloadPipeline;
 
   public PipelineChainDownloader(
-      final SyncState syncState,
-      final SyncTargetManager<C> syncTargetManager,
+      final SyncState syncState, final SyncTargetManager<C> syncTargetManager,
       final DownloadPipelineFactory downloadPipelineFactory,
-      final EthScheduler scheduler,
-      final MetricsSystem metricsSystem) {
+      final EthScheduler scheduler, final MetricsSystem metricsSystem) {
     this.syncState = syncState;
     this.syncTargetManager = syncTargetManager;
     this.downloadPipelineFactory = downloadPipelineFactory;
@@ -67,8 +66,7 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
 
     final LabelledMetric<Counter> labelledCounter =
         metricsSystem.createLabelledCounter(
-            BesuMetricCategory.SYNCHRONIZER,
-            "chain_download_pipeline_restarts",
+            BesuMetricCategory.SYNCHRONIZER, "chain_download_pipeline_restarts",
             "Number of times the chain download pipeline has been restarted",
             "reason");
     pipelineCompleteCounter = labelledCounter.labels("complete");
@@ -92,19 +90,19 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
   }
 
   private CompletableFuture<Void> performDownload() {
-    return exceptionallyCompose(selectSyncTargetAndDownload(), this::handleFailedDownload)
+    return exceptionallyCompose(selectSyncTargetAndDownload(),
+                                this::handleFailedDownload)
         .thenCompose(this::repeatUnlessDownloadComplete);
   }
 
   private CompletableFuture<Void> selectSyncTargetAndDownload() {
-    return syncTargetManager
-        .findSyncTarget(Optional.empty())
+    return syncTargetManager.findSyncTarget(Optional.empty())
         .thenCompose(this::startDownloadForSyncTarget)
         .thenRun(pipelineCompleteCounter::inc);
   }
 
-  private CompletionStage<Void> repeatUnlessDownloadComplete(
-      @SuppressWarnings("unused") final Void result) {
+  private CompletionStage<Void>
+  repeatUnlessDownloadComplete(@SuppressWarnings("unused") final Void result) {
     syncState.clearSyncTarget();
     if (syncTargetManager.shouldContinueDownloading()) {
       return performDownload();
@@ -117,18 +115,18 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
   private CompletionStage<Void> handleFailedDownload(final Throwable error) {
     pipelineErrorCounter.inc();
     if (ExceptionUtils.rootCause(error) instanceof InvalidBlockException) {
-      LOG.warn(
-          "Invalid block detected.  Disconnecting from sync target. {}",
-          ExceptionUtils.rootCause(error).getMessage());
+      LOG.warn("Invalid block detected.  Disconnecting from sync target. {}",
+               ExceptionUtils.rootCause(error).getMessage());
       syncState.disconnectSyncTarget(DisconnectReason.BREACH_OF_PROTOCOL);
     }
 
-    if (!cancelled.get()
-        && syncTargetManager.shouldContinueDownloading()
-        && !(ExceptionUtils.rootCause(error) instanceof CancellationException)) {
-      logDownloadFailure("Chain download failed. Restarting after short delay.", error);
+    if (!cancelled.get() && syncTargetManager.shouldContinueDownloading() &&
+        !(ExceptionUtils.rootCause(error) instanceof CancellationException)) {
+      logDownloadFailure("Chain download failed. Restarting after short delay.",
+                         error);
       // Allowing the normal looping logic to retry after a brief delay.
-      return scheduler.scheduleFutureTask(() -> completedFuture(null), PAUSE_AFTER_ERROR_DURATION);
+      return scheduler.scheduleFutureTask(
+          () -> completedFuture(null), PAUSE_AFTER_ERROR_DURATION);
     }
 
     logDownloadFailure("Chain download failed.", error);
@@ -138,7 +136,8 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
 
   private void logDownloadFailure(final String message, final Throwable error) {
     final Throwable rootCause = ExceptionUtils.rootCause(error);
-    if (rootCause instanceof CancellationException || rootCause instanceof InterruptedException) {
+    if (rootCause instanceof CancellationException ||
+        rootCause instanceof InterruptedException) {
       LOG.trace(message, error);
     } else if (rootCause instanceof EthTaskException) {
       LOG.debug(message, error);
@@ -149,13 +148,15 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
     }
   }
 
-  private synchronized CompletionStage<Void> startDownloadForSyncTarget(final SyncTarget target) {
+  private synchronized CompletionStage<Void>
+  startDownloadForSyncTarget(final SyncTarget target) {
     if (cancelled.get()) {
       return CompletableFuture.failedFuture(
           new CancellationException("Chain download was cancelled"));
     }
     syncState.setSyncTarget(target.peer(), target.commonAncestor());
-    currentDownloadPipeline = downloadPipelineFactory.createDownloadPipelineForSyncTarget(target);
+    currentDownloadPipeline =
+        downloadPipelineFactory.createDownloadPipelineForSyncTarget(target);
     return scheduler.startPipeline(currentDownloadPipeline);
   }
 }

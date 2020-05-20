@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
@@ -35,10 +40,6 @@ import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
 import org.hyperledger.besu.ethereum.transaction.CallParameter;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulatorResult;
-
-import java.util.Optional;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,7 +60,8 @@ public class EthEstimateGasTest {
   public void setUp() {
     when(blockchainQueries.headBlockNumber()).thenReturn(1L);
     when(blockchainQueries.getBlockchain()).thenReturn(blockchain);
-    when(blockchain.getBlockHeader(eq(1L))).thenReturn(Optional.of(blockHeader));
+    when(blockchain.getBlockHeader(eq(1L)))
+        .thenReturn(Optional.of(blockHeader));
     when(blockHeader.getGasLimit()).thenReturn(Long.MAX_VALUE);
     when(blockHeader.getNumber()).thenReturn(1L);
 
@@ -73,7 +75,8 @@ public class EthEstimateGasTest {
 
   @Test
   public void shouldReturnErrorWhenTransientTransactionProcessorReturnsEmpty() {
-    final JsonRpcRequestContext request = ethEstimateGasRequest(callParameter());
+    final JsonRpcRequestContext request =
+        ethEstimateGasRequest(callParameter());
     when(transactionSimulator.process(eq(modifiedCallParameter()), eq(1L)))
         .thenReturn(Optional.empty());
 
@@ -85,19 +88,24 @@ public class EthEstimateGasTest {
   }
 
   @Test
-  public void shouldReturnGasEstimateWhenTransientTransactionProcessorReturnsResultSuccess() {
-    final JsonRpcRequestContext request = ethEstimateGasRequest(callParameter());
+  public void
+  shouldReturnGasEstimateWhenTransientTransactionProcessorReturnsResultSuccess() {
+    final JsonRpcRequestContext request =
+        ethEstimateGasRequest(callParameter());
     mockTransientProcessorResultGasEstimate(1L, true);
 
-    final JsonRpcResponse expectedResponse = new JsonRpcSuccessResponse(null, Quantity.create(1L));
+    final JsonRpcResponse expectedResponse =
+        new JsonRpcSuccessResponse(null, Quantity.create(1L));
 
     Assertions.assertThat(method.response(request))
         .isEqualToComparingFieldByField(expectedResponse);
   }
 
   @Test
-  public void shouldReturnGasEstimateErrorWhenTransientTransactionProcessorReturnsResultFailure() {
-    final JsonRpcRequestContext request = ethEstimateGasRequest(callParameter());
+  public void
+  shouldReturnGasEstimateErrorWhenTransientTransactionProcessorReturnsResultFailure() {
+    final JsonRpcRequestContext request =
+        ethEstimateGasRequest(callParameter());
     mockTransientProcessorResultGasEstimate(1L, false);
 
     final JsonRpcResponse expectedResponse =
@@ -108,32 +116,40 @@ public class EthEstimateGasTest {
   }
 
   @Test
-  public void shouldReturnErrorWhenTransactionProcessorReturnsTxInvalidReason() {
-    final JsonRpcRequestContext request = ethEstimateGasRequest(callParameter());
+  public void
+  shouldReturnErrorWhenTransactionProcessorReturnsTxInvalidReason() {
+    final JsonRpcRequestContext request =
+        ethEstimateGasRequest(callParameter());
     mockTransientProcessorResultTxInvalidReason(
         TransactionInvalidReason.UPFRONT_COST_EXCEEDS_BALANCE);
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(null, JsonRpcError.TRANSACTION_UPFRONT_COST_EXCEEDS_BALANCE);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        null, JsonRpcError.TRANSACTION_UPFRONT_COST_EXCEEDS_BALANCE);
 
     Assertions.assertThat(method.response(request))
         .isEqualToComparingFieldByField(expectedResponse);
   }
 
-  private void mockTransientProcessorResultTxInvalidReason(final TransactionInvalidReason reason) {
-    final TransactionSimulatorResult mockTxSimResult = getMockTransactionSimulatorResult(false);
-    when(mockTxSimResult.getValidationResult()).thenReturn(ValidationResult.invalid(reason));
+  private void mockTransientProcessorResultTxInvalidReason(
+      final TransactionInvalidReason reason) {
+    final TransactionSimulatorResult mockTxSimResult =
+        getMockTransactionSimulatorResult(false);
+    when(mockTxSimResult.getValidationResult())
+        .thenReturn(ValidationResult.invalid(reason));
   }
 
-  private void mockTransientProcessorResultGasEstimate(
-      final long gasEstimate, final boolean isSuccessful) {
+  private void
+  mockTransientProcessorResultGasEstimate(final long gasEstimate,
+                                          final boolean isSuccessful) {
     final TransactionSimulatorResult mockTxSimResult =
         getMockTransactionSimulatorResult(isSuccessful);
     when(mockTxSimResult.getGasEstimate()).thenReturn(gasEstimate);
   }
 
-  private TransactionSimulatorResult getMockTransactionSimulatorResult(final boolean isSuccessful) {
-    final TransactionSimulatorResult mockTxSimResult = mock(TransactionSimulatorResult.class);
+  private TransactionSimulatorResult
+  getMockTransactionSimulatorResult(final boolean isSuccessful) {
+    final TransactionSimulatorResult mockTxSimResult =
+        mock(TransactionSimulatorResult.class);
     when(transactionSimulator.process(eq(modifiedCallParameter()), eq(1L)))
         .thenReturn(Optional.of(mockTxSimResult));
     when(mockTxSimResult.isSuccessful()).thenReturn(isSuccessful);
@@ -145,11 +161,13 @@ public class EthEstimateGasTest {
   }
 
   private JsonCallParameter modifiedCallParameter() {
-    return new JsonCallParameter("0x0", "0x0", Quantity.create(Long.MAX_VALUE), "0x0", "0x0", "");
+    return new JsonCallParameter("0x0", "0x0", Quantity.create(Long.MAX_VALUE),
+                                 "0x0", "0x0", "");
   }
 
-  private JsonRpcRequestContext ethEstimateGasRequest(final CallParameter callParameter) {
-    return new JsonRpcRequestContext(
-        new JsonRpcRequest("2.0", "eth_estimateGas", new Object[] {callParameter}));
+  private JsonRpcRequestContext
+  ethEstimateGasRequest(final CallParameter callParameter) {
+    return new JsonRpcRequestContext(new JsonRpcRequest(
+        "2.0", "eth_estimateGas", new Object[] {callParameter}));
   }
 }

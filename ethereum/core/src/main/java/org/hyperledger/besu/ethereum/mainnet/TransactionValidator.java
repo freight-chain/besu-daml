@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,37 +28,47 @@ public interface TransactionValidator {
    * Asserts whether a transaction is valid.
    *
    * @param transaction the transaction to validate
-   * @return An empty @{link Optional} if the transaction is considered valid; otherwise an @{code
-   *     Optional} containing a {@link TransactionInvalidReason} that identifies why the transaction
-   *     is invalid.
+   * @return An empty @{link Optional} if the transaction is considered valid;
+   *     otherwise an @{code Optional} containing a {@link
+   *     TransactionInvalidReason} that identifies why the transaction is
+   *     invalid.
    */
   ValidationResult<TransactionInvalidReason> validate(Transaction transaction);
 
   /**
-   * Asserts whether a transaction is valid for the sender accounts current state.
+   * Asserts whether a transaction is valid for the sender accounts current
+   * state.
    *
-   * <p>Note: {@code validate} should be called before getting the sender {@link Account} used in
-   * this method to ensure that a sender can be extracted from the {@link Transaction}.
+   * <p>Note: {@code validate} should be called before getting the sender {@link
+   * Account} used in this method to ensure that a sender can be extracted from
+   * the {@link Transaction}.
    *
-   * @param transaction the transaction to validateMessageFrame.State.COMPLETED_FAILED
+   * @param transaction the transaction to
+   *     validateMessageFrame.State.COMPLETED_FAILED
    * @param sender the sender account state to validate against
-   * @param allowFutureNonce if true, transactions with nonce equal or higher than the account nonce
-   *     will be considered valid (used when received transactions in the transaction pool). If
-   *     false, only a transaction with the nonce equals the account nonce will be considered valid
-   *     (used when processing transactions).
-   * @return An empty @{link Optional} if the transaction is considered valid; otherwise an @{code
-   *     Optional} containing a {@link TransactionInvalidReason} that identifies why the transaction
-   *     is invalid.
+   * @param allowFutureNonce if true, transactions with nonce equal or higher
+   *     than the account nonce will be considered valid (used when received
+   *     transactions in the transaction pool). If false, only a transaction
+   *     with the nonce equals the account nonce will be considered valid (used
+   *     when processing transactions).
+   * @return An empty @{link Optional} if the transaction is considered valid;
+   *     otherwise an @{code Optional} containing a {@link
+   *     TransactionInvalidReason} that identifies why the transaction is
+   *     invalid.
    */
-  default ValidationResult<TransactionInvalidReason> validateForSender(
-      final Transaction transaction, final Account sender, final boolean allowFutureNonce) {
+  default ValidationResult<TransactionInvalidReason>
+  validateForSender(final Transaction transaction, final Account sender,
+                    final boolean allowFutureNonce) {
     final TransactionValidationParams validationParams =
-        new TransactionValidationParams.Builder().allowFutureNonce(allowFutureNonce).build();
+        new TransactionValidationParams.Builder()
+            .allowFutureNonce(allowFutureNonce)
+            .build();
     return validateForSender(transaction, sender, validationParams);
   }
 
-  ValidationResult<TransactionInvalidReason> validateForSender(
-      Transaction transaction, Account sender, TransactionValidationParams validationParams);
+  ValidationResult<TransactionInvalidReason>
+  validateForSender(Transaction transaction, Account sender,
+                    TransactionValidationParams validationParams);
 
   void setTransactionFilter(TransactionFilter transactionFilter);
 

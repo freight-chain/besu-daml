@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,17 @@ import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createI
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import com.google.common.collect.Iterables;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.StubGenesisConfigOptions;
 import org.hyperledger.besu.consensus.common.BlockInterface;
 import org.hyperledger.besu.consensus.common.EpochManager;
@@ -74,19 +88,6 @@ import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
 import org.hyperledger.besu.util.Subscribers;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import com.google.common.collect.Iterables;
-import org.apache.tuweni.bytes.Bytes;
-
 public class TestContextBuilder {
 
   private static final MetricsSystem metricsSystem = new NoOpMetricsSystem();
@@ -98,32 +99,23 @@ public class TestContextBuilder {
     private final IbftFinalState finalState;
     private final EventMultiplexer eventMultiplexer;
 
-    public ControllerAndState(
-        final IbftExecutors ibftExecutors,
-        final IbftController controller,
-        final IbftFinalState finalState,
-        final EventMultiplexer eventMultiplexer) {
+    public ControllerAndState(final IbftExecutors ibftExecutors,
+                              final IbftController controller,
+                              final IbftFinalState finalState,
+                              final EventMultiplexer eventMultiplexer) {
       this.ibftExecutors = ibftExecutors;
       this.controller = controller;
       this.finalState = finalState;
       this.eventMultiplexer = eventMultiplexer;
     }
 
-    public IbftExecutors getIbftExecutors() {
-      return ibftExecutors;
-    }
+    public IbftExecutors getIbftExecutors() { return ibftExecutors; }
 
-    public IbftController getController() {
-      return controller;
-    }
+    public IbftController getController() { return controller; }
 
-    public IbftFinalState getFinalState() {
-      return finalState;
-    }
+    public IbftFinalState getFinalState() { return finalState; }
 
-    public EventMultiplexer getEventMultiplexer() {
-      return eventMultiplexer;
-    }
+    public EventMultiplexer getEventMultiplexer() { return eventMultiplexer; }
   }
 
   public static final int EPOCH_LENGTH = 10_000;
@@ -136,9 +128,11 @@ public class TestContextBuilder {
   public static final int FUTURE_MESSAGES_LIMIT = 1000;
 
   private Clock clock = Clock.fixed(Instant.MIN, ZoneId.of("UTC"));
-  private IbftEventQueue ibftEventQueue = new IbftEventQueue(MESSAGE_QUEUE_LIMIT);
+  private IbftEventQueue ibftEventQueue =
+      new IbftEventQueue(MESSAGE_QUEUE_LIMIT);
   private int validatorCount = 4;
-  private int indexOfFirstLocallyProposedBlock = 0; // Meaning first block is from remote peer.
+  private int indexOfFirstLocallyProposedBlock =
+      0; // Meaning first block is from remote peer.
   private boolean useGossip = false;
 
   public TestContextBuilder clock(final Clock clock) {
@@ -146,7 +140,8 @@ public class TestContextBuilder {
     return this;
   }
 
-  public TestContextBuilder ibftEventQueue(final IbftEventQueue ibftEventQueue) {
+  public TestContextBuilder
+  ibftEventQueue(final IbftEventQueue ibftEventQueue) {
     this.ibftEventQueue = ibftEventQueue;
     return this;
   }
@@ -156,8 +151,8 @@ public class TestContextBuilder {
     return this;
   }
 
-  public TestContextBuilder indexOfFirstLocallyProposedBlock(
-      final int indexOfFirstLocallyProposedBlock) {
+  public TestContextBuilder
+  indexOfFirstLocallyProposedBlock(final int indexOfFirstLocallyProposedBlock) {
     this.indexOfFirstLocallyProposedBlock = indexOfFirstLocallyProposedBlock;
     return this;
   }
@@ -168,59 +163,54 @@ public class TestContextBuilder {
   }
 
   public TestContext build() {
-    final NetworkLayout networkNodes =
-        NetworkLayout.createNetworkLayout(validatorCount, indexOfFirstLocallyProposedBlock);
+    final NetworkLayout networkNodes = NetworkLayout.createNetworkLayout(
+        validatorCount, indexOfFirstLocallyProposedBlock);
 
-    final Block genesisBlock = createGenesisBlock(networkNodes.getValidatorAddresses());
-    final MutableBlockchain blockChain =
-        createInMemoryBlockchain(genesisBlock, IbftBlockHeaderFunctions.forOnChainBlock());
+    final Block genesisBlock =
+        createGenesisBlock(networkNodes.getValidatorAddresses());
+    final MutableBlockchain blockChain = createInMemoryBlockchain(
+        genesisBlock, IbftBlockHeaderFunctions.forOnChainBlock());
 
-    // Use a stubbed version of the multicaster, to prevent creating PeerConnections etc.
+    // Use a stubbed version of the multicaster, to prevent creating
+    // PeerConnections etc.
     final StubValidatorMulticaster multicaster = new StubValidatorMulticaster();
     final UniqueMessageMulticaster uniqueMulticaster =
         new UniqueMessageMulticaster(multicaster, GOSSIPED_HISTORY_LIMIT);
 
-    final Gossiper gossiper = useGossip ? new IbftGossip(uniqueMulticaster) : mock(Gossiper.class);
+    final Gossiper gossiper =
+        useGossip ? new IbftGossip(uniqueMulticaster) : mock(Gossiper.class);
 
-    final StubbedSynchronizerUpdater synchronizerUpdater = new StubbedSynchronizerUpdater();
+    final StubbedSynchronizerUpdater synchronizerUpdater =
+        new StubbedSynchronizerUpdater();
 
-    final ControllerAndState controllerAndState =
-        createControllerAndFinalState(
-            blockChain,
-            multicaster,
-            networkNodes.getLocalNode().getNodeKey(),
-            clock,
-            ibftEventQueue,
-            gossiper,
-            synchronizerUpdater);
+    final ControllerAndState controllerAndState = createControllerAndFinalState(
+        blockChain, multicaster, networkNodes.getLocalNode().getNodeKey(),
+        clock, ibftEventQueue, gossiper, synchronizerUpdater);
 
-    // Add each networkNode to the Multicaster (such that each can receive msgs from local node).
-    // NOTE: the remotePeers needs to be ordered based on Address (as this is used to determine
-    // the proposer order which must be managed in test).
+    // Add each networkNode to the Multicaster (such that each can receive msgs
+    // from local node). NOTE: the remotePeers needs to be ordered based on
+    // Address (as this is used to determine the proposer order which must be
+    // managed in test).
     final Map<Address, ValidatorPeer> remotePeers =
-        networkNodes.getRemotePeers().stream()
-            .collect(
-                Collectors.toMap(
-                    NodeParams::getAddress,
-                    nodeParams ->
-                        new ValidatorPeer(
-                            nodeParams,
-                            new MessageFactory(nodeParams.getNodeKey()),
-                            controllerAndState.getEventMultiplexer()),
-                    (u, v) -> {
-                      throw new IllegalStateException(String.format("Duplicate key %s", u));
-                    },
-                    LinkedHashMap::new));
+        networkNodes.getRemotePeers().stream().collect(Collectors.toMap(
+            NodeParams::getAddress,
+            nodeParams
+            -> new ValidatorPeer(nodeParams,
+                                 new MessageFactory(nodeParams.getNodeKey()),
+                                 controllerAndState.getEventMultiplexer()),
+            (u, v)
+                -> {
+              throw new IllegalStateException(
+                  String.format("Duplicate key %s", u));
+            },
+            LinkedHashMap::new));
 
     multicaster.addNetworkPeers(remotePeers.values());
     synchronizerUpdater.addNetworkPeers(remotePeers.values());
 
     return new TestContext(
-        remotePeers,
-        blockChain,
-        controllerAndState.getIbftExecutors(),
-        controllerAndState.getController(),
-        controllerAndState.getFinalState(),
+        remotePeers, blockChain, controllerAndState.getIbftExecutors(),
+        controllerAndState.getController(), controllerAndState.getFinalState(),
         controllerAndState.getEventMultiplexer());
   }
 
@@ -232,10 +222,11 @@ public class TestContextBuilder {
 
   private static Block createGenesisBlock(final Set<Address> validators) {
     final Address coinbase = Iterables.get(validators, 0);
-    final BlockHeaderTestFixture headerTestFixture = new BlockHeaderTestFixture();
+    final BlockHeaderTestFixture headerTestFixture =
+        new BlockHeaderTestFixture();
     final IbftExtraData extraData =
-        new IbftExtraData(
-            Bytes.wrap(new byte[32]), Collections.emptyList(), Optional.empty(), 0, validators);
+        new IbftExtraData(Bytes.wrap(new byte[32]), Collections.emptyList(),
+                          Optional.empty(), 0, validators);
     headerTestFixture.extraData(extraData.encode());
     headerTestFixture.mixHash(IbftHelpers.EXPECTED_MIX_HASH);
     headerTestFixture.difficulty(Difficulty.ONE);
@@ -247,29 +238,25 @@ public class TestContextBuilder {
     headerTestFixture.coinbase(coinbase);
 
     final BlockHeader genesisHeader = headerTestFixture.buildHeader();
-    return new Block(
-        genesisHeader, new BlockBody(Collections.emptyList(), Collections.emptyList()));
+    return new Block(genesisHeader, new BlockBody(Collections.emptyList(),
+                                                  Collections.emptyList()));
   }
 
   private static ControllerAndState createControllerAndFinalState(
       final MutableBlockchain blockChain,
-      final StubValidatorMulticaster multicaster,
-      final NodeKey nodeKey,
-      final Clock clock,
-      final IbftEventQueue ibftEventQueue,
-      final Gossiper gossiper,
-      final SynchronizerUpdater synchronizerUpdater) {
+      final StubValidatorMulticaster multicaster, final NodeKey nodeKey,
+      final Clock clock, final IbftEventQueue ibftEventQueue,
+      final Gossiper gossiper, final SynchronizerUpdater synchronizerUpdater) {
 
-    final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
+    final WorldStateArchive worldStateArchive =
+        createInMemoryWorldStateArchive();
 
-    final MiningParameters miningParams =
-        new MiningParameters(
-            AddressHelpers.ofValue(1),
-            Wei.ZERO,
-            Bytes.wrap("Ibft Int tests".getBytes(UTF_8)),
-            true);
+    final MiningParameters miningParams = new MiningParameters(
+        AddressHelpers.ofValue(1), Wei.ZERO,
+        Bytes.wrap("Ibft Int tests".getBytes(UTF_8)), true);
 
-    final StubGenesisConfigOptions genesisConfigOptions = new StubGenesisConfigOptions();
+    final StubGenesisConfigOptions genesisConfigOptions =
+        new StubGenesisConfigOptions();
     genesisConfigOptions.byzantiumBlock(0);
 
     final ProtocolSchedule<IbftContext> protocolSchedule =
@@ -281,85 +268,72 @@ public class TestContextBuilder {
 
     final BlockInterface blockInterface = new IbftBlockInterface();
 
-    final VoteTallyCache voteTallyCache =
-        new VoteTallyCache(
-            blockChain,
-            new VoteTallyUpdater(epochManager, blockInterface),
-            epochManager,
-            new IbftBlockInterface());
+    final VoteTallyCache voteTallyCache = new VoteTallyCache(
+        blockChain, new VoteTallyUpdater(epochManager, blockInterface),
+        epochManager, new IbftBlockInterface());
 
     final VoteProposer voteProposer = new VoteProposer();
 
     final ProtocolContext<IbftContext> protocolContext =
-        new ProtocolContext<>(
-            blockChain,
-            worldStateArchive,
-            new IbftContext(voteTallyCache, voteProposer, epochManager, blockInterface));
+        new ProtocolContext<>(blockChain, worldStateArchive,
+                              new IbftContext(voteTallyCache, voteProposer,
+                                              epochManager, blockInterface));
 
-    final PendingTransactions pendingTransactions =
-        new PendingTransactions(
-            TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS, 1, 1, clock, metricsSystem);
+    final PendingTransactions pendingTransactions = new PendingTransactions(
+        TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS, 1, 1, clock,
+        metricsSystem);
 
     final IbftBlockCreatorFactory blockCreatorFactory =
         new IbftBlockCreatorFactory(
-            (gasLimit) -> gasLimit,
+            (gasLimit)
+                -> gasLimit,
             pendingTransactions, // changed from IbftBesuController
-            protocolContext,
-            protocolSchedule,
-            miningParams,
+            protocolContext, protocolSchedule, miningParams,
             Util.publicKeyToAddress(nodeKey.getPublicKey()));
 
     final ProposerSelector proposerSelector =
         new ProposerSelector(blockChain, blockInterface, true, voteTallyCache);
 
-    final IbftExecutors ibftExecutors = IbftExecutors.create(new NoOpMetricsSystem());
-    final IbftFinalState finalState =
-        new IbftFinalState(
-            protocolContext.getConsensusState().getVoteTallyCache(),
-            nodeKey,
-            Util.publicKeyToAddress(nodeKey.getPublicKey()),
-            proposerSelector,
-            multicaster,
-            new RoundTimer(ibftEventQueue, ROUND_TIMER_SEC * 1000, ibftExecutors),
-            new BlockTimer(
-                ibftEventQueue, BLOCK_TIMER_SEC * 1000, ibftExecutors, TestClock.fixed()),
-            blockCreatorFactory,
-            new MessageFactory(nodeKey),
-            clock);
+    final IbftExecutors ibftExecutors =
+        IbftExecutors.create(new NoOpMetricsSystem());
+    final IbftFinalState finalState = new IbftFinalState(
+        protocolContext.getConsensusState().getVoteTallyCache(), nodeKey,
+        Util.publicKeyToAddress(nodeKey.getPublicKey()), proposerSelector,
+        multicaster,
+        new RoundTimer(ibftEventQueue, ROUND_TIMER_SEC * 1000, ibftExecutors),
+        new BlockTimer(ibftEventQueue, BLOCK_TIMER_SEC * 1000, ibftExecutors,
+                       TestClock.fixed()),
+        blockCreatorFactory, new MessageFactory(nodeKey), clock);
 
     final MessageValidatorFactory messageValidatorFactory =
-        new MessageValidatorFactory(proposerSelector, protocolSchedule, protocolContext);
+        new MessageValidatorFactory(proposerSelector, protocolSchedule,
+                                    protocolContext);
 
-    final Subscribers<MinedBlockObserver> minedBlockObservers = Subscribers.create();
+    final Subscribers<MinedBlockObserver> minedBlockObservers =
+        Subscribers.create();
 
-    final MessageTracker duplicateMessageTracker = new MessageTracker(DUPLICATE_MESSAGE_LIMIT);
-    final FutureMessageBuffer futureMessageBuffer =
-        new FutureMessageBuffer(
-            FUTURE_MESSAGES_MAX_DISTANCE,
-            FUTURE_MESSAGES_LIMIT,
-            blockChain.getChainHeadBlockNumber());
+    final MessageTracker duplicateMessageTracker =
+        new MessageTracker(DUPLICATE_MESSAGE_LIMIT);
+    final FutureMessageBuffer futureMessageBuffer = new FutureMessageBuffer(
+        FUTURE_MESSAGES_MAX_DISTANCE, FUTURE_MESSAGES_LIMIT,
+        blockChain.getChainHeadBlockNumber());
 
-    final IbftController ibftController =
-        new IbftController(
-            blockChain,
+    final IbftController ibftController = new IbftController(
+        blockChain, finalState,
+        new IbftBlockHeightManagerFactory(
             finalState,
-            new IbftBlockHeightManagerFactory(
-                finalState,
-                new IbftRoundFactory(
-                    finalState,
-                    protocolContext,
-                    protocolSchedule,
-                    minedBlockObservers,
-                    messageValidatorFactory),
-                messageValidatorFactory),
-            gossiper,
-            duplicateMessageTracker,
-            futureMessageBuffer,
-            synchronizerUpdater);
+            new IbftRoundFactory(finalState, protocolContext, protocolSchedule,
+                                 minedBlockObservers, messageValidatorFactory),
+            messageValidatorFactory),
+        gossiper, duplicateMessageTracker, futureMessageBuffer,
+        synchronizerUpdater);
 
-    final EventMultiplexer eventMultiplexer = new EventMultiplexer(ibftController);
-    //////////////////////////// END IBFT BesuController ////////////////////////////
+    final EventMultiplexer eventMultiplexer =
+        new EventMultiplexer(ibftController);
+    //////////////////////////// END IBFT BesuController
+    ///////////////////////////////
 
-    return new ControllerAndState(ibftExecutors, ibftController, finalState, eventMultiplexer);
+    return new ControllerAndState(ibftExecutors, ibftController, finalState,
+                                  eventMultiplexer);
   }
 }

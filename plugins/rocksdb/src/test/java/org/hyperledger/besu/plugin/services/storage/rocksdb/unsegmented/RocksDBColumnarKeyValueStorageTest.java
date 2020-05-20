@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,10 @@ package org.hyperledger.besu.plugin.services.storage.rocksdb.unsegmented;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.Set;
 import org.hyperledger.besu.kvstore.AbstractKeyValueStorageTest;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
@@ -26,43 +33,41 @@ import org.hyperledger.besu.plugin.services.storage.rocksdb.segmented.RocksDBCol
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorage;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorage.Transaction;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageAdapter;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.Set;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.rocksdb.ColumnFamilyHandle;
 
-public class RocksDBColumnarKeyValueStorageTest extends AbstractKeyValueStorageTest {
+public class RocksDBColumnarKeyValueStorageTest
+    extends AbstractKeyValueStorageTest {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 
   @Test
   public void twoSegmentsAreIndependent() throws Exception {
-    final SegmentedKeyValueStorage<ColumnFamilyHandle> store = createSegmentedStore();
+    final SegmentedKeyValueStorage<ColumnFamilyHandle> store =
+        createSegmentedStore();
 
     final Transaction<ColumnFamilyHandle> tx = store.startTransaction();
-    tx.put(
-        store.getSegmentIdentifierByName(TestSegment.BAR),
-        bytesFromHexString("0001"),
-        bytesFromHexString("0FFF"));
+    tx.put(store.getSegmentIdentifierByName(TestSegment.BAR),
+           bytesFromHexString("0001"), bytesFromHexString("0FFF"));
     tx.commit();
 
     final Optional<byte[]> result =
-        store.get(store.getSegmentIdentifierByName(TestSegment.FOO), bytesFromHexString("0001"));
+        store.get(store.getSegmentIdentifierByName(TestSegment.FOO),
+                  bytesFromHexString("0001"));
 
     assertThat(result).isEmpty();
   }
 
   @Test
   public void canRemoveThroughSegmentIteration() throws Exception {
-    final SegmentedKeyValueStorage<ColumnFamilyHandle> store = createSegmentedStore();
-    final ColumnFamilyHandle fooSegment = store.getSegmentIdentifierByName(TestSegment.FOO);
-    final ColumnFamilyHandle barSegment = store.getSegmentIdentifierByName(TestSegment.BAR);
+    final SegmentedKeyValueStorage<ColumnFamilyHandle> store =
+        createSegmentedStore();
+    final ColumnFamilyHandle fooSegment =
+        store.getSegmentIdentifierByName(TestSegment.FOO);
+    final ColumnFamilyHandle barSegment =
+        store.getSegmentIdentifierByName(TestSegment.BAR);
 
     final Transaction<ColumnFamilyHandle> tx = store.startTransaction();
     tx.put(fooSegment, bytesOf(1), bytesOf(1));
@@ -73,10 +78,10 @@ public class RocksDBColumnarKeyValueStorageTest extends AbstractKeyValueStorageT
     tx.put(barSegment, bytesOf(6), bytesOf(6));
     tx.commit();
 
-    final long removedFromFoo =
-        store.removeAllKeysUnless(fooSegment, x -> Arrays.equals(x, bytesOf(3)));
-    final long removedFromBar =
-        store.removeAllKeysUnless(barSegment, x -> Arrays.equals(x, bytesOf(4)));
+    final long removedFromFoo = store.removeAllKeysUnless(
+        fooSegment, x -> Arrays.equals(x, bytesOf(3)));
+    final long removedFromBar = store.removeAllKeysUnless(
+        barSegment, x -> Arrays.equals(x, bytesOf(4)));
 
     assertThat(removedFromFoo).isEqualTo(2);
     assertThat(removedFromBar).isEqualTo(2);
@@ -92,9 +97,12 @@ public class RocksDBColumnarKeyValueStorageTest extends AbstractKeyValueStorageT
 
   @Test
   public void canGetThroughSegmentIteration() throws Exception {
-    final SegmentedKeyValueStorage<ColumnFamilyHandle> store = createSegmentedStore();
-    final ColumnFamilyHandle fooSegment = store.getSegmentIdentifierByName(TestSegment.FOO);
-    final ColumnFamilyHandle barSegment = store.getSegmentIdentifierByName(TestSegment.BAR);
+    final SegmentedKeyValueStorage<ColumnFamilyHandle> store =
+        createSegmentedStore();
+    final ColumnFamilyHandle fooSegment =
+        store.getSegmentIdentifierByName(TestSegment.FOO);
+    final ColumnFamilyHandle barSegment =
+        store.getSegmentIdentifierByName(TestSegment.BAR);
 
     final Transaction<ColumnFamilyHandle> tx = store.startTransaction();
     tx.put(fooSegment, bytesOf(1), bytesOf(1));
@@ -107,9 +115,9 @@ public class RocksDBColumnarKeyValueStorageTest extends AbstractKeyValueStorageT
 
     final Set<byte[]> gotFromFoo =
         store.getAllKeysThat(fooSegment, x -> Arrays.equals(x, bytesOf(3)));
-    final Set<byte[]> gotFromBar =
-        store.getAllKeysThat(
-            barSegment, x -> Arrays.equals(x, bytesOf(4)) || Arrays.equals(x, bytesOf(5)));
+    final Set<byte[]> gotFromBar = store.getAllKeysThat(
+        barSegment,
+        x -> Arrays.equals(x, bytesOf(4)) || Arrays.equals(x, bytesOf(5)));
     final Set<byte[]> gotEmpty =
         store.getAllKeysThat(fooSegment, x -> Arrays.equals(x, bytesOf(0)));
 
@@ -144,16 +152,19 @@ public class RocksDBColumnarKeyValueStorageTest extends AbstractKeyValueStorageT
     }
   }
 
-  private SegmentedKeyValueStorage<ColumnFamilyHandle> createSegmentedStore() throws Exception {
+  private SegmentedKeyValueStorage<ColumnFamilyHandle> createSegmentedStore()
+      throws Exception {
     return new RocksDBColumnarKeyValueStorage(
-        new RocksDBConfigurationBuilder().databaseDir(folder.newFolder().toPath()).build(),
+        new RocksDBConfigurationBuilder()
+            .databaseDir(folder.newFolder().toPath())
+            .build(),
         Arrays.asList(TestSegment.FOO, TestSegment.BAR),
-        new NoOpMetricsSystem(),
-        RocksDBMetricsFactory.PUBLIC_ROCKS_DB_METRICS);
+        new NoOpMetricsSystem(), RocksDBMetricsFactory.PUBLIC_ROCKS_DB_METRICS);
   }
 
   @Override
   protected KeyValueStorage createStore() throws Exception {
-    return new SegmentedKeyValueStorageAdapter<>(TestSegment.FOO, createSegmentedStore());
+    return new SegmentedKeyValueStorageAdapter<>(TestSegment.FOO,
+                                                 createSegmentedStore());
   }
 }

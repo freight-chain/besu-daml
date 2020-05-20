@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,13 @@ import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createI
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.hyperledger.besu.config.StubGenesisConfigOptions;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.filter.FilterManager;
@@ -46,14 +56,6 @@ import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.nat.NatService;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 /** Provides a facade to construct the JSON-RPC component. */
 public class JsonRpcTestMethodsFactory {
 
@@ -71,28 +73,35 @@ public class JsonRpcTestMethodsFactory {
 
     importer.getGenesisState().writeStateTo(stateArchive.getMutable());
 
-    final MutableBlockchain blockchain = createInMemoryBlockchain(importer.getGenesisBlock());
-    final ProtocolContext<Void> context = new ProtocolContext<>(blockchain, stateArchive, null);
+    final MutableBlockchain blockchain =
+        createInMemoryBlockchain(importer.getGenesisBlock());
+    final ProtocolContext<Void> context =
+        new ProtocolContext<>(blockchain, stateArchive, null);
 
     for (final Block block : importer.getBlocks()) {
-      final ProtocolSchedule<Void> protocolSchedule = importer.getProtocolSchedule();
+      final ProtocolSchedule<Void> protocolSchedule =
+          importer.getProtocolSchedule();
       final ProtocolSpec<Void> protocolSpec =
           protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
       final BlockImporter<Void> blockImporter = protocolSpec.getBlockImporter();
       blockImporter.importBlock(context, block, HeaderValidationMode.FULL);
     }
 
-    final BlockchainQueries blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+    final BlockchainQueries blockchainQueries =
+        new BlockchainQueries(blockchain, stateArchive);
 
     final Synchronizer synchronizer = mock(Synchronizer.class);
     final P2PNetwork peerDiscovery = mock(P2PNetwork.class);
     final TransactionPool transactionPool = mock(TransactionPool.class);
-    final EthHashMiningCoordinator miningCoordinator = mock(EthHashMiningCoordinator.class);
+    final EthHashMiningCoordinator miningCoordinator =
+        mock(EthHashMiningCoordinator.class);
     final ObservableMetricsSystem metricsSystem = new NoOpMetricsSystem();
-    final Optional<AccountLocalConfigPermissioningController> accountWhitelistController =
-        Optional.of(mock(AccountLocalConfigPermissioningController.class));
-    final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController =
-        Optional.of(mock(NodeLocalConfigPermissioningController.class));
+    final Optional<AccountLocalConfigPermissioningController>
+        accountWhitelistController =
+            Optional.of(mock(AccountLocalConfigPermissioningController.class));
+    final Optional<NodeLocalConfigPermissioningController>
+        nodeWhitelistController =
+            Optional.of(mock(NodeLocalConfigPermissioningController.class));
     final PrivacyParameters privacyParameters = mock(PrivacyParameters.class);
 
     final FilterManager filterManager =
@@ -102,9 +111,12 @@ public class JsonRpcTestMethodsFactory {
             .privacyParameters(privacyParameters)
             .build();
 
-    final JsonRpcConfiguration jsonRpcConfiguration = mock(JsonRpcConfiguration.class);
-    final WebSocketConfiguration webSocketConfiguration = mock(WebSocketConfiguration.class);
-    final MetricsConfiguration metricsConfiguration = mock(MetricsConfiguration.class);
+    final JsonRpcConfiguration jsonRpcConfiguration =
+        mock(JsonRpcConfiguration.class);
+    final WebSocketConfiguration webSocketConfiguration =
+        mock(WebSocketConfiguration.class);
+    final MetricsConfiguration metricsConfiguration =
+        mock(MetricsConfiguration.class);
     final NatService natService = new NatService(Optional.empty());
 
     final List<RpcApi> apis = new ArrayList<>();
@@ -112,28 +124,13 @@ public class JsonRpcTestMethodsFactory {
     apis.add(RpcApis.NET);
     apis.add(RpcApis.WEB3);
     apis.add(RpcApis.PRIV);
-    return new JsonRpcMethodsFactory()
-        .methods(
-            CLIENT_VERSION,
-            NETWORK_ID,
-            new StubGenesisConfigOptions(),
-            peerDiscovery,
-            blockchainQueries,
-            synchronizer,
-            MainnetProtocolSchedule.create(),
-            filterManager,
-            transactionPool,
-            miningCoordinator,
-            metricsSystem,
-            new HashSet<>(),
-            accountWhitelistController,
-            nodeWhitelistController,
-            apis,
-            privacyParameters,
-            jsonRpcConfiguration,
-            webSocketConfiguration,
-            metricsConfiguration,
-            natService,
-            new HashMap<>());
+    return new JsonRpcMethodsFactory().methods(
+        CLIENT_VERSION, NETWORK_ID, new StubGenesisConfigOptions(),
+        peerDiscovery, blockchainQueries, synchronizer,
+        MainnetProtocolSchedule.create(), filterManager, transactionPool,
+        miningCoordinator, metricsSystem, new HashSet<>(),
+        accountWhitelistController, nodeWhitelistController, apis,
+        privacyParameters, jsonRpcConfiguration, webSocketConfiguration,
+        metricsConfiguration, natService, new HashMap<>());
   }
 }

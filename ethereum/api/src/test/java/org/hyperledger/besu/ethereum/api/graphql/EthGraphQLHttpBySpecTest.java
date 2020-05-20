@@ -1,27 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.graphql;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
-import io.vertx.core.json.JsonObject;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
@@ -32,7 +34,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class EthGraphQLHttpBySpecTest extends AbstractEthGraphQLHttpServiceTest {
+public class EthGraphQLHttpBySpecTest
+    extends AbstractEthGraphQLHttpServiceTest {
 
   private final String specFileName;
 
@@ -117,13 +120,14 @@ public class EthGraphQLHttpBySpecTest extends AbstractEthGraphQLHttpServiceTest 
 
   private void graphQLCall(final String name) throws IOException {
     final String testSpecFile = name + ".json";
-    final String json =
-        Resources.toString(
-            EthGraphQLHttpBySpecTest.class.getResource(testSpecFile), Charsets.UTF_8);
+    final String json = Resources.toString(
+        EthGraphQLHttpBySpecTest.class.getResource(testSpecFile),
+        Charsets.UTF_8);
     final JsonObject spec = new JsonObject(json);
     final String rawRequestBody = spec.getString("request");
     final RequestBody requestBody = RequestBody.create(GRAPHQL, rawRequestBody);
-    final Request request = new Request.Builder().post(requestBody).url(baseUrl).build();
+    final Request request =
+        new Request.Builder().post(requestBody).url(baseUrl).build();
 
     importBlocks(1, BLOCKS.size());
     try (final Response resp = client.newCall(request).execute()) {

@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.vm;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -39,18 +44,16 @@ import org.hyperledger.besu.ethereum.vm.operations.SLoadOperation;
 import org.hyperledger.besu.ethereum.vm.operations.SelfDestructOperation;
 import org.hyperledger.besu.ethereum.vm.operations.Sha3Operation;
 
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
-
 /**
- * Provides various gas cost lookups and calculations used during block processing.
+ * Provides various gas cost lookups and calculations used during block
+ * processing.
  *
- * <p>The {@code GasCalculator} is meant to encapsulate all {@link Gas}-related calculations except
- * for the following "safe" operations:
+ * <p>The {@code GasCalculator} is meant to encapsulate all {@link Gas}-related
+ * calculations except for the following "safe" operations:
  *
  * <ul>
- *   <li><b>Operation Gas Deductions:</b> Deducting the operation's gas cost from the VM's current
- *       message frame because the
+ *   <li><b>Operation Gas Deductions:</b> Deducting the operation's gas cost
+ * from the VM's current message frame because the
  * </ul>
  */
 public interface GasCalculator {
@@ -68,7 +71,8 @@ public interface GasCalculator {
   // Contract Creation Gas Calculations
 
   /**
-   * Returns the cost for a {@link AbstractMessageProcessor} to deposit the code in storage
+   * Returns the cost for a {@link AbstractMessageProcessor} to deposit the code
+   * in storage
    *
    * @param codeSize The size of the code in bytes
    * @return the code deposit cost
@@ -167,15 +171,10 @@ public interface GasCalculator {
    * @param recipient The CALL recipient
    * @return The gas cost for the CALL operation
    */
-  Gas callOperationGasCost(
-      MessageFrame frame,
-      Gas stipend,
-      UInt256 inputDataOffset,
-      UInt256 inputDataLength,
-      UInt256 outputDataOffset,
-      UInt256 outputDataLength,
-      Wei transferValue,
-      Account recipient);
+  Gas callOperationGasCost(MessageFrame frame, Gas stipend,
+                           UInt256 inputDataOffset, UInt256 inputDataLength,
+                           UInt256 outputDataOffset, UInt256 outputDataLength,
+                           Wei transferValue, Account recipient);
 
   Gas getAdditionalCallStipend();
 
@@ -187,7 +186,8 @@ public interface GasCalculator {
    * @param transfersValue Whether or not the call transfers any wei
    * @return the amount of gas parent will provide its child CALL
    */
-  Gas gasAvailableForChildCall(MessageFrame frame, Gas stipend, boolean transfersValue);
+  Gas gasAvailableForChildCall(MessageFrame frame, Gas stipend,
+                               boolean transfersValue);
 
   /**
    * Returns the amount of gas the CREATE operation will consume.
@@ -223,7 +223,8 @@ public interface GasCalculator {
    * @param length The length of the data being copied into memory
    * @return the amount of gas consumed by the data copy operation
    */
-  Gas dataCopyOperationGasCost(MessageFrame frame, UInt256 offset, UInt256 length);
+  Gas dataCopyOperationGasCost(MessageFrame frame, UInt256 offset,
+                               UInt256 length);
 
   /**
    * Returns the cost of expanding memory for the specified access.
@@ -233,7 +234,8 @@ public interface GasCalculator {
    * @param length the length of the memory access
    * @return The gas required to expand memory for the specified access
    */
-  Gas memoryExpansionGasCost(MessageFrame frame, UInt256 offset, UInt256 length);
+  Gas memoryExpansionGasCost(MessageFrame frame, UInt256 offset,
+                             UInt256 length);
 
   // Specific Non-call Operation Calculations
 
@@ -267,7 +269,8 @@ public interface GasCalculator {
    * @param length The length of the code being copied into memory
    * @return the cost for executing the external code size operation
    */
-  Gas extCodeCopyOperationGasCost(MessageFrame frame, UInt256 offset, UInt256 length);
+  Gas extCodeCopyOperationGasCost(MessageFrame frame, UInt256 offset,
+                                  UInt256 length);
 
   /**
    * Returns the cost for executing a {@link ExtCodeHashOperation}.
@@ -299,8 +302,8 @@ public interface GasCalculator {
    * @param numTopics The number of topics in the log
    * @return the cost for executing the external code size operation
    */
-  Gas logOperationGasCost(
-      MessageFrame frame, UInt256 dataOffset, UInt256 dataLength, int numTopics);
+  Gas logOperationGasCost(MessageFrame frame, UInt256 dataOffset,
+                          UInt256 dataLength, int numTopics);
 
   /**
    * Returns the cost for executing a {@link MLoadOperation}.
@@ -332,7 +335,8 @@ public interface GasCalculator {
   /**
    * Returns the cost for executing a {@link SelfDestructOperation}.
    *
-   * @param recipient The recipient of the self destructed inheritance (may be null)
+   * @param recipient The recipient of the self destructed inheritance (may be
+   *     null)
    * @param inheritance The amount the recipient will receive
    * @return the cost for executing the self destruct operation
    */
@@ -373,12 +377,15 @@ public interface GasCalculator {
    * @param newValue the new value to be stored
    * @return the gas refund for the SSTORE operation
    */
-  Gas calculateStorageRefundAmount(Account account, UInt256 key, UInt256 newValue);
+  Gas calculateStorageRefundAmount(Account account, UInt256 key,
+                                   UInt256 newValue);
 
   /**
-   * Returns the refund amount for deleting an account in a {@link SelfDestructOperation}.
+   * Returns the refund amount for deleting an account in a {@link
+   * SelfDestructOperation}.
    *
-   * @return the refund amount for deleting an account in a self destruct operation
+   * @return the refund amount for deleting an account in a self destruct
+   *     operation
    */
   Gas getSelfDestructRefundAmount();
 

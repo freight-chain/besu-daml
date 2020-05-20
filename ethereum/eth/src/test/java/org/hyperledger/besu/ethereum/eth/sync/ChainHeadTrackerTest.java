@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,7 @@ package org.hyperledger.besu.ethereum.eth.sync;
 
 import static org.mockito.Mockito.mock;
 
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
@@ -29,14 +33,14 @@ import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer.Responder;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class ChainHeadTrackerTest {
 
-  private final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
-  private final MutableBlockchain blockchain = blockchainSetupUtil.getBlockchain();
+  private final BlockchainSetupUtil<Void> blockchainSetupUtil =
+      BlockchainSetupUtil.forTesting();
+  private final MutableBlockchain blockchain =
+      blockchainSetupUtil.getBlockchain();
   private final EthProtocolManager ethProtocolManager =
       EthProtocolManagerTestUtil.create(blockchain);
   private final RespondingEthPeer respondingPeer =
@@ -50,21 +54,18 @@ public class ChainHeadTrackerTest {
       FixedDifficultyProtocolSchedule.create(
           GenesisConfigFile.development().getConfigOptions(), false);
 
-  private final TrailingPeerLimiter trailingPeerLimiter = mock(TrailingPeerLimiter.class);
+  private final TrailingPeerLimiter trailingPeerLimiter =
+      mock(TrailingPeerLimiter.class);
   private final ChainHeadTracker chainHeadTracker =
-      new ChainHeadTracker(
-          ethProtocolManager.ethContext(),
-          protocolSchedule,
-          trailingPeerLimiter,
-          new NoOpMetricsSystem());
+      new ChainHeadTracker(ethProtocolManager.ethContext(), protocolSchedule,
+                           trailingPeerLimiter, new NoOpMetricsSystem());
 
   @Test
   public void shouldRequestHeaderChainHeadWhenNewPeerConnects() {
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchainSetupUtil.getBlockchain(),
-            blockchainSetupUtil.getWorldArchive(),
-            blockchainSetupUtil.getTransactionPool());
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchainSetupUtil.getBlockchain(),
+        blockchainSetupUtil.getWorldArchive(),
+        blockchainSetupUtil.getTransactionPool());
     chainHeadTracker.onPeerConnected(respondingPeer.getEthPeer());
 
     Assertions.assertThat(chainHeadState().getEstimatedHeight()).isZero();
@@ -76,16 +77,17 @@ public class ChainHeadTrackerTest {
   }
 
   @Test
-  public void shouldIgnoreHeadersIfChainHeadHasAlreadyBeenUpdatedWhileWaiting() {
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchainSetupUtil.getBlockchain(),
-            blockchainSetupUtil.getWorldArchive(),
-            blockchainSetupUtil.getTransactionPool());
+  public void
+  shouldIgnoreHeadersIfChainHeadHasAlreadyBeenUpdatedWhileWaiting() {
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchainSetupUtil.getBlockchain(),
+        blockchainSetupUtil.getWorldArchive(),
+        blockchainSetupUtil.getTransactionPool());
     chainHeadTracker.onPeerConnected(respondingPeer.getEthPeer());
 
     // Change the hash of the current known head
-    respondingPeer.getEthPeer().chainState().statusReceived(Hash.EMPTY_TRIE_HASH, Difficulty.ONE);
+    respondingPeer.getEthPeer().chainState().statusReceived(
+        Hash.EMPTY_TRIE_HASH, Difficulty.ONE);
 
     respondingPeer.respond(responder);
 
@@ -94,11 +96,10 @@ public class ChainHeadTrackerTest {
 
   @Test
   public void shouldCheckTrialingPeerLimits() {
-    final Responder responder =
-        RespondingEthPeer.blockchainResponder(
-            blockchainSetupUtil.getBlockchain(),
-            blockchainSetupUtil.getWorldArchive(),
-            blockchainSetupUtil.getTransactionPool());
+    final Responder responder = RespondingEthPeer.blockchainResponder(
+        blockchainSetupUtil.getBlockchain(),
+        blockchainSetupUtil.getWorldArchive(),
+        blockchainSetupUtil.getTransactionPool());
     chainHeadTracker.onPeerConnected(respondingPeer.getEthPeer());
 
     Assertions.assertThat(chainHeadState().getEstimatedHeight()).isZero();

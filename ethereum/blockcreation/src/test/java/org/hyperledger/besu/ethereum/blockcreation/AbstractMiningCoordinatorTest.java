@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,6 +26,8 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -30,21 +35,17 @@ import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
-
-import java.util.Collections;
-import java.util.Optional;
-
 import org.junit.Before;
 import org.junit.Test;
 
 public class AbstractMiningCoordinatorTest {
 
-  private static final Block BLOCK =
-      new Block(
-          new BlockHeaderTestFixture().buildHeader(),
-          new BlockBody(Collections.emptyList(), Collections.emptyList()));
+  private static final Block BLOCK = new Block(
+      new BlockHeaderTestFixture().buildHeader(),
+      new BlockBody(Collections.emptyList(), Collections.emptyList()));
   private final Blockchain blockchain = mock(Blockchain.class);
-  private final EthHashMinerExecutor minerExecutor = mock(EthHashMinerExecutor.class);
+  private final EthHashMinerExecutor minerExecutor =
+      mock(EthHashMinerExecutor.class);
   private final SyncState syncState = mock(SyncState.class);
   private final EthHashBlockMiner blockMiner = mock(EthHashBlockMiner.class);
   private final TestMiningCoordinator miningCoordinator =
@@ -52,7 +53,8 @@ public class AbstractMiningCoordinatorTest {
 
   @Before
   public void setUp() {
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
   }
 
   @Test
@@ -105,9 +107,8 @@ public class AbstractMiningCoordinatorTest {
     miningCoordinator.enable();
     miningCoordinator.start();
 
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
 
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
@@ -118,9 +119,8 @@ public class AbstractMiningCoordinatorTest {
     miningCoordinator.enable();
     miningCoordinator.start();
 
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
 
     verify(blockMiner).cancel();
     verify(minerExecutor, times(2)).startAsyncMining(any(), any(), any());
@@ -158,7 +158,8 @@ public class AbstractMiningCoordinatorTest {
   }
 
   @Test
-  public void shouldNotStartMiningWhenBecomingInSyncIfMinerStoppedThenStarted() {
+  public void
+  shouldNotStartMiningWhenBecomingInSyncIfMinerStoppedThenStarted() {
     miningCoordinator.enable();
     miningCoordinator.start();
     miningCoordinator.stop();
@@ -176,9 +177,8 @@ public class AbstractMiningCoordinatorTest {
     miningCoordinator.disable();
     miningCoordinator.start();
     when(syncState.isInSync()).thenReturn(true);
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
 
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
@@ -187,9 +187,8 @@ public class AbstractMiningCoordinatorTest {
   public void shouldNotStartMiningWhenBlockAddedAndInSyncIfMinerNotStarted() {
     miningCoordinator.enable();
     when(syncState.isInSync()).thenReturn(true);
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
 
@@ -201,15 +200,15 @@ public class AbstractMiningCoordinatorTest {
     verify(minerExecutor).shutDown();
 
     when(syncState.isInSync()).thenReturn(true);
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
 
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
 
   @Test
-  public void shouldNotStartMiningWhenBlockAddedAndInSyncIfStoppedThenStarted() {
+  public void
+  shouldNotStartMiningWhenBlockAddedAndInSyncIfStoppedThenStarted() {
     miningCoordinator.enable();
     miningCoordinator.start();
     miningCoordinator.stop();
@@ -217,9 +216,8 @@ public class AbstractMiningCoordinatorTest {
     miningCoordinator.start();
 
     when(syncState.isInSync()).thenReturn(true);
-    miningCoordinator.onBlockAdded(
-        BlockAddedEvent.createForHeadAdvancement(
-            BLOCK, Collections.emptyList(), Collections.emptyList()));
+    miningCoordinator.onBlockAdded(BlockAddedEvent.createForHeadAdvancement(
+        BLOCK, Collections.emptyList(), Collections.emptyList()));
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
 
@@ -234,7 +232,8 @@ public class AbstractMiningCoordinatorTest {
     }
 
     @Override
-    public boolean newChainHeadInvalidatesMiningOperation(final BlockHeader newChainHeadHeader) {
+    public boolean newChainHeadInvalidatesMiningOperation(
+        final BlockHeader newChainHeadHeader) {
       return true;
     }
   }

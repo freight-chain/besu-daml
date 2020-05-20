@@ -1,28 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket;
 
 import static com.google.common.collect.Streams.stream;
-
-import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationService;
-import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationUtils;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
-
-import java.net.InetSocketAddress;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -39,14 +34,21 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.net.InetSocketAddress;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationService;
+import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationUtils;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
 
 public class WebSocketService {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  private static final InetSocketAddress EMPTY_SOCKET_ADDRESS = new InetSocketAddress("0.0.0.0", 0);
+  private static final InetSocketAddress EMPTY_SOCKET_ADDRESS =
+      new InetSocketAddress("0.0.0.0", 0);
   private static final String APPLICATION_JSON = "application/json";
 
   private final Vertx vertx;
@@ -55,22 +57,18 @@ public class WebSocketService {
 
   private HttpServer httpServer;
 
-  @VisibleForTesting public final Optional<AuthenticationService> authenticationService;
+  @VisibleForTesting
+  public final Optional<AuthenticationService> authenticationService;
 
   public WebSocketService(
-      final Vertx vertx,
-      final WebSocketConfiguration configuration,
+      final Vertx vertx, final WebSocketConfiguration configuration,
       final WebSocketRequestHandler websocketRequestHandler) {
-    this(
-        vertx,
-        configuration,
-        websocketRequestHandler,
-        AuthenticationService.create(vertx, configuration));
+    this(vertx, configuration, websocketRequestHandler,
+         AuthenticationService.create(vertx, configuration));
   }
 
   private WebSocketService(
-      final Vertx vertx,
-      final WebSocketConfiguration configuration,
+      final Vertx vertx, final WebSocketConfiguration configuration,
       final WebSocketRequestHandler websocketRequestHandler,
       final Optional<AuthenticationService> authenticationService) {
     this.vertx = vertx;
@@ -80,18 +78,17 @@ public class WebSocketService {
   }
 
   public CompletableFuture<?> start() {
-    LOG.info(
-        "Starting Websocket service on {}:{}", configuration.getHost(), configuration.getPort());
+    LOG.info("Starting Websocket service on {}:{}", configuration.getHost(),
+             configuration.getPort());
 
     final CompletableFuture<?> resultFuture = new CompletableFuture<>();
 
     httpServer =
         vertx
-            .createHttpServer(
-                new HttpServerOptions()
-                    .setHost(configuration.getHost())
-                    .setPort(configuration.getPort())
-                    .setWebsocketSubProtocols("undefined"))
+            .createHttpServer(new HttpServerOptions()
+                                  .setHost(configuration.getHost())
+                                  .setPort(configuration.getPort())
+                                  .setWebsocketSubProtocols("undefined"))
             .websocketHandler(websocketHandler())
             .requestHandler(httpHandler())
             .listen(startHandler(resultFuture));
@@ -108,43 +105,38 @@ public class WebSocketService {
         LOG.trace("Websocket authentication token {}", token);
       }
 
-      if (!hasWhitelistedHostnameHeader(Optional.ofNullable(websocket.headers().get("Host")))) {
+      if (!hasWhitelistedHostnameHeader(
+              Optional.ofNullable(websocket.headers().get("Host")))) {
         websocket.reject(403);
       }
 
-      LOG.debug("Websocket Connected ({})", socketAddressAsString(socketAddress));
-
-      websocket.textMessageHandler(
-          payload -> {
-            LOG.debug(
-                "Received Websocket request {} ({})",
-                payload,
+      LOG.debug("Websocket Connected ({})",
                 socketAddressAsString(socketAddress));
 
-            AuthenticationUtils.getUser(
-                authenticationService,
-                token,
-                user ->
-                    websocketRequestHandler.handle(
-                        authenticationService, connectionId, payload, user));
-          });
+      websocket.textMessageHandler(payload -> {
+        LOG.debug("Received Websocket request {} ({})", payload,
+                  socketAddressAsString(socketAddress));
 
-      websocket.closeHandler(
-          v -> {
-            LOG.debug("Websocket Disconnected ({})", socketAddressAsString(socketAddress));
-            vertx
-                .eventBus()
-                .publish(SubscriptionManager.EVENTBUS_REMOVE_SUBSCRIPTIONS_ADDRESS, connectionId);
-          });
+        AuthenticationUtils.getUser(
+            authenticationService, token,
+            user
+            -> websocketRequestHandler.handle(authenticationService,
+                                              connectionId, payload, user));
+      });
 
-      websocket.exceptionHandler(
-          t -> {
-            LOG.debug(
-                "Unrecoverable error on Websocket: {} ({})",
-                t.getMessage(),
-                socketAddressAsString(socketAddress));
-            websocket.close();
-          });
+      websocket.closeHandler(v -> {
+        LOG.debug("Websocket Disconnected ({})",
+                  socketAddressAsString(socketAddress));
+        vertx.eventBus().publish(
+            SubscriptionManager.EVENTBUS_REMOVE_SUBSCRIPTIONS_ADDRESS,
+            connectionId);
+      });
+
+      websocket.exceptionHandler(t -> {
+        LOG.debug("Unrecoverable error on Websocket: {} ({})", t.getMessage(),
+                  socketAddressAsString(socketAddress));
+        websocket.close();
+      });
     };
   }
 
@@ -156,13 +148,11 @@ public class WebSocketService {
 
     if (authenticationService.isPresent()) {
       router.route("/login").handler(BodyHandler.create());
-      router
-          .post("/login")
+      router.post("/login")
           .produces(APPLICATION_JSON)
           .handler(authenticationService.get()::handleLogin);
     } else {
-      router
-          .post("/login")
+      router.post("/login")
           .produces(APPLICATION_JSON)
           .handler(AuthenticationService::handleDisabledLogin);
     }
@@ -174,19 +164,19 @@ public class WebSocketService {
   private static void handleHttpNotSupported(final RoutingContext http) {
     final HttpServerResponse response = http.response();
     if (!response.closed()) {
-      response.setStatusCode(400).end("Websocket endpoint can't handle HTTP requests");
+      response.setStatusCode(400).end(
+          "Websocket endpoint can't handle HTTP requests");
     }
   }
 
-  private Handler<AsyncResult<HttpServer>> startHandler(final CompletableFuture<?> resultFuture) {
+  private Handler<AsyncResult<HttpServer>>
+  startHandler(final CompletableFuture<?> resultFuture) {
     return res -> {
       if (res.succeeded()) {
 
         final int actualPort = res.result().actualPort();
-        LOG.info(
-            "Websocket service started and listening on {}:{}",
-            configuration.getHost(),
-            actualPort);
+        LOG.info("Websocket service started and listening on {}:{}",
+                 configuration.getHost(), actualPort);
         configuration.setPort(actualPort);
         resultFuture.complete(null);
       } else {
@@ -202,15 +192,14 @@ public class WebSocketService {
 
     final CompletableFuture<?> resultFuture = new CompletableFuture<>();
 
-    httpServer.close(
-        res -> {
-          if (res.succeeded()) {
-            httpServer = null;
-            resultFuture.complete(null);
-          } else {
-            resultFuture.completeExceptionally(res.cause());
-          }
-        });
+    httpServer.close(res -> {
+      if (res.succeeded()) {
+        httpServer = null;
+        resultFuture.complete(null);
+      } else {
+        resultFuture.completeExceptionally(res.cause());
+      }
+    });
 
     return resultFuture;
   }
@@ -219,11 +208,13 @@ public class WebSocketService {
     if (httpServer == null) {
       return EMPTY_SOCKET_ADDRESS;
     }
-    return new InetSocketAddress(configuration.getHost(), httpServer.actualPort());
+    return new InetSocketAddress(configuration.getHost(),
+                                 httpServer.actualPort());
   }
 
   private String socketAddressAsString(final SocketAddress socketAddress) {
-    return String.format("host=%s, port=%d", socketAddress.host(), socketAddress.port());
+    return String.format("host=%s, port=%d", socketAddress.host(),
+                         socketAddress.port());
   }
 
   private String getAuthToken(final ServerWebSocket websocket) {
@@ -233,13 +224,13 @@ public class WebSocketService {
 
   private Handler<RoutingContext> checkWhitelistHostHeader() {
     return event -> {
-      if (hasWhitelistedHostnameHeader(Optional.ofNullable(event.request().host()))) {
+      if (hasWhitelistedHostnameHeader(
+              Optional.ofNullable(event.request().host()))) {
         event.next();
       } else {
         final HttpServerResponse response = event.response();
         if (!response.closed()) {
-          response
-              .setStatusCode(403)
+          response.setStatusCode(403)
               .putHeader("Content-Type", "application/json; charset=utf-8")
               .end("{\"message\":\"Host not authorized.\"}");
         }
@@ -249,16 +240,19 @@ public class WebSocketService {
 
   @VisibleForTesting
   public boolean hasWhitelistedHostnameHeader(final Optional<String> header) {
-    return configuration.getHostsWhitelist().contains("*")
-        || header.map(value -> checkHostInWhitelist(validateHostHeader(value))).orElse(false);
+    return configuration.getHostsWhitelist().contains("*") ||
+        header.map(value -> checkHostInWhitelist(validateHostHeader(value)))
+            .orElse(false);
   }
 
   private Optional<String> validateHostHeader(final String header) {
     final Iterable<String> splitHostHeader = Splitter.on(':').split(header);
     final long hostPieces = stream(splitHostHeader).count();
     if (hostPieces > 1) {
-      // If the host contains a colon, verify the host is correctly formed - host [ ":" port ]
-      if (hostPieces > 2 || !Iterables.get(splitHostHeader, 1).matches("\\d{1,5}+")) {
+      // If the host contains a colon, verify the host is correctly formed -
+      // host [ ":" port ]
+      if (hostPieces > 2 ||
+          !Iterables.get(splitHostHeader, 1).matches("\\d{1,5}+")) {
         return Optional.empty();
       }
     }
@@ -267,12 +261,10 @@ public class WebSocketService {
 
   private boolean checkHostInWhitelist(final Optional<String> hostHeader) {
     return hostHeader
-        .map(
-            header ->
-                configuration.getHostsWhitelist().stream()
-                    .anyMatch(
-                        whitelistEntry ->
-                            whitelistEntry.toLowerCase().equals(header.toLowerCase())))
+        .map(header
+             -> configuration.getHostsWhitelist().stream().anyMatch(
+                 whitelistEntry
+                 -> whitelistEntry.toLowerCase().equals(header.toLowerCase())))
         .orElse(false);
   }
 }

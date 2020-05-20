@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,14 @@ package org.hyperledger.besu.ethereum.core;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.Files;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.util.Base64;
+import java.util.Optional;
 import org.hyperledger.besu.crypto.KeyPairUtil;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.enclave.Enclave;
@@ -28,19 +39,10 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.ethereum.worldstate.WorldStatePreimageStorage;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Base64;
-import java.util.Optional;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.io.Files;
-
 public class PrivacyParameters {
 
-  public static final URI DEFAULT_ENCLAVE_URL = URI.create("http://localhost:8888");
+  public static final URI DEFAULT_ENCLAVE_URL =
+      URI.create("http://localhost:8888");
   public static final PrivacyParameters DEFAULT = new PrivacyParameters();
 
   private Integer privacyAddress = Address.PRIVACY;
@@ -58,42 +60,30 @@ public class PrivacyParameters {
   private PrivateStateRootResolver privateStateRootResolver;
   private PrivateWorldStateReader privateWorldStateReader;
 
-  public Integer getPrivacyAddress() {
-    return privacyAddress;
-  }
+  public Integer getPrivacyAddress() { return privacyAddress; }
 
   private void setPrivacyAddress(final Integer privacyAddress) {
     this.privacyAddress = privacyAddress;
   }
 
-  public Boolean isEnabled() {
-    return enabled;
-  }
+  public Boolean isEnabled() { return enabled; }
 
-  private void setEnabled(final boolean enabled) {
-    this.enabled = enabled;
-  }
+  private void setEnabled(final boolean enabled) { this.enabled = enabled; }
 
-  public URI getEnclaveUri() {
-    return enclaveUri;
-  }
+  public URI getEnclaveUri() { return enclaveUri; }
 
   private void setEnclaveUri(final URI enclaveUri) {
     this.enclaveUri = enclaveUri;
   }
 
-  public String getEnclavePublicKey() {
-    return enclavePublicKey;
-  }
+  public String getEnclavePublicKey() { return enclavePublicKey; }
 
   @VisibleForTesting
   public void setEnclavePublicKey(final String enclavePublicKey) {
     this.enclavePublicKey = enclavePublicKey;
   }
 
-  public File getEnclavePublicKeyFile() {
-    return enclavePublicKeyFile;
-  }
+  public File getEnclavePublicKeyFile() { return enclavePublicKeyFile; }
 
   private void setEnclavePublicKeyFile(final File enclavePublicKeyFile) {
     this.enclavePublicKeyFile = enclavePublicKeyFile;
@@ -111,7 +101,8 @@ public class PrivacyParameters {
     return privateWorldStateArchive;
   }
 
-  private void setPrivateWorldStateArchive(final WorldStateArchive privateWorldStateArchive) {
+  private void setPrivateWorldStateArchive(
+      final WorldStateArchive privateWorldStateArchive) {
     this.privateWorldStateArchive = privateWorldStateArchive;
   }
 
@@ -119,7 +110,8 @@ public class PrivacyParameters {
     return privateStorageProvider;
   }
 
-  private void setPrivateStorageProvider(final PrivacyStorageProvider privateStorageProvider) {
+  private void setPrivateStorageProvider(
+      final PrivacyStorageProvider privateStorageProvider) {
     this.privateStorageProvider = privateStorageProvider;
   }
 
@@ -127,27 +119,23 @@ public class PrivacyParameters {
     return privateStateStorage;
   }
 
-  private void setPrivateStateStorage(final PrivateStateStorage privateStateStorage) {
+  private void
+  setPrivateStateStorage(final PrivateStateStorage privateStateStorage) {
     this.privateStateStorage = privateStateStorage;
   }
 
-  public Enclave getEnclave() {
-    return enclave;
-  }
+  public Enclave getEnclave() { return enclave; }
 
-  private void setEnclave(final Enclave enclave) {
-    this.enclave = enclave;
-  }
+  private void setEnclave(final Enclave enclave) { this.enclave = enclave; }
 
   private void setMultiTenancyEnabled(final boolean multiTenancyEnabled) {
     this.multiTenancyEnabled = multiTenancyEnabled;
   }
 
-  public boolean isMultiTenancyEnabled() {
-    return multiTenancyEnabled;
-  }
+  public boolean isMultiTenancyEnabled() { return multiTenancyEnabled; }
 
-  private void setOnchainPrivacyGroupsEnabled(final boolean onchainPrivacyGroupsEnabled) {
+  private void
+  setOnchainPrivacyGroupsEnabled(final boolean onchainPrivacyGroupsEnabled) {
     this.onchainPrivacyGroupsEnabled = onchainPrivacyGroupsEnabled;
   }
 
@@ -168,23 +156,18 @@ public class PrivacyParameters {
     return privateWorldStateReader;
   }
 
-  private void setPrivateWorldStateReader(final PrivateWorldStateReader privateWorldStateReader) {
+  private void setPrivateWorldStateReader(
+      final PrivateWorldStateReader privateWorldStateReader) {
     this.privateWorldStateReader = privateWorldStateReader;
   }
 
   @Override
   public String toString() {
     return "PrivacyParameters{"
-        + "enabled="
-        + enabled
-        + ", multiTenancyEnabled = "
-        + multiTenancyEnabled
-        + ", onchainPrivacyGroupsEnabled = "
-        + onchainPrivacyGroupsEnabled
-        + ", enclaveUri='"
-        + enclaveUri
-        + '\''
-        + '}';
+        + "enabled=" + enabled +
+        ", multiTenancyEnabled = " + multiTenancyEnabled +
+        ", onchainPrivacyGroupsEnabled = " + onchainPrivacyGroupsEnabled +
+        ", enclaveUri='" + enclaveUri + '\'' + '}';
   }
 
   public static class Builder {
@@ -218,7 +201,8 @@ public class PrivacyParameters {
       return this;
     }
 
-    public Builder setStorageProvider(final PrivacyStorageProvider privateStorageProvider) {
+    public Builder
+    setStorageProvider(final PrivacyStorageProvider privateStorageProvider) {
       this.storageProvider = privateStorageProvider;
       return this;
     }
@@ -243,17 +227,20 @@ public class PrivacyParameters {
       return this;
     }
 
-    public Builder setPrivacyKeyStorePasswordFile(final Path privacyKeyStorePasswordFile) {
+    public Builder
+    setPrivacyKeyStorePasswordFile(final Path privacyKeyStorePasswordFile) {
       this.privacyKeyStorePasswordFile = privacyKeyStorePasswordFile;
       return this;
     }
 
-    public Builder setPrivacyTlsKnownEnclaveFile(final Path privacyTlsKnownEnclaveFile) {
+    public Builder
+    setPrivacyTlsKnownEnclaveFile(final Path privacyTlsKnownEnclaveFile) {
       this.privacyTlsKnownEnclaveFile = privacyTlsKnownEnclaveFile;
       return this;
     }
 
-    public Builder setOnchainPrivacyGroupsEnabled(final boolean onchainPrivacyGroupsEnabled) {
+    public Builder
+    setOnchainPrivacyGroupsEnabled(final boolean onchainPrivacyGroupsEnabled) {
       this.onchainPrivacyGroupsEnabled = onchainPrivacyGroupsEnabled;
       return this;
     }
@@ -266,16 +253,18 @@ public class PrivacyParameters {
         final WorldStatePreimageStorage privatePreimageStorage =
             storageProvider.createWorldStatePreimageStorage();
         final WorldStateArchive privateWorldStateArchive =
-            new WorldStateArchive(privateWorldStateStorage, privatePreimageStorage);
+            new WorldStateArchive(privateWorldStateStorage,
+                                  privatePreimageStorage);
 
-        final PrivateStateStorage privateStateStorage = storageProvider.createPrivateStateStorage();
+        final PrivateStateStorage privateStateStorage =
+            storageProvider.createPrivateStateStorage();
         final PrivateStateRootResolver privateStateRootResolver =
             new PrivateStateRootResolver(privateStateStorage);
 
         config.setPrivateStateRootResolver(privateStateRootResolver);
-        config.setPrivateWorldStateReader(
-            new PrivateWorldStateReader(
-                privateStateRootResolver, privateWorldStateArchive, privateStateStorage));
+        config.setPrivateWorldStateReader(new PrivateWorldStateReader(
+            privateStateRootResolver, privateWorldStateArchive,
+            privateStateStorage));
 
         config.setPrivateWorldStateArchive(privateWorldStateArchive);
         config.setEnclavePublicKey(enclavePublicKey);
@@ -284,12 +273,9 @@ public class PrivacyParameters {
         config.setPrivateStateStorage(privateStateStorage);
         // pass TLS options to enclave factory if they are set
         if (privacyKeyStoreFile != null) {
-          config.setEnclave(
-              enclaveFactory.createVertxEnclave(
-                  enclaveUrl,
-                  privacyKeyStoreFile,
-                  privacyKeyStorePasswordFile,
-                  privacyTlsKnownEnclaveFile));
+          config.setEnclave(enclaveFactory.createVertxEnclave(
+              enclaveUrl, privacyKeyStoreFile, privacyKeyStorePasswordFile,
+              privacyTlsKnownEnclaveFile));
         } else {
           config.setEnclave(enclaveFactory.createVertxEnclave(enclaveUrl));
         }
@@ -306,7 +292,8 @@ public class PrivacyParameters {
       return config;
     }
 
-    public Builder setEnclavePublicKeyUsingFile(final File publicKeyFile) throws IOException {
+    public Builder setEnclavePublicKeyUsingFile(final File publicKeyFile)
+        throws IOException {
       this.enclavePublicKeyFile = publicKeyFile;
       this.enclavePublicKey = Files.asCharSource(publicKeyFile, UTF_8).read();
       validatePublicKey(publicKeyFile);

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,11 @@ package org.hyperledger.besu.ethereum.blockcreation;
 
 import static org.apache.logging.log4j.LogManager.getLogger;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
 import org.hyperledger.besu.ethereum.chain.BlockAddedObserver;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -29,27 +37,18 @@ import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.util.Subscribers;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-
 public abstract class AbstractMiningCoordinator<
-        C, M extends BlockMiner<C, ? extends AbstractBlockCreator<C>>>
+    C, M extends BlockMiner<C, ? extends AbstractBlockCreator<C>>>
     implements BlockAddedObserver, MiningCoordinator {
 
-  private enum State {
-    IDLE,
-    RUNNING,
-    STOPPED
-  }
+  private enum State { IDLE, RUNNING, STOPPED }
 
   private static final Logger LOG = getLogger();
 
-  private final Subscribers<MinedBlockObserver> minedBlockObservers = Subscribers.create();
-  private final Subscribers<EthHashObserver> ethHashObservers = Subscribers.create();
+  private final Subscribers<MinedBlockObserver> minedBlockObservers =
+      Subscribers.create();
+  private final Subscribers<EthHashObserver> ethHashObservers =
+      Subscribers.create();
   private final AbstractMinerExecutor<C, M> executor;
   private final SyncState syncState;
   private final Blockchain blockchain;
@@ -58,10 +57,9 @@ public abstract class AbstractMiningCoordinator<
   private boolean isEnabled = false;
   protected Optional<M> currentRunningMiner = Optional.empty();
 
-  public AbstractMiningCoordinator(
-      final Blockchain blockchain,
-      final AbstractMinerExecutor<C, M> executor,
-      final SyncState syncState) {
+  public AbstractMiningCoordinator(final Blockchain blockchain,
+                                   final AbstractMinerExecutor<C, M> executor,
+                                   final SyncState syncState) {
     this.executor = executor;
     this.blockchain = blockchain;
     this.syncState = syncState;
@@ -70,11 +68,11 @@ public abstract class AbstractMiningCoordinator<
   }
 
   @Override
-  public Optional<Block> createBlock(
-      final BlockHeader parentHeader,
-      final List<Transaction> transactions,
-      final List<BlockHeader> ommers) {
-    final M miner = executor.createMiner(minedBlockObservers, ethHashObservers, parentHeader);
+  public Optional<Block> createBlock(final BlockHeader parentHeader,
+                                     final List<Transaction> transactions,
+                                     final List<BlockHeader> ommers) {
+    final M miner = executor.createMiner(minedBlockObservers, ethHashObservers,
+                                         parentHeader);
     return Optional.of(miner.createBlock(parentHeader, transactions, ommers));
   }
 
@@ -132,13 +130,12 @@ public abstract class AbstractMiningCoordinator<
 
   @Override
   public boolean isMining() {
-    synchronized (this) {
-      return currentRunningMiner.isPresent();
-    }
+    synchronized (this) { return currentRunningMiner.isPresent(); }
   }
 
   private synchronized boolean startMiningIfPossible() {
-    if ((state != State.RUNNING) || !isEnabled || !syncState.isInSync() || isMining()) {
+    if ((state != State.RUNNING) || !isEnabled || !syncState.isInSync() ||
+        isMining()) {
       return false;
     }
 
@@ -148,30 +145,27 @@ public abstract class AbstractMiningCoordinator<
 
   private void startAsyncMiningOperation() {
     final BlockHeader parentHeader = blockchain.getChainHeadHeader();
-    currentRunningMiner =
-        executor.startAsyncMining(minedBlockObservers, ethHashObservers, parentHeader);
+    currentRunningMiner = executor.startAsyncMining(
+        minedBlockObservers, ethHashObservers, parentHeader);
   }
 
   private synchronized boolean haltCurrentMiningOperation() {
     final AtomicBoolean wasHalted = new AtomicBoolean(false);
-    currentRunningMiner.ifPresent(
-        (miner) -> {
-          haltMiner(miner);
-          wasHalted.set(true);
-        });
+    currentRunningMiner.ifPresent((miner) -> {
+      haltMiner(miner);
+      wasHalted.set(true);
+    });
     currentRunningMiner = Optional.empty();
     return wasHalted.get();
   }
 
-  protected void haltMiner(final M miner) {
-    miner.cancel();
-  }
+  protected void haltMiner(final M miner) { miner.cancel(); }
 
   @Override
   public void onBlockAdded(final BlockAddedEvent event) {
     synchronized (this) {
-      if (event.isNewCanonicalHead()
-          && newChainHeadInvalidatesMiningOperation(event.getBlock().getHeader())) {
+      if (event.isNewCanonicalHead() && newChainHeadInvalidatesMiningOperation(
+                                            event.getBlock().getHeader())) {
         haltCurrentMiningOperation();
         startMiningIfPossible();
       }
@@ -213,6 +207,6 @@ public abstract class AbstractMiningCoordinator<
     return executor.getCoinbase();
   }
 
-  protected abstract boolean newChainHeadInvalidatesMiningOperation(
-      final BlockHeader newChainHeadHeader);
+  protected abstract boolean
+  newChainHeadInvalidatesMiningOperation(final BlockHeader newChainHeadHeader);
 }

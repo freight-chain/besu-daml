@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,12 @@ import static java.util.Collections.singletonList;
 import static org.apache.logging.log4j.LogManager.getLogger;
 import static org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason.CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
@@ -45,18 +54,11 @@ import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import org.apache.logging.log4j.Logger;
-
 /**
- * Maintains the set of pending transactions received from JSON-RPC or other nodes. Transactions are
- * removed automatically when they are included in a block on the canonical chain and re-added if a
- * re-org removes them from the canonical chain again.
+ * Maintains the set of pending transactions received from JSON-RPC or other
+ * nodes. Transactions are removed automatically when they are included in a
+ * block on the canonical chain and re-added if a re-org removes them from the
+ * canonical chain again.
  *
  * <p>This class is safe for use across multiple threads.
  */
@@ -71,12 +73,14 @@ public class TransactionPool implements BlockAddedObserver {
   private final ProtocolSchedule<?> protocolSchedule;
   private final ProtocolContext<?> protocolContext;
   private final TransactionBatchAddedListener transactionBatchAddedListener;
-  private final Optional<TransactionBatchAddedListener> pendingTransactionBatchAddedListener;
+  private final Optional<TransactionBatchAddedListener>
+      pendingTransactionBatchAddedListener;
   private final SyncState syncState;
   private final Wei minTransactionGasPrice;
   private final LabelledMetric<Counter> duplicateTransactionCounter;
   private final PeerTransactionTracker peerTransactionTracker;
-  private final Optional<PeerPendingTransactionTracker> peerPendingTransactionTracker;
+  private final Optional<PeerPendingTransactionTracker>
+      peerPendingTransactionTracker;
   private final Optional<EIP1559> eip1559;
   private final TransactionPriceCalculator frontierPriceCalculator =
       TransactionPriceCalculator.frontier();
@@ -88,31 +92,29 @@ public class TransactionPool implements BlockAddedObserver {
       final ProtocolSchedule<?> protocolSchedule,
       final ProtocolContext<?> protocolContext,
       final TransactionBatchAddedListener transactionBatchAddedListener,
-      final Optional<TransactionBatchAddedListener> pendingTransactionBatchAddedListener,
-      final SyncState syncState,
-      final EthContext ethContext,
+      final Optional<TransactionBatchAddedListener>
+          pendingTransactionBatchAddedListener,
+      final SyncState syncState, final EthContext ethContext,
       final PeerTransactionTracker peerTransactionTracker,
-      final Optional<PeerPendingTransactionTracker> peerPendingTransactionTracker,
-      final Wei minTransactionGasPrice,
-      final MetricsSystem metricsSystem,
+      final Optional<PeerPendingTransactionTracker>
+          peerPendingTransactionTracker,
+      final Wei minTransactionGasPrice, final MetricsSystem metricsSystem,
       final Optional<EIP1559> eip1559) {
     this.pendingTransactions = pendingTransactions;
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
     this.transactionBatchAddedListener = transactionBatchAddedListener;
-    this.pendingTransactionBatchAddedListener = pendingTransactionBatchAddedListener;
+    this.pendingTransactionBatchAddedListener =
+        pendingTransactionBatchAddedListener;
     this.syncState = syncState;
     this.peerTransactionTracker = peerTransactionTracker;
     this.peerPendingTransactionTracker = peerPendingTransactionTracker;
     this.minTransactionGasPrice = minTransactionGasPrice;
     this.eip1559 = eip1559;
 
-    duplicateTransactionCounter =
-        metricsSystem.createLabelledCounter(
-            BesuMetricCategory.TRANSACTION_POOL,
-            "transactions_duplicates_total",
-            "Total number of duplicate transactions received",
-            "source");
+    duplicateTransactionCounter = metricsSystem.createLabelledCounter(
+        BesuMetricCategory.TRANSACTION_POOL, "transactions_duplicates_total",
+        "Total number of duplicate transactions received", "source");
 
     ethContext.getEthPeers().subscribeConnect(this::handleConnect);
   }
@@ -122,15 +124,15 @@ public class TransactionPool implements BlockAddedObserver {
     for (final Transaction transaction : localTransactions) {
       peerTransactionTracker.addToPeerSendQueue(peer, transaction);
     }
-    peerPendingTransactionTracker.ifPresent(
-        peerPendingTransactionTracker -> {
-          if (peerPendingTransactionTracker.isPeerSupported(peer, EthProtocol.ETH65)) {
-            final Collection<Hash> hashes = getNewPooledHashes();
-            for (final Hash hash : hashes) {
-              peerPendingTransactionTracker.addToPeerSendQueue(peer, hash);
-            }
-          }
-        });
+    peerPendingTransactionTracker.ifPresent(peerPendingTransactionTracker -> {
+      if (peerPendingTransactionTracker.isPeerSupported(peer,
+                                                        EthProtocol.ETH65)) {
+        final Collection<Hash> hashes = getNewPooledHashes();
+        for (final Hash hash : hashes) {
+          peerPendingTransactionTracker.addToPeerSendQueue(peer, hash);
+        }
+      }
+    });
   }
 
   private List<Transaction> getLocalTransactions() {
@@ -145,30 +147,33 @@ public class TransactionPool implements BlockAddedObserver {
     return pendingTransactions.addTransactionHash(transactionHash);
   }
 
-  public ValidationResult<TransactionInvalidReason> addLocalTransaction(
-      final Transaction transaction) {
+  public ValidationResult<TransactionInvalidReason>
+  addLocalTransaction(final Transaction transaction) {
     final Wei transactionGasPrice = minTransactionGasPrice(transaction);
     if (transactionGasPrice.compareTo(minTransactionGasPrice) < 0) {
-      return ValidationResult.invalid(TransactionInvalidReason.GAS_PRICE_TOO_LOW);
+      return ValidationResult.invalid(
+          TransactionInvalidReason.GAS_PRICE_TOO_LOW);
     }
     final ValidationResult<TransactionInvalidReason> validationResult =
         validateTransaction(transaction);
 
-    validationResult.ifValid(
-        () -> {
-          final boolean added = pendingTransactions.addLocalTransaction(transaction);
-          if (added) {
-            final Collection<Transaction> txs = singletonList(transaction);
-            transactionBatchAddedListener.onTransactionsAdded(txs);
-            pendingTransactionBatchAddedListener.ifPresent(it -> it.onTransactionsAdded(txs));
-          } else {
-            duplicateTransactionCounter.labels(LOCAL).inc();
-          }
-        });
+    validationResult.ifValid(() -> {
+      final boolean added =
+          pendingTransactions.addLocalTransaction(transaction);
+      if (added) {
+        final Collection<Transaction> txs = singletonList(transaction);
+        transactionBatchAddedListener.onTransactionsAdded(txs);
+        pendingTransactionBatchAddedListener.ifPresent(
+            it -> it.onTransactionsAdded(txs));
+      } else {
+        duplicateTransactionCounter.labels(LOCAL).inc();
+      }
+    });
     return validationResult;
   }
 
-  public void addRemoteTransactions(final Collection<Transaction> transactions) {
+  public void
+  addRemoteTransactions(final Collection<Transaction> transactions) {
     if (!syncState.isInSync(SYNC_TOLERANCE)) {
       return;
     }
@@ -187,17 +192,16 @@ public class TransactionPool implements BlockAddedObserver {
       final ValidationResult<TransactionInvalidReason> validationResult =
           validateTransaction(transaction);
       if (validationResult.isValid()) {
-        final boolean added = pendingTransactions.addRemoteTransaction(transaction);
+        final boolean added =
+            pendingTransactions.addRemoteTransaction(transaction);
         if (added) {
           addedTransactions.add(transaction);
         } else {
           duplicateTransactionCounter.labels(REMOTE).inc();
         }
       } else {
-        LOG.trace(
-            "Validation failed ({}) for transaction {}. Discarding.",
-            validationResult.getInvalidReason(),
-            transaction);
+        LOG.trace("Validation failed ({}) for transaction {}. Discarding.",
+                  validationResult.getInvalidReason(), transaction);
       }
     }
     if (!addedTransactions.isEmpty()) {
@@ -205,7 +209,8 @@ public class TransactionPool implements BlockAddedObserver {
     }
   }
 
-  public long subscribePendingTransactions(final PendingTransactionListener listener) {
+  public long
+  subscribePendingTransactions(final PendingTransactionListener listener) {
     return pendingTransactions.subscribePendingTransactions(listener);
   }
 
@@ -213,7 +218,8 @@ public class TransactionPool implements BlockAddedObserver {
     pendingTransactions.unsubscribePendingTransactions(id);
   }
 
-  public long subscribeDroppedTransactions(final PendingTransactionDroppedListener listener) {
+  public long subscribeDroppedTransactions(
+      final PendingTransactionDroppedListener listener) {
     return pendingTransactions.subscribeDroppedTransactions(listener);
   }
 
@@ -223,13 +229,15 @@ public class TransactionPool implements BlockAddedObserver {
 
   @Override
   public void onBlockAdded(final BlockAddedEvent event) {
-    event.getAddedTransactions().forEach(pendingTransactions::transactionAddedToBlock);
+    event.getAddedTransactions().forEach(
+        pendingTransactions::transactionAddedToBlock);
     addRemoteTransactions(event.getRemovedTransactions());
   }
 
   private TransactionValidator getTransactionValidator() {
     return protocolSchedule
-        .getByBlockNumber(protocolContext.getBlockchain().getChainHeadBlockNumber())
+        .getByBlockNumber(
+            protocolContext.getBlockchain().getChainHeadBlockNumber())
         .getTransactionValidator();
   }
 
@@ -237,8 +245,8 @@ public class TransactionPool implements BlockAddedObserver {
     return pendingTransactions;
   }
 
-  private ValidationResult<TransactionInvalidReason> validateTransaction(
-      final Transaction transaction) {
+  private ValidationResult<TransactionInvalidReason>
+  validateTransaction(final Transaction transaction) {
     final BlockHeader chainHeadBlockHeader = getChainHeadBlockHeader();
     final ValidationResult<TransactionInvalidReason> basicValidationResult =
         getTransactionValidator().validate(transaction);
@@ -254,17 +262,17 @@ public class TransactionPool implements BlockAddedObserver {
               transaction.getGasLimit(), chainHeadBlockHeader.getGasLimit()));
     }
 
-    return protocolContext
-        .getWorldStateArchive()
+    return protocolContext.getWorldStateArchive()
         .get(chainHeadBlockHeader.getStateRoot())
-        .map(
-            worldState -> {
-              final Account senderAccount = worldState.get(transaction.getSender());
-              return getTransactionValidator()
-                  .validateForSender(
-                      transaction, senderAccount, TransactionValidationParams.transactionPool());
-            })
-        .orElseGet(() -> ValidationResult.invalid(CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE));
+        .map(worldState -> {
+          final Account senderAccount = worldState.get(transaction.getSender());
+          return getTransactionValidator().validateForSender(
+              transaction, senderAccount,
+              TransactionValidationParams.transactionPool());
+        })
+        .orElseGet(()
+                       -> ValidationResult.invalid(
+                           CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE));
   }
 
   public Optional<Transaction> getTransactionByHash(final Hash hash) {
@@ -288,10 +296,12 @@ public class TransactionPool implements BlockAddedObserver {
     }
 
     final BlockHeader chainHeadBlockHeader = getChainHeadBlockHeader();
-    // Compute transaction price using EIP-1559 rules if chain head is after fork
+    // Compute transaction price using EIP-1559 rules if chain head is after
+    // fork
     if (this.eip1559.get().isEIP1559(chainHeadBlockHeader.getNumber())) {
       return BaseFee.minTransactionPriceInNextBlock(
-          transaction, eip1559PriceCalculator, chainHeadBlockHeader::getBaseFee);
+          transaction, eip1559PriceCalculator,
+          chainHeadBlockHeader::getBaseFee);
     } else { // Use frontier rules otherwise
       return frontierPriceCalculator.price(transaction, Optional.empty());
     }

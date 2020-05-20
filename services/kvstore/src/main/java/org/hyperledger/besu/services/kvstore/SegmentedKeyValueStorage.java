@@ -1,26 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.services.kvstore;
 
-import org.hyperledger.besu.plugin.services.exception.StorageException;
-import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
-
 import java.io.Closeable;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import org.hyperledger.besu.plugin.services.exception.StorageException;
+import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 
 /**
  * Service provided by besu to facilitate persistent data storage.
@@ -38,12 +40,14 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
    */
   Optional<byte[]> get(S segment, byte[] key) throws StorageException;
 
-  default boolean containsKey(final S segment, final byte[] key) throws StorageException {
+  default boolean containsKey(final S segment, final byte[] key)
+      throws StorageException {
     return get(segment, key).isPresent();
   }
 
   /**
-   * Begins a transaction. Returns a transaction object that can be updated and committed.
+   * Begins a transaction. Returns a transaction object that can be updated and
+   * committed.
    *
    * @return An object representing the transaction.
    */
@@ -51,13 +55,15 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
 
   long removeAllKeysUnless(S segmentHandle, Predicate<byte[]> inUseCheck);
 
-  Set<byte[]> getAllKeysThat(S segmentHandle, Predicate<byte[]> returnCondition);
+  Set<byte[]> getAllKeysThat(S segmentHandle,
+                             Predicate<byte[]> returnCondition);
 
   void clear(S segmentHandle);
 
   /**
-   * Represents a set of changes to be committed atomically. A single transaction is not
-   * thread-safe, but multiple transactions can execute concurrently.
+   * Represents a set of changes to be committed atomically. A single
+   * transaction is not thread-safe, but multiple transactions can execute
+   * concurrently.
    *
    * @param <S> the segment identifier type
    */
@@ -81,15 +87,16 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
     void remove(S segment, byte[] key);
 
     /**
-     * Atomically commit the set of changes contained in this transaction to the underlying
-     * key-value storage from which this transaction was started. After committing, the transaction
-     * is no longer usable and will throw exceptions if modifications are attempted.
+     * Atomically commit the set of changes contained in this transaction to the
+     * underlying key-value storage from which this transaction was started.
+     * After committing, the transaction is no longer usable and will throw
+     * exceptions if modifications are attempted.
      */
     void commit() throws StorageException;
 
     /**
-     * Cancel this transaction. After rolling back, the transaction is no longer usable and will
-     * throw exceptions if modifications are attempted.
+     * Cancel this transaction. After rolling back, the transaction is no longer
+     * usable and will throw exceptions if modifications are attempted.
      */
     void rollback();
   }

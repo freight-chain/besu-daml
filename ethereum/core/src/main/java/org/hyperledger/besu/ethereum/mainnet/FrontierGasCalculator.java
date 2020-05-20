@@ -1,19 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Transaction;
@@ -22,10 +28,6 @@ import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.Words;
 import org.hyperledger.besu.ethereum.vm.operations.ExpOperation;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 
 public class FrontierGasCalculator implements GasCalculator {
 
@@ -122,11 +124,9 @@ public class FrontierGasCalculator implements GasCalculator {
     }
     final int nonZeros = payload.size() - zeros;
 
-    Gas cost =
-        Gas.ZERO
-            .plus(TX_BASE_COST)
-            .plus(TX_DATA_ZERO_COST.times(zeros))
-            .plus(TX_DATA_NON_ZERO_COST.times(nonZeros));
+    Gas cost = Gas.ZERO.plus(TX_BASE_COST)
+                   .plus(TX_DATA_ZERO_COST.times(zeros))
+                   .plus(TX_DATA_NON_ZERO_COST.times(nonZeros));
 
     if (transaction.isContractCreation()) {
       cost = cost.plus(txCreateExtraGasCost());
@@ -140,9 +140,7 @@ public class FrontierGasCalculator implements GasCalculator {
    *
    * @return the additional gas cost for contract creation transactions
    */
-  protected Gas txCreateExtraGasCost() {
-    return TX_CREATE_EXTRA_COST;
-  }
+  protected Gas txCreateExtraGasCost() { return TX_CREATE_EXTRA_COST; }
 
   @Override
   public Gas codeDepositGasCost(final int codeSize) {
@@ -151,8 +149,7 @@ public class FrontierGasCalculator implements GasCalculator {
 
   @Override
   public Gas idPrecompiledContractGasCost(final Bytes input) {
-    return ID_PRECOMPILED_WORD_GAS_COST
-        .times(Words.numWords(input))
+    return ID_PRECOMPILED_WORD_GAS_COST.times(Words.numWords(input))
         .plus(ID_PRECOMPILED_BASE_GAS_COST);
   }
 
@@ -163,15 +160,13 @@ public class FrontierGasCalculator implements GasCalculator {
 
   @Override
   public Gas sha256PrecompiledContractGasCost(final Bytes input) {
-    return SHA256_PRECOMPILED_WORD_GAS_COST
-        .times(Words.numWords(input))
+    return SHA256_PRECOMPILED_WORD_GAS_COST.times(Words.numWords(input))
         .plus(SHA256_PRECOMPILED_BASE_GAS_COST);
   }
 
   @Override
   public Gas ripemd160PrecompiledContractGasCost(final Bytes input) {
-    return RIPEMD160_PRECOMPILED_WORD_GAS_COST
-        .times(Words.numWords(input))
+    return RIPEMD160_PRECOMPILED_WORD_GAS_COST.times(Words.numWords(input))
         .plus(RIPEMD160_PRECOMPILED_BASE_GAS_COST);
   }
 
@@ -228,27 +223,25 @@ public class FrontierGasCalculator implements GasCalculator {
    *
    * @return the gas cost to create a new account
    */
-  protected Gas newAccountGasCost() {
-    return NEW_ACCOUNT_GAS_COST;
-  }
+  protected Gas newAccountGasCost() { return NEW_ACCOUNT_GAS_COST; }
 
   @Override
-  public Gas callOperationGasCost(
-      final MessageFrame frame,
-      final Gas stipend,
-      final UInt256 inputDataOffset,
-      final UInt256 inputDataLength,
-      final UInt256 outputDataOffset,
-      final UInt256 outputDataLength,
-      final Wei transferValue,
-      final Account recipient) {
+  public Gas callOperationGasCost(final MessageFrame frame, final Gas stipend,
+                                  final UInt256 inputDataOffset,
+                                  final UInt256 inputDataLength,
+                                  final UInt256 outputDataOffset,
+                                  final UInt256 outputDataLength,
+                                  final Wei transferValue,
+                                  final Account recipient) {
     final Gas inputDataMemoryExpansionCost =
         memoryExpansionGasCost(frame, inputDataOffset, inputDataLength);
     final Gas outputDataMemoryExpansionCost =
         memoryExpansionGasCost(frame, outputDataOffset, outputDataLength);
-    final Gas memoryExpansionCost = inputDataMemoryExpansionCost.max(outputDataMemoryExpansionCost);
+    final Gas memoryExpansionCost =
+        inputDataMemoryExpansionCost.max(outputDataMemoryExpansionCost);
 
-    Gas cost = callOperationBaseGasCost().plus(stipend).plus(memoryExpansionCost);
+    Gas cost =
+        callOperationBaseGasCost().plus(stipend).plus(memoryExpansionCost);
 
     if (!transferValue.isZero()) {
       cost = cost.plus(callValueTransferGasCost());
@@ -272,8 +265,9 @@ public class FrontierGasCalculator implements GasCalculator {
   }
 
   @Override
-  public Gas gasAvailableForChildCall(
-      final MessageFrame frame, final Gas stipend, final boolean transfersValue) {
+  public Gas gasAvailableForChildCall(final MessageFrame frame,
+                                      final Gas stipend,
+                                      final boolean transfersValue) {
     if (transfersValue) {
       return stipend.plus(getAdditionalCallStipend());
     } else {
@@ -286,7 +280,8 @@ public class FrontierGasCalculator implements GasCalculator {
     final UInt256 initCodeOffset = UInt256.fromBytes(frame.getStackItem(1));
     final UInt256 initCodeLength = UInt256.fromBytes(frame.getStackItem(2));
 
-    final Gas memoryGasCost = memoryExpansionGasCost(frame, initCodeOffset, initCodeLength);
+    final Gas memoryGasCost =
+        memoryExpansionGasCost(frame, initCodeOffset, initCodeLength);
     return CREATE_OPERATION_GAS_COST.plus(memoryGasCost);
   }
 
@@ -296,15 +291,17 @@ public class FrontierGasCalculator implements GasCalculator {
   }
 
   @Override
-  public Gas dataCopyOperationGasCost(
-      final MessageFrame frame, final UInt256 offset, final UInt256 length) {
-    return copyWordsToMemoryGasCost(
-        frame, VERY_LOW_TIER_GAS_COST, COPY_WORD_GAS_COST, offset, length);
+  public Gas dataCopyOperationGasCost(final MessageFrame frame,
+                                      final UInt256 offset,
+                                      final UInt256 length) {
+    return copyWordsToMemoryGasCost(frame, VERY_LOW_TIER_GAS_COST,
+                                    COPY_WORD_GAS_COST, offset, length);
   }
 
   @Override
-  public Gas memoryExpansionGasCost(
-      final MessageFrame frame, final UInt256 offset, final UInt256 length) {
+  public Gas memoryExpansionGasCost(final MessageFrame frame,
+                                    final UInt256 offset,
+                                    final UInt256 length) {
 
     final Gas pre = memoryCost(frame.memoryWordSize());
     final Gas post = memoryCost(frame.calculateMemoryExpansion(offset, length));
@@ -333,7 +330,9 @@ public class FrontierGasCalculator implements GasCalculator {
 
   @Override
   public Gas expOperationGasCost(final int numBytes) {
-    return expOperationByteGasCost().times(Gas.of(numBytes)).plus(EXP_OPERATION_BASE_GAS_COST);
+    return expOperationByteGasCost()
+        .times(Gas.of(numBytes))
+        .plus(EXP_OPERATION_BASE_GAS_COST);
   }
 
   /**
@@ -341,21 +340,20 @@ public class FrontierGasCalculator implements GasCalculator {
    *
    * @return the base gas cost for external code accesses
    */
-  protected Gas extCodeBaseGasCost() {
-    return EXT_CODE_BASE_GAS_COST;
-  }
+  protected Gas extCodeBaseGasCost() { return EXT_CODE_BASE_GAS_COST; }
 
   @Override
-  public Gas extCodeCopyOperationGasCost(
-      final MessageFrame frame, final UInt256 offset, final UInt256 length) {
-    return copyWordsToMemoryGasCost(
-        frame, extCodeBaseGasCost(), COPY_WORD_GAS_COST, offset, length);
+  public Gas extCodeCopyOperationGasCost(final MessageFrame frame,
+                                         final UInt256 offset,
+                                         final UInt256 length) {
+    return copyWordsToMemoryGasCost(frame, extCodeBaseGasCost(),
+                                    COPY_WORD_GAS_COST, offset, length);
   }
 
   @Override
   public Gas extCodeHashOperationGasCost() {
-    throw new UnsupportedOperationException(
-        "EXTCODEHASH not supported by " + getClass().getSimpleName());
+    throw new UnsupportedOperationException("EXTCODEHASH not supported by " +
+                                            getClass().getSimpleName());
   }
 
   @Override
@@ -369,43 +367,48 @@ public class FrontierGasCalculator implements GasCalculator {
   }
 
   @Override
-  public Gas logOperationGasCost(
-      final MessageFrame frame,
-      final UInt256 dataOffset,
-      final UInt256 dataLength,
-      final int numTopics) {
-    return Gas.ZERO
-        .plus(LOG_OPERATION_BASE_GAS_COST)
+  public Gas
+  logOperationGasCost(final MessageFrame frame, final UInt256 dataOffset,
+                      final UInt256 dataLength, final int numTopics) {
+    return Gas.ZERO.plus(LOG_OPERATION_BASE_GAS_COST)
         .plus(LOG_OPERATION_DATA_BYTE_GAS_COST.times(Gas.of(dataLength)))
         .plus(LOG_OPERATION_TOPIC_GAS_COST.times(numTopics))
         .plus(memoryExpansionGasCost(frame, dataOffset, dataLength));
   }
 
   @Override
-  public Gas mLoadOperationGasCost(final MessageFrame frame, final UInt256 offset) {
-    return VERY_LOW_TIER_GAS_COST.plus(memoryExpansionGasCost(frame, offset, UInt256.valueOf(32)));
+  public Gas mLoadOperationGasCost(final MessageFrame frame,
+                                   final UInt256 offset) {
+    return VERY_LOW_TIER_GAS_COST.plus(
+        memoryExpansionGasCost(frame, offset, UInt256.valueOf(32)));
   }
 
   @Override
-  public Gas mStoreOperationGasCost(final MessageFrame frame, final UInt256 offset) {
-    return VERY_LOW_TIER_GAS_COST.plus(memoryExpansionGasCost(frame, offset, UInt256.valueOf(32)));
+  public Gas mStoreOperationGasCost(final MessageFrame frame,
+                                    final UInt256 offset) {
+    return VERY_LOW_TIER_GAS_COST.plus(
+        memoryExpansionGasCost(frame, offset, UInt256.valueOf(32)));
   }
 
   @Override
-  public Gas mStore8OperationGasCost(final MessageFrame frame, final UInt256 offset) {
-    return VERY_LOW_TIER_GAS_COST.plus(memoryExpansionGasCost(frame, offset, UInt256.ONE));
+  public Gas mStore8OperationGasCost(final MessageFrame frame,
+                                     final UInt256 offset) {
+    return VERY_LOW_TIER_GAS_COST.plus(
+        memoryExpansionGasCost(frame, offset, UInt256.ONE));
   }
 
   @Override
-  public Gas selfDestructOperationGasCost(final Account recipient, final Wei inheritance) {
+  public Gas selfDestructOperationGasCost(final Account recipient,
+                                          final Wei inheritance) {
     return SELFDESTRUCT_OPERATION_GAS_COST;
   }
 
   @Override
-  public Gas sha3OperationGasCost(
-      final MessageFrame frame, final UInt256 offset, final UInt256 length) {
-    return copyWordsToMemoryGasCost(
-        frame, SHA3_OPERATION_BASE_GAS_COST, SHA3_OPERATION_WORD_GAS_COST, offset, length);
+  public Gas sha3OperationGasCost(final MessageFrame frame,
+                                  final UInt256 offset, final UInt256 length) {
+    return copyWordsToMemoryGasCost(frame, SHA3_OPERATION_BASE_GAS_COST,
+                                    SHA3_OPERATION_WORD_GAS_COST, offset,
+                                    length);
   }
 
   @Override
@@ -420,16 +423,17 @@ public class FrontierGasCalculator implements GasCalculator {
   }
 
   @Override
-  public Gas calculateStorageCost(
-      final Account account, final UInt256 key, final UInt256 newValue) {
+  public Gas calculateStorageCost(final Account account, final UInt256 key,
+                                  final UInt256 newValue) {
     return !newValue.isZero() && account.getStorageValue(key).isZero()
         ? STORAGE_SET_GAS_COST
         : STORAGE_RESET_GAS_COST;
   }
 
   @Override
-  public Gas calculateStorageRefundAmount(
-      final Account account, final UInt256 key, final UInt256 newValue) {
+  public Gas calculateStorageRefundAmount(final Account account,
+                                          final UInt256 key,
+                                          final UInt256 newValue) {
     return newValue.isZero() && !account.getStorageValue(key).isZero()
         ? STORAGE_RESET_REFUND_AMOUNT
         : Gas.ZERO;
@@ -446,12 +450,11 @@ public class FrontierGasCalculator implements GasCalculator {
         "BEGINSUB operation not supported by " + getClass().getSimpleName());
   }
 
-  private Gas copyWordsToMemoryGasCost(
-      final MessageFrame frame,
-      final Gas baseGasCost,
-      final Gas wordGasCost,
-      final UInt256 offset,
-      final UInt256 length) {
+  private Gas copyWordsToMemoryGasCost(final MessageFrame frame,
+                                       final Gas baseGasCost,
+                                       final Gas wordGasCost,
+                                       final UInt256 offset,
+                                       final UInt256 length) {
     final UInt256 numWords = length.divideCeil(Bytes32.SIZE);
 
     final Gas copyCost = wordGasCost.times(Gas.of(numWords)).plus(baseGasCost);

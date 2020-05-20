@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,7 +28,8 @@ public class PasswordSubCommandTest extends CommandTestAbstract {
   public void passwordSubCommandExistsWithHashSubCommand() {
     final CommandSpec spec = parseCommand().getSpec();
     assertThat(spec.subcommands()).containsKeys("password");
-    assertThat(spec.subcommands().get("password").getSubcommands()).containsKeys("hash");
+    assertThat(spec.subcommands().get("password").getSubcommands())
+        .containsKeys("hash");
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
@@ -34,7 +38,8 @@ public class PasswordSubCommandTest extends CommandTestAbstract {
   public void passwordSubCommandExists() {
     parseCommand("password");
 
-    assertThat(commandOutput.toString()).contains("This command provides password related actions");
+    assertThat(commandOutput.toString())
+        .contains("This command provides password related actions");
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
@@ -61,7 +66,8 @@ public class PasswordSubCommandTest extends CommandTestAbstract {
   public void passwordHashSubCommandHashesPassword() {
     parseCommand("password", "hash", "--password", "foo");
 
-    // we can't predict the final value so we are only checking if it starts with the hash marker
+    // we can't predict the final value so we are only checking if it starts
+    // with the hash marker
     assertThat(commandOutput.toString()).startsWith("$2");
     assertThat(commandErrorOutput.toString()).isEmpty();
   }

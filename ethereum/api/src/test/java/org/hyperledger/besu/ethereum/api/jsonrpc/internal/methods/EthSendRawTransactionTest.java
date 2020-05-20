@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -29,7 +32,6 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,12 +53,11 @@ public class EthSendRawTransactionTest {
 
   @Test
   public void requestIsMissingParameter() {
-    final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {}));
+    final JsonRpcRequestContext request = new JsonRpcRequestContext(
+        new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {}));
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
 
     final JsonRpcResponse actualResponse = method.response(request);
 
@@ -65,11 +66,11 @@ public class EthSendRawTransactionTest {
 
   @Test
   public void requestHasNullObjectParameter() {
-    final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(new JsonRpcRequest("2.0", "eth_sendRawTransaction", null));
+    final JsonRpcRequestContext request = new JsonRpcRequestContext(
+        new JsonRpcRequest("2.0", "eth_sendRawTransaction", null));
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
 
     final JsonRpcResponse actualResponse = method.response(request);
 
@@ -79,11 +80,11 @@ public class EthSendRawTransactionTest {
   @Test
   public void requestHasNullArrayParameter() {
     final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {null}));
+        new JsonRpcRequestContext(new JsonRpcRequest(
+            "2.0", "eth_sendRawTransaction", new String[] {null}));
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
 
     final JsonRpcResponse actualResponse = method.response(request);
 
@@ -95,11 +96,11 @@ public class EthSendRawTransactionTest {
     final String rawTransaction = "0x00";
 
     final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {rawTransaction}));
+        new JsonRpcRequestContext(new JsonRpcRequest(
+            "2.0", "eth_sendRawTransaction", new String[] {rawTransaction}));
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
 
     final JsonRpcResponse actualResponse = method.response(request);
 
@@ -112,13 +113,12 @@ public class EthSendRawTransactionTest {
         .thenReturn(ValidationResult.valid());
 
     final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {VALID_TRANSACTION}));
+        new JsonRpcRequestContext(new JsonRpcRequest(
+            "2.0", "eth_sendRawTransaction", new String[] {VALID_TRANSACTION}));
 
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcSuccessResponse(
-            request.getRequest().getId(),
-            "0xbaabcc1bd699e7378451e4ce5969edb9bdcae76cb79bdacae793525c31e423c7");
+    final JsonRpcResponse expectedResponse = new JsonRpcSuccessResponse(
+        request.getRequest().getId(),
+        "0xbaabcc1bd699e7378451e4ce5969edb9bdcae76cb79bdacae793525c31e423c7");
 
     final JsonRpcResponse actualResponse = method.response(request);
 
@@ -128,20 +128,21 @@ public class EthSendRawTransactionTest {
 
   @Test
   public void transactionWithNonceBelowAccountNonceIsRejected() {
-    verifyErrorForInvalidTransaction(
-        TransactionInvalidReason.NONCE_TOO_LOW, JsonRpcError.NONCE_TOO_LOW);
+    verifyErrorForInvalidTransaction(TransactionInvalidReason.NONCE_TOO_LOW,
+                                     JsonRpcError.NONCE_TOO_LOW);
   }
 
   @Test
   public void transactionWithNonceAboveAccountNonceIsRejected() {
-    verifyErrorForInvalidTransaction(
-        TransactionInvalidReason.INCORRECT_NONCE, JsonRpcError.INCORRECT_NONCE);
+    verifyErrorForInvalidTransaction(TransactionInvalidReason.INCORRECT_NONCE,
+                                     JsonRpcError.INCORRECT_NONCE);
   }
 
   @Test
   public void transactionWithInvalidSignatureIsRejected() {
     verifyErrorForInvalidTransaction(
-        TransactionInvalidReason.INVALID_SIGNATURE, JsonRpcError.INVALID_TRANSACTION_SIGNATURE);
+        TransactionInvalidReason.INVALID_SIGNATURE,
+        JsonRpcError.INVALID_TRANSACTION_SIGNATURE);
   }
 
   @Test
@@ -161,23 +162,26 @@ public class EthSendRawTransactionTest {
   @Test
   public void transactionWithGasLimitExceedingBlockGasLimitIsRejected() {
     verifyErrorForInvalidTransaction(
-        TransactionInvalidReason.EXCEEDS_BLOCK_GAS_LIMIT, JsonRpcError.EXCEEDS_BLOCK_GAS_LIMIT);
+        TransactionInvalidReason.EXCEEDS_BLOCK_GAS_LIMIT,
+        JsonRpcError.EXCEEDS_BLOCK_GAS_LIMIT);
   }
 
   @Test
   public void transactionWithNotWhitelistedSenderAccountIsRejected() {
     verifyErrorForInvalidTransaction(
-        TransactionInvalidReason.TX_SENDER_NOT_AUTHORIZED, JsonRpcError.TX_SENDER_NOT_AUTHORIZED);
+        TransactionInvalidReason.TX_SENDER_NOT_AUTHORIZED,
+        JsonRpcError.TX_SENDER_NOT_AUTHORIZED);
   }
 
   private void verifyErrorForInvalidTransaction(
-      final TransactionInvalidReason transactionInvalidReason, final JsonRpcError expectedError) {
+      final TransactionInvalidReason transactionInvalidReason,
+      final JsonRpcError expectedError) {
     when(transactionPool.addLocalTransaction(any(Transaction.class)))
         .thenReturn(ValidationResult.invalid(transactionInvalidReason));
 
     final JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "eth_sendRawTransaction", new String[] {VALID_TRANSACTION}));
+        new JsonRpcRequestContext(new JsonRpcRequest(
+            "2.0", "eth_sendRawTransaction", new String[] {VALID_TRANSACTION}));
 
     final JsonRpcResponse expectedResponse =
         new JsonRpcErrorResponse(request.getRequest().getId(), expectedError);

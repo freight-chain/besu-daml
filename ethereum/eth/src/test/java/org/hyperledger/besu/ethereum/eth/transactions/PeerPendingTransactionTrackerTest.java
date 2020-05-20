@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,14 +22,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
-
-import java.util.Optional;
-
-import com.google.common.collect.ImmutableSet;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,7 +36,8 @@ public class PeerPendingTransactionTrackerTest {
   private final EthPeer ethPeer1 = mock(EthPeer.class);
   private final EthPeer ethPeer2 = mock(EthPeer.class);
   private final BlockDataGenerator generator = new BlockDataGenerator();
-  private final PendingTransactions pendingTransactions = mock(PendingTransactions.class);
+  private final PendingTransactions pendingTransactions =
+      mock(PendingTransactions.class);
   private final PeerPendingTransactionTracker tracker =
       new PeerPendingTransactionTracker(pendingTransactions);
   private final Hash hash1 = generator.transaction().getHash();
@@ -45,7 +47,8 @@ public class PeerPendingTransactionTrackerTest {
   @Before
   public void setUp() {
     Transaction tx = mock(Transaction.class);
-    when(pendingTransactions.getTransactionByHash(any())).thenReturn(Optional.of(tx));
+    when(pendingTransactions.getTransactionByHash(any()))
+        .thenReturn(Optional.of(tx));
   }
 
   @Test
@@ -54,9 +57,12 @@ public class PeerPendingTransactionTrackerTest {
     tracker.addToPeerSendQueue(ethPeer1, hash2);
     tracker.addToPeerSendQueue(ethPeer2, hash3);
 
-    assertThat(tracker.getEthPeersWithUnsentTransactions()).containsOnly(ethPeer1, ethPeer2);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1)).containsOnly(hash1, hash2);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2)).containsOnly(hash3);
+    assertThat(tracker.getEthPeersWithUnsentTransactions())
+        .containsOnly(ethPeer1, ethPeer2);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1))
+        .containsOnly(hash1, hash2);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2))
+        .containsOnly(hash3);
   }
 
   @Test
@@ -67,22 +73,29 @@ public class PeerPendingTransactionTrackerTest {
     tracker.addToPeerSendQueue(ethPeer1, hash2);
     tracker.addToPeerSendQueue(ethPeer2, hash3);
 
-    assertThat(tracker.getEthPeersWithUnsentTransactions()).containsOnly(ethPeer1, ethPeer2);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1)).containsOnly(hash1);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2)).containsOnly(hash3);
+    assertThat(tracker.getEthPeersWithUnsentTransactions())
+        .containsOnly(ethPeer1, ethPeer2);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1))
+        .containsOnly(hash1);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2))
+        .containsOnly(hash3);
   }
 
   @Test
-  public void shouldExcludeAlreadySeenTransactionsAsACollectionFromTransactionsToSend() {
-    tracker.markTransactionsHashesAsSeen(ethPeer1, ImmutableSet.of(hash1, hash2));
+  public void
+  shouldExcludeAlreadySeenTransactionsAsACollectionFromTransactionsToSend() {
+    tracker.markTransactionsHashesAsSeen(ethPeer1,
+                                         ImmutableSet.of(hash1, hash2));
 
     tracker.addToPeerSendQueue(ethPeer1, hash1);
     tracker.addToPeerSendQueue(ethPeer1, hash2);
     tracker.addToPeerSendQueue(ethPeer2, hash3);
 
-    assertThat(tracker.getEthPeersWithUnsentTransactions()).containsOnly(ethPeer2);
+    assertThat(tracker.getEthPeersWithUnsentTransactions())
+        .containsOnly(ethPeer2);
     assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1)).isEmpty();
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2)).containsOnly(hash3);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2))
+        .containsOnly(hash3);
   }
 
   @Test
@@ -94,13 +107,17 @@ public class PeerPendingTransactionTrackerTest {
 
     tracker.onDisconnect(ethPeer1);
 
-    assertThat(tracker.getEthPeersWithUnsentTransactions()).containsOnly(ethPeer2);
+    assertThat(tracker.getEthPeersWithUnsentTransactions())
+        .containsOnly(ethPeer2);
 
     // Should have cleared data that ethPeer1 has already seen transaction1
     tracker.addToPeerSendQueue(ethPeer1, hash1);
 
-    assertThat(tracker.getEthPeersWithUnsentTransactions()).containsOnly(ethPeer1, ethPeer2);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1)).containsOnly(hash1);
-    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2)).containsOnly(hash3);
+    assertThat(tracker.getEthPeersWithUnsentTransactions())
+        .containsOnly(ethPeer1, ethPeer2);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer1))
+        .containsOnly(hash1);
+    assertThat(tracker.claimTransactionsToSendToPeer(ethPeer2))
+        .containsOnly(hash3);
   }
 }

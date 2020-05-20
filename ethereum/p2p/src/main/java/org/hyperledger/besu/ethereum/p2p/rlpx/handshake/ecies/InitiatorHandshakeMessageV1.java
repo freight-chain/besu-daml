@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,19 +19,18 @@ package org.hyperledger.besu.ethereum.p2p.rlpx.handshake.ecies;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.bytes.MutableBytes;
 import org.hyperledger.besu.crypto.Hash;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.crypto.SECP256K1;
 
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.bytes.MutableBytes;
-
 /**
  * The initiator's handshake message.
  *
- * <p>This message must be sent by the party that initiates the RLPX connection, as the first
- * message in the handshake protocol.
+ * <p>This message must be sent by the party that initiates the RLPX connection,
+ * as the first message in the handshake protocol.
  *
  * <h3>Message structure</h3>
  *
@@ -44,16 +46,15 @@ import org.apache.tuweni.bytes.MutableBytes;
  * </pre>
  *
  * @see <a href=
- *     "https://github.com/ethereum/devp2p/blob/master/rlpx.md#encrypted-handshake">Structure of the
- *     initiator request</a>
+ *     "https://github.com/ethereum/devp2p/blob/master/rlpx.md#encrypted-handshake">Structure
+ * of the initiator request</a>
  */
-public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMessage {
+public final class InitiatorHandshakeMessageV1
+    implements InitiatorHandshakeMessage {
   public static final int MESSAGE_LENGTH =
-      ECIESHandshaker.SIGNATURE_LENGTH
-          + ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH
-          + ECIESHandshaker.PUBKEY_LENGTH
-          + ECIESHandshaker.NONCE_LENGTH
-          + ECIESHandshaker.TOKEN_FLAG_LENGTH;
+      ECIESHandshaker.SIGNATURE_LENGTH +
+      ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH + ECIESHandshaker.PUBKEY_LENGTH +
+      ECIESHandshaker.NONCE_LENGTH + ECIESHandshaker.TOKEN_FLAG_LENGTH;
 
   private final SECP256K1.PublicKey pubKey;
   private final SECP256K1.Signature signature;
@@ -62,13 +63,12 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
   private final Bytes32 nonce;
   private final boolean token;
 
-  protected InitiatorHandshakeMessageV1(
-      final SECP256K1.PublicKey pubKey,
-      final SECP256K1.Signature signature,
-      final SECP256K1.PublicKey ephPubKey,
-      final Bytes32 ephPubKeyHash,
-      final Bytes32 nonce,
-      final boolean token) {
+  protected InitiatorHandshakeMessageV1(final SECP256K1.PublicKey pubKey,
+                                        final SECP256K1.Signature signature,
+                                        final SECP256K1.PublicKey ephPubKey,
+                                        final Bytes32 ephPubKeyHash,
+                                        final Bytes32 nonce,
+                                        final boolean token) {
     this.pubKey = pubKey;
     this.signature = signature;
     this.ephPubKey = ephPubKey;
@@ -77,18 +77,19 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
     this.token = token;
   }
 
-  public static InitiatorHandshakeMessageV1 create(
-      final SECP256K1.PublicKey ourPubKey,
-      final SECP256K1.KeyPair ephKeyPair,
-      final Bytes32 staticSharedSecret,
-      final Bytes32 nonce,
-      final boolean token) {
-    final Bytes32 ephPubKeyHash = Hash.keccak256(ephKeyPair.getPublicKey().getEncodedBytes());
+  public static InitiatorHandshakeMessageV1
+  create(final SECP256K1.PublicKey ourPubKey,
+         final SECP256K1.KeyPair ephKeyPair, final Bytes32 staticSharedSecret,
+         final Bytes32 nonce, final boolean token) {
+    final Bytes32 ephPubKeyHash =
+        Hash.keccak256(ephKeyPair.getPublicKey().getEncodedBytes());
 
     // XOR of the static shared secret and the generated nonce.
-    final SECP256K1.Signature signature = SECP256K1.sign(staticSharedSecret.xor(nonce), ephKeyPair);
-    return new InitiatorHandshakeMessageV1(
-        ourPubKey, signature, ephKeyPair.getPublicKey(), ephPubKeyHash, nonce, token);
+    final SECP256K1.Signature signature =
+        SECP256K1.sign(staticSharedSecret.xor(nonce), ephKeyPair);
+    return new InitiatorHandshakeMessageV1(ourPubKey, signature,
+                                           ephKeyPair.getPublicKey(),
+                                           ephPubKeyHash, nonce, token);
   }
 
   /**
@@ -98,33 +99,38 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
    * @param nodeKey The nodeKey used to calculate ECDH key agreements.
    * @return The decoded message.
    */
-  public static InitiatorHandshakeMessageV1 decode(final Bytes bytes, final NodeKey nodeKey) {
+  public static InitiatorHandshakeMessageV1 decode(final Bytes bytes,
+                                                   final NodeKey nodeKey) {
     checkState(bytes.size() == MESSAGE_LENGTH);
 
     int offset = 0;
-    final SECP256K1.Signature signature =
-        SECP256K1.Signature.decode(bytes.slice(offset, ECIESHandshaker.SIGNATURE_LENGTH));
+    final SECP256K1.Signature signature = SECP256K1.Signature.decode(
+        bytes.slice(offset, ECIESHandshaker.SIGNATURE_LENGTH));
     final Bytes32 ephPubKeyHash =
-        Bytes32.wrap(
-            bytes.slice(
-                offset += ECIESHandshaker.SIGNATURE_LENGTH, ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH),
-            0);
-    final SECP256K1.PublicKey pubKey =
-        SECP256K1.PublicKey.create(
-            bytes.slice(
-                offset += ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH, ECIESHandshaker.PUBKEY_LENGTH));
+        Bytes32.wrap(bytes.slice(offset += ECIESHandshaker.SIGNATURE_LENGTH,
+                                 ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH),
+                     0);
+    final SECP256K1.PublicKey pubKey = SECP256K1.PublicKey.create(
+        bytes.slice(offset += ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH,
+                    ECIESHandshaker.PUBKEY_LENGTH));
     final Bytes32 nonce =
-        Bytes32.wrap(
-            bytes.slice(offset += ECIESHandshaker.PUBKEY_LENGTH, ECIESHandshaker.NONCE_LENGTH), 0);
+        Bytes32.wrap(bytes.slice(offset += ECIESHandshaker.PUBKEY_LENGTH,
+                                 ECIESHandshaker.NONCE_LENGTH),
+                     0);
     final boolean token = bytes.get(offset) == 0x01;
 
-    final Bytes32 staticSharedSecret = nodeKey.calculateECDHKeyAgreement(pubKey);
+    final Bytes32 staticSharedSecret =
+        nodeKey.calculateECDHKeyAgreement(pubKey);
     final SECP256K1.PublicKey ephPubKey =
-        SECP256K1.PublicKey.recoverFromSignature(staticSharedSecret.xor(nonce), signature)
-            .orElseThrow(() -> new RuntimeException("Could not recover public key from signature"));
+        SECP256K1.PublicKey
+            .recoverFromSignature(staticSharedSecret.xor(nonce), signature)
+            .orElseThrow(
+                ()
+                    -> new RuntimeException(
+                        "Could not recover public key from signature"));
 
-    return new InitiatorHandshakeMessageV1(
-        pubKey, signature, ephPubKey, ephPubKeyHash, nonce, token);
+    return new InitiatorHandshakeMessageV1(pubKey, signature, ephPubKey,
+                                           ephPubKeyHash, nonce, token);
   }
 
   @Override
@@ -132,15 +138,13 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
     final MutableBytes bytes = MutableBytes.create(MESSAGE_LENGTH);
     signature.encodedBytes().copyTo(bytes, 0);
     ephPubKeyHash.copyTo(bytes, ECIESHandshaker.SIGNATURE_LENGTH);
-    pubKey
-        .getEncodedBytes()
-        .copyTo(bytes, ECIESHandshaker.SIGNATURE_LENGTH + ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH);
-    nonce.copyTo(
-        bytes,
-        ECIESHandshaker.SIGNATURE_LENGTH
-            + ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH
-            + ECIESHandshaker.PUBKEY_LENGTH);
-    bytes.set(MESSAGE_LENGTH - 1, (byte) (token ? 0x01 : 0x00));
+    pubKey.getEncodedBytes().copyTo(bytes,
+                                    ECIESHandshaker.SIGNATURE_LENGTH +
+                                        ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH);
+    nonce.copyTo(bytes, ECIESHandshaker.SIGNATURE_LENGTH +
+                            ECIESHandshaker.HASH_EPH_PUBKEY_LENGTH +
+                            ECIESHandshaker.PUBKEY_LENGTH);
+    bytes.set(MESSAGE_LENGTH - 1, (byte)(token ? 0x01 : 0x00));
     return bytes;
   }
 
@@ -167,18 +171,8 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
   @Override
   public String toString() {
     return "InitiatorHandshakeMessage{"
-        + "pubKey="
-        + pubKey
-        + ", signature="
-        + signature
-        + ", ephPubKey="
-        + ephPubKey
-        + ", ephPubKeyHash="
-        + ephPubKeyHash
-        + ", nonce="
-        + nonce
-        + ", token="
-        + token
-        + '}';
+        + "pubKey=" + pubKey + ", signature=" + signature +
+        ", ephPubKey=" + ephPubKey + ", ephPubKeyHash=" + ephPubKeyHash +
+        ", nonce=" + nonce + ", token=" + token + '}';
   }
 }

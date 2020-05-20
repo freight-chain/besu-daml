@@ -1,19 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet.precompiles.privacy;
 
+import com.google.common.annotations.VisibleForTesting;
+import java.util.Base64;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.enclave.Enclave;
 import org.hyperledger.besu.enclave.EnclaveClientException;
 import org.hyperledger.besu.enclave.EnclaveIOException;
@@ -42,14 +51,6 @@ import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-import java.util.Base64;
-
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-
 public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
   final Enclave enclave;
   final PrivateStateStorage privateStateStorage;
@@ -59,36 +60,26 @@ public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  public PrivacyPrecompiledContract(
-      final GasCalculator gasCalculator, final PrivacyParameters privacyParameters) {
-    this(
-        gasCalculator,
-        privacyParameters.getEnclave(),
-        privacyParameters.getPrivateWorldStateArchive(),
-        privacyParameters.getPrivateStateStorage(),
-        privacyParameters.getPrivateStateRootResolver(),
-        "Privacy");
+  public PrivacyPrecompiledContract(final GasCalculator gasCalculator,
+                                    final PrivacyParameters privacyParameters) {
+    this(gasCalculator, privacyParameters.getEnclave(),
+         privacyParameters.getPrivateWorldStateArchive(),
+         privacyParameters.getPrivateStateStorage(),
+         privacyParameters.getPrivateStateRootResolver(), "Privacy");
   }
 
   @VisibleForTesting
   PrivacyPrecompiledContract(
-      final GasCalculator gasCalculator,
-      final Enclave enclave,
+      final GasCalculator gasCalculator, final Enclave enclave,
       final WorldStateArchive worldStateArchive,
       final PrivateStateStorage privateStateStorage,
       final PrivateStateRootResolver privateStateRootResolver) {
-    this(
-        gasCalculator,
-        enclave,
-        worldStateArchive,
-        privateStateStorage,
-        privateStateRootResolver,
-        "Privacy");
+    this(gasCalculator, enclave, worldStateArchive, privateStateStorage,
+         privateStateRootResolver, "Privacy");
   }
 
   protected PrivacyPrecompiledContract(
-      final GasCalculator gasCalculator,
-      final Enclave enclave,
+      final GasCalculator gasCalculator, final Enclave enclave,
       final WorldStateArchive worldStateArchive,
       final PrivateStateStorage privateStateStorage,
       final PrivateStateRootResolver privateStateRootResolver,
@@ -124,130 +115,126 @@ public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
     try {
       receiveResponse = getReceiveResponse(key);
     } catch (final EnclaveClientException e) {
-      LOG.debug("Can not fetch private transaction payload with key {}", key, e);
+      LOG.debug("Can not fetch private transaction payload with key {}", key,
+                e);
       return Bytes.EMPTY;
     }
 
-    final BytesValueRLPInput bytesValueRLPInput =
-        new BytesValueRLPInput(
-            Bytes.wrap(Base64.getDecoder().decode(receiveResponse.getPayload())), false);
+    final BytesValueRLPInput bytesValueRLPInput = new BytesValueRLPInput(
+        Bytes.wrap(Base64.getDecoder().decode(receiveResponse.getPayload())),
+        false);
     final PrivateTransaction privateTransaction =
         PrivateTransaction.readFrom(bytesValueRLPInput.readAsRlp());
 
-    final Bytes32 privacyGroupId =
-        Bytes32.wrap(Bytes.fromBase64String(receiveResponse.getPrivacyGroupId()));
+    final Bytes32 privacyGroupId = Bytes32.wrap(
+        Bytes.fromBase64String(receiveResponse.getPrivacyGroupId()));
 
-    LOG.debug("Processing private transaction {} in privacy group {}", pmtHash, privacyGroupId);
+    LOG.debug("Processing private transaction {} in privacy group {}", pmtHash,
+              privacyGroupId);
 
-    final Hash currentBlockHash = ((BlockHeader) messageFrame.getBlockHeader()).getHash();
+    final Hash currentBlockHash =
+        ((BlockHeader)messageFrame.getBlockHeader()).getHash();
 
-    final Hash lastRootHash =
-        privateStateRootResolver.resolveLastStateRoot(privacyGroupId, currentBlockHash);
+    final Hash lastRootHash = privateStateRootResolver.resolveLastStateRoot(
+        privacyGroupId, currentBlockHash);
 
     final MutableWorldState disposablePrivateState =
         privateWorldStateArchive.getMutable(lastRootHash).get();
 
-    final WorldUpdater privateWorldStateUpdater = disposablePrivateState.updater();
+    final WorldUpdater privateWorldStateUpdater =
+        disposablePrivateState.updater();
 
     final PrivateTransactionProcessor.Result result =
-        processPrivateTransaction(
-            messageFrame, privateTransaction, privacyGroupId, privateWorldStateUpdater);
+        processPrivateTransaction(messageFrame, privateTransaction,
+                                  privacyGroupId, privateWorldStateUpdater);
 
     if (result.isInvalid() || !result.isSuccessful()) {
-      LOG.error(
-          "Failed to process private transaction {}: {}",
-          pmtHash,
-          result.getValidationResult().getErrorMessage());
+      LOG.error("Failed to process private transaction {}: {}", pmtHash,
+                result.getValidationResult().getErrorMessage());
       return Bytes.EMPTY;
     }
 
     if (messageFrame.isPersistingPrivateState()) {
-      persistPrivateState(
-          pmtHash,
-          currentBlockHash,
-          privateTransaction,
-          privacyGroupId,
-          disposablePrivateState,
-          privateWorldStateUpdater,
-          result);
+      persistPrivateState(pmtHash, currentBlockHash, privateTransaction,
+                          privacyGroupId, disposablePrivateState,
+                          privateWorldStateUpdater, result);
     }
 
     return result.getOutput();
   }
 
-  void persistPrivateState(
-      final Hash commitmentHash,
-      final Hash currentBlockHash,
-      final PrivateTransaction privateTransaction,
-      final Bytes32 privacyGroupId,
-      final MutableWorldState disposablePrivateState,
-      final WorldUpdater privateWorldStateUpdater,
-      final PrivateTransactionProcessor.Result result) {
+  void persistPrivateState(final Hash commitmentHash,
+                           final Hash currentBlockHash,
+                           final PrivateTransaction privateTransaction,
+                           final Bytes32 privacyGroupId,
+                           final MutableWorldState disposablePrivateState,
+                           final WorldUpdater privateWorldStateUpdater,
+                           final PrivateTransactionProcessor.Result result) {
 
-    LOG.trace(
-        "Persisting private state {} for privacyGroup {}",
-        disposablePrivateState.rootHash(),
-        privacyGroupId);
+    LOG.trace("Persisting private state {} for privacyGroup {}",
+              disposablePrivateState.rootHash(), privacyGroupId);
 
     privateWorldStateUpdater.commit();
     disposablePrivateState.persist();
 
-    final PrivateStateStorage.Updater privateStateUpdater = privateStateStorage.updater();
+    final PrivateStateStorage.Updater privateStateUpdater =
+        privateStateStorage.updater();
 
-    updatePrivateBlockMetadata(
-        commitmentHash,
-        currentBlockHash,
-        privacyGroupId,
-        disposablePrivateState.rootHash(),
-        privateStateUpdater);
+    updatePrivateBlockMetadata(commitmentHash, currentBlockHash, privacyGroupId,
+                               disposablePrivateState.rootHash(),
+                               privateStateUpdater);
 
     final int txStatus =
-        result.getStatus() == PrivateTransactionProcessor.Result.Status.SUCCESSFUL ? 1 : 0;
+        result.getStatus() ==
+                PrivateTransactionProcessor.Result.Status.SUCCESSFUL
+            ? 1
+            : 0;
 
     final PrivateTransactionReceipt privateTransactionReceipt =
-        new PrivateTransactionReceipt(
-            txStatus, result.getLogs(), result.getOutput(), result.getRevertReason());
+        new PrivateTransactionReceipt(txStatus, result.getLogs(),
+                                      result.getOutput(),
+                                      result.getRevertReason());
 
-    privateStateUpdater.putTransactionReceipt(
-        currentBlockHash, commitmentHash, privateTransactionReceipt);
+    privateStateUpdater.putTransactionReceipt(currentBlockHash, commitmentHash,
+                                              privateTransactionReceipt);
 
-    maybeUpdateGroupHeadBlockMap(privacyGroupId, currentBlockHash, privateStateUpdater);
+    maybeUpdateGroupHeadBlockMap(privacyGroupId, currentBlockHash,
+                                 privateStateUpdater);
 
     privateStateUpdater.commit();
   }
 
   void maybeUpdateGroupHeadBlockMap(
-      final Bytes32 privacyGroupId,
-      final Hash currentBlockHash,
+      final Bytes32 privacyGroupId, final Hash currentBlockHash,
       final PrivateStateStorage.Updater privateStateUpdater) {
 
     final PrivacyGroupHeadBlockMap privacyGroupHeadBlockMap =
-        privateStateStorage.getPrivacyGroupHeadBlockMap(currentBlockHash).orElseThrow();
+        privateStateStorage.getPrivacyGroupHeadBlockMap(currentBlockHash)
+            .orElseThrow();
 
-    if (!privacyGroupHeadBlockMap.contains(Bytes32.wrap(privacyGroupId), currentBlockHash)) {
-      privacyGroupHeadBlockMap.put(Bytes32.wrap(privacyGroupId), currentBlockHash);
+    if (!privacyGroupHeadBlockMap.contains(Bytes32.wrap(privacyGroupId),
+                                           currentBlockHash)) {
+      privacyGroupHeadBlockMap.put(Bytes32.wrap(privacyGroupId),
+                                   currentBlockHash);
       privateStateUpdater.putPrivacyGroupHeadBlockMap(
-          currentBlockHash, new PrivacyGroupHeadBlockMap(privacyGroupHeadBlockMap));
+          currentBlockHash,
+          new PrivacyGroupHeadBlockMap(privacyGroupHeadBlockMap));
     }
   }
 
-  PrivateTransactionProcessor.Result processPrivateTransaction(
-      final MessageFrame messageFrame,
-      final PrivateTransaction privateTransaction,
-      final Bytes32 privacyGroupId,
-      final WorldUpdater privateWorldStateUpdater) {
+  PrivateTransactionProcessor.Result
+  processPrivateTransaction(final MessageFrame messageFrame,
+                            final PrivateTransaction privateTransaction,
+                            final Bytes32 privacyGroupId,
+                            final WorldUpdater privateWorldStateUpdater) {
 
     return privateTransactionProcessor.processTransaction(
-        messageFrame.getBlockchain(),
-        messageFrame.getWorldState(),
-        privateWorldStateUpdater,
-        messageFrame.getBlockHeader(),
-        messageFrame.getTransactionHash(),
-        privateTransaction,
+        messageFrame.getBlockchain(), messageFrame.getWorldState(),
+        privateWorldStateUpdater, messageFrame.getBlockHeader(),
+        messageFrame.getTransactionHash(), privateTransaction,
         messageFrame.getMiningBeneficiary(),
         new DebugOperationTracer(TraceOptions.DEFAULT),
-        messageFrame.getBlockHashLookup(),
-        privacyGroupId);
+        messageFrame.getBlockHashLookup(), privacyGroupId);
   }
 
   ReceiveResponse getReceiveResponse(final String key) {
@@ -255,7 +242,9 @@ public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
     try {
       receiveResponse = enclave.receive(key);
     } catch (final EnclaveServerException e) {
-      LOG.error("Enclave is responding with an error, perhaps it has a misconfiguration?", e);
+      LOG.error(
+          "Enclave is responding with an error, perhaps it has a misconfiguration?",
+          e);
       throw e;
     } catch (final EnclaveIOException e) {
       LOG.error("Can not communicate with enclave is it up?", e);
@@ -266,7 +255,8 @@ public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
 
   boolean isMining(final MessageFrame messageFrame) {
     boolean isMining = false;
-    final ProcessableBlockHeader currentBlockHeader = messageFrame.getBlockHeader();
+    final ProcessableBlockHeader currentBlockHeader =
+        messageFrame.getBlockHeader();
     if (!BlockHeader.class.isAssignableFrom(currentBlockHeader.getClass())) {
       if (!messageFrame.isPersistingPrivateState()) {
         isMining = true;
@@ -279,18 +269,18 @@ public class PrivacyPrecompiledContract extends AbstractPrecompiledContract {
   }
 
   void updatePrivateBlockMetadata(
-      final Hash markerTransactionHash,
-      final Hash currentBlockHash,
-      final Bytes32 privacyGroupId,
-      final Hash rootHash,
+      final Hash markerTransactionHash, final Hash currentBlockHash,
+      final Bytes32 privacyGroupId, final Hash rootHash,
       final PrivateStateStorage.Updater privateStateUpdater) {
     final PrivateBlockMetadata privateBlockMetadata =
         privateStateStorage
-            .getPrivateBlockMetadata(currentBlockHash, Bytes32.wrap(privacyGroupId))
+            .getPrivateBlockMetadata(currentBlockHash,
+                                     Bytes32.wrap(privacyGroupId))
             .orElseGet(PrivateBlockMetadata::empty);
     privateBlockMetadata.addPrivateTransactionMetadata(
         new PrivateTransactionMetadata(markerTransactionHash, rootHash));
-    privateStateUpdater.putPrivateBlockMetadata(
-        Bytes32.wrap(currentBlockHash), Bytes32.wrap(privacyGroupId), privateBlockMetadata);
+    privateStateUpdater.putPrivateBlockMetadata(Bytes32.wrap(currentBlockHash),
+                                                Bytes32.wrap(privacyGroupId),
+                                                privateBlockMetadata);
   }
 }

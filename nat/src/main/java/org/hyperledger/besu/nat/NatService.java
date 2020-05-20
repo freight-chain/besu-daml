@@ -1,32 +1,33 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.nat;
 
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.nat.core.NatManager;
 import org.hyperledger.besu.nat.core.NatMethodDetector;
 import org.hyperledger.besu.nat.core.domain.NatPortMapping;
 import org.hyperledger.besu.nat.core.domain.NatServiceType;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
-
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /** Utility class to help interacting with various {@link NatManager}. */
 public class NatService {
@@ -44,22 +45,25 @@ public class NatService {
   /**
    * Returns whether or not the Besu node is running under a NAT environment.
    *
-   * @return true if Besu node is running under NAT environment, false otherwise.
+   * @return true if Besu node is running under NAT environment, false
+   *     otherwise.
    */
   public boolean isNatEnvironment() {
     return currentNatMethod != NatMethod.NONE;
   }
 
   /**
-   * If nat environment is present, performs the given action, otherwise does nothing.
+   * If nat environment is present, performs the given action, otherwise does
+   * nothing.
    *
    * @param natMethod specific on which only this action must be performed
    * @param action the action to be performed, if a nat environment is present
    */
-  public void ifNatEnvironment(
-      final NatMethod natMethod, final Consumer<? super NatManager> action) {
+  public void ifNatEnvironment(final NatMethod natMethod,
+                               final Consumer<? super NatManager> action) {
     if (isNatEnvironment()) {
-      currentNatManager.filter(s -> natMethod.equals(s.getNatMethod())).ifPresent(action);
+      currentNatManager.filter(s -> natMethod.equals(s.getNatMethod()))
+          .ifPresent(action);
     }
   }
 
@@ -68,18 +72,15 @@ public class NatService {
    *
    * @return the current NatMethod.
    */
-  public NatMethod getNatMethod() {
-    return currentNatMethod;
-  }
+  public NatMethod getNatMethod() { return currentNatMethod; }
 
   /**
    * Returns the NAT manager associated to the current NAT method.
    *
-   * @return an {@link Optional} wrapping the {@link NatManager} or empty if not found.
+   * @return an {@link Optional} wrapping the {@link NatManager} or empty if not
+   *     found.
    */
-  public Optional<NatManager> getNatManager() {
-    return currentNatManager;
-  }
+  public Optional<NatManager> getNatManager() { return currentNatManager; }
 
   /** Starts the manager or service. */
   public void start() {
@@ -87,7 +88,9 @@ public class NatService {
       try {
         getNatManager().orElseThrow().start();
       } catch (Exception e) {
-        LOG.debug("Caught exception while trying to start the manager or service.", e);
+        LOG.debug(
+            "Caught exception while trying to start the manager or service.",
+            e);
         disableNatManager();
       }
     } else {
@@ -101,7 +104,8 @@ public class NatService {
       try {
         getNatManager().orElseThrow().stop();
       } catch (Exception e) {
-        LOG.warn("Caught exception while trying to stop the manager or service", e);
+        LOG.warn("Caught exception while trying to stop the manager or service",
+                 e);
       }
     } else {
       LOG.info("No NAT environment detected so no service could be stopped");
@@ -122,14 +126,15 @@ public class NatService {
         LOG.debug(
             "Waiting for up to {} seconds to detect external IP address...",
             NatManager.TIMEOUT_SECONDS);
-        return Optional.ofNullable(
-                natManager
-                    .queryExternalIPAddress()
-                    .get(NatManager.TIMEOUT_SECONDS, TimeUnit.SECONDS))
+        return Optional
+            .ofNullable(natManager.queryExternalIPAddress().get(
+                NatManager.TIMEOUT_SECONDS, TimeUnit.SECONDS))
             .orElseThrow();
 
       } catch (Exception e) {
-        LOG.debug("Caught exception while trying to query NAT external IP address (ignoring)", e);
+        LOG.debug(
+            "Caught exception while trying to query NAT external IP address (ignoring)",
+            e);
         LOG.warn(
             "Unable to query NAT external IP address. Using the fallback value : {} ",
             fallbackValue);
@@ -144,20 +149,24 @@ public class NatService {
    * @param fallbackValue the advertised IP address fallback value
    * @return The local IP address wrapped in a {@link Optional}.
    */
-  public String queryLocalIPAddress(final String fallbackValue) throws RuntimeException {
+  public String queryLocalIPAddress(final String fallbackValue)
+      throws RuntimeException {
     if (isNatEnvironment()) {
       try {
         final NatManager natManager = getNatManager().orElseThrow();
-        LOG.debug(
-            "Waiting for up to {} seconds to detect local IP address...",
-            NatManager.TIMEOUT_SECONDS);
-        return Optional.ofNullable(
-                natManager.queryLocalIPAddress().get(NatManager.TIMEOUT_SECONDS, TimeUnit.SECONDS))
+        LOG.debug("Waiting for up to {} seconds to detect local IP address...",
+                  NatManager.TIMEOUT_SECONDS);
+        return Optional
+            .ofNullable(natManager.queryLocalIPAddress().get(
+                NatManager.TIMEOUT_SECONDS, TimeUnit.SECONDS))
             .orElseThrow();
       } catch (Exception e) {
-        LOG.debug("Caught exception while trying to query NAT local IP address (ignoring)", e);
+        LOG.debug(
+            "Caught exception while trying to query NAT local IP address (ignoring)",
+            e);
         LOG.warn(
-            "Unable to query NAT local IP address. Using the fallback value : {} ", fallbackValue);
+            "Unable to query NAT local IP address. Using the fallback value : {} ",
+            fallbackValue);
       }
     }
     return fallbackValue;
@@ -170,14 +179,18 @@ public class NatService {
    * @param networkProtocol The network protocol {@link NetworkProtocol}.
    * @return The port mapping {@link NatPortMapping}
    */
-  public Optional<NatPortMapping> getPortMapping(
-      final NatServiceType serviceType, final NetworkProtocol networkProtocol) {
+  public Optional<NatPortMapping>
+  getPortMapping(final NatServiceType serviceType,
+                 final NetworkProtocol networkProtocol) {
     if (isNatEnvironment()) {
       try {
         final NatManager natManager = getNatManager().orElseThrow();
-        return Optional.of(natManager.getPortMapping(serviceType, networkProtocol));
+        return Optional.of(
+            natManager.getPortMapping(serviceType, networkProtocol));
       } catch (Exception e) {
-        LOG.warn("Caught exception while trying to query port mapping (ignoring): {}", e);
+        LOG.warn(
+            "Caught exception while trying to query port mapping (ignoring): {}",
+            e);
       }
     }
     return Optional.empty();
@@ -201,13 +214,15 @@ public class NatService {
   }
 
   /**
-   * Attempts to automatically detect the Nat method by applying nat method detectors. Will return
-   * the first one that succeeds in its detection.
+   * Attempts to automatically detect the Nat method by applying nat method
+   * detectors. Will return the first one that succeeds in its detection.
    *
    * @param natMethodDetectors list of nat method auto detections
-   * @return a {@link NatMethod} equal to NONE if no Nat method has been detected automatically.
+   * @return a {@link NatMethod} equal to NONE if no Nat method has been
+   *     detected automatically.
    */
-  public static NatMethod autoDetectNatMethod(final NatMethodDetector... natMethodDetectors) {
+  public static NatMethod
+  autoDetectNatMethod(final NatMethodDetector... natMethodDetectors) {
     return Arrays.stream(natMethodDetectors)
         .flatMap(natMethodDetector -> natMethodDetector.detect().stream())
         .findFirst()

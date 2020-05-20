@@ -1,29 +1,30 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.core;
 
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
-import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
-import org.hyperledger.besu.ethereum.privacy.Restriction;
-
+import com.google.common.collect.Lists;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
-
-import com.google.common.collect.Lists;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
+import org.hyperledger.besu.ethereum.privacy.Restriction;
 
 public class PrivateTransactionTestFixture {
 
@@ -35,7 +36,8 @@ public class PrivateTransactionTestFixture {
 
   private Optional<Address> to = Optional.empty();
 
-  private Address sender = Address.fromHexString("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
+  private Address sender =
+      Address.fromHexString("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
 
   private Wei value = Wei.of(0);
 
@@ -46,10 +48,8 @@ public class PrivateTransactionTestFixture {
   private Bytes privateFrom =
       Bytes.fromBase64String("A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=");
 
-  private Optional<List<Bytes>> privateFor =
-      Optional.of(
-          Lists.newArrayList(
-              Bytes.fromBase64String("Ko2bVqD+nNlNYL5EE7y3IdOnviftjiizpjRt+HTuFBs=")));
+  private Optional<List<Bytes>> privateFor = Optional.of(Lists.newArrayList(
+      Bytes.fromBase64String("Ko2bVqD+nNlNYL5EE7y3IdOnviftjiizpjRt+HTuFBs=")));
 
   private Optional<Bytes> privacyGroupId = Optional.empty();
 
@@ -57,8 +57,7 @@ public class PrivateTransactionTestFixture {
 
   public PrivateTransaction createTransaction(final KeyPair keys) {
     final PrivateTransaction.Builder builder = PrivateTransaction.builder();
-    builder
-        .gasLimit(gasLimit)
+    builder.gasLimit(gasLimit)
         .gasPrice(gasPrice)
         .nonce(nonce)
         .payload(payload)
@@ -119,7 +118,8 @@ public class PrivateTransactionTestFixture {
     return this;
   }
 
-  public PrivateTransactionTestFixture chainId(final Optional<BigInteger> chainId) {
+  public PrivateTransactionTestFixture
+  chainId(final Optional<BigInteger> chainId) {
     this.chainId = chainId;
     return this;
   }
@@ -129,17 +129,20 @@ public class PrivateTransactionTestFixture {
     return this;
   }
 
-  public PrivateTransactionTestFixture privateFor(final List<Bytes> privateFor) {
+  public PrivateTransactionTestFixture
+  privateFor(final List<Bytes> privateFor) {
     this.privateFor = Optional.of(privateFor);
     return this;
   }
 
-  public PrivateTransactionTestFixture privacyGroupId(final Bytes privacyGroupId) {
+  public PrivateTransactionTestFixture
+  privacyGroupId(final Bytes privacyGroupId) {
     this.privacyGroupId = Optional.of(privacyGroupId);
     return this;
   }
 
-  public PrivateTransactionTestFixture restriction(final Restriction restriction) {
+  public PrivateTransactionTestFixture
+  restriction(final Restriction restriction) {
     this.restriction = restriction;
     return this;
   }

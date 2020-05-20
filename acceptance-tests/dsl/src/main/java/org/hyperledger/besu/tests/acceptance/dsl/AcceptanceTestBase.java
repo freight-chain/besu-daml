@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,16 @@ package org.hyperledger.besu.tests.acceptance.dsl;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.ProcessBuilder.Redirect;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Blockchain;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.admin.AdminConditions;
@@ -45,18 +58,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.transaction.perm.PermissioningT
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy.PrivacyTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.web3.Web3Transactions;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.ProcessBuilder.Redirect;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -95,7 +96,8 @@ public class AcceptanceTestBase {
   protected final TxPoolTransactions txPoolTransactions;
   protected final ExitedWithCode exitedSuccessfully;
 
-  private final ExecutorService outputProcessorExecutor = Executors.newCachedThreadPool();
+  private final ExecutorService outputProcessorExecutor =
+      Executors.newCachedThreadPool();
 
   protected AcceptanceTestBase() {
     ethTransactions = new EthTransactions();
@@ -140,20 +142,24 @@ public class AcceptanceTestBase {
     String os = System.getProperty("os.name");
     String[] command = null;
     if (os.contains("Linux")) {
-      command = new String[] {"/usr/bin/top", "-n", "1", "-o", "%MEM", "-b", "-c", "-w", "180"};
+      command = new String[] {"/usr/bin/top", "-n", "1",  "-o", "%MEM",
+                              "-b",           "-c", "-w", "180"};
     }
     if (os.contains("Mac")) {
-      command = new String[] {"/usr/bin/top", "-l", "1", "-o", "mem", "-n", "20"};
+      command =
+          new String[] {"/usr/bin/top", "-l", "1", "-o", "mem", "-n", "20"};
     }
     if (command != null) {
       LOG.info("Memory usage at end of test:");
       final ProcessBuilder processBuilder =
-          new ProcessBuilder(command).redirectErrorStream(true).redirectInput(Redirect.INHERIT);
+          new ProcessBuilder(command).redirectErrorStream(true).redirectInput(
+              Redirect.INHERIT);
       try {
         final Process memInfoProcess = processBuilder.start();
         outputProcessorExecutor.execute(() -> printOutput(memInfoProcess));
         memInfoProcess.waitFor();
-        LOG.debug("Memory info process exited with code {}", memInfoProcess.exitValue());
+        LOG.debug("Memory info process exited with code {}",
+                  memInfoProcess.exitValue());
       } catch (final Exception e) {
         LOG.warn("Error running memory information process", e);
       }
@@ -163,8 +169,8 @@ public class AcceptanceTestBase {
   }
 
   private void printOutput(final Process process) {
-    try (final BufferedReader in =
-        new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
+    try (final BufferedReader in = new BufferedReader(
+             new InputStreamReader(process.getInputStream(), UTF_8))) {
       String line = in.readLine();
       while (line != null) {
         LOG.info(line);
@@ -176,44 +182,38 @@ public class AcceptanceTestBase {
   }
 
   @Rule
-  public TestWatcher log_eraser =
-      new TestWatcher() {
+  public TestWatcher log_eraser = new TestWatcher() {
+    @Override
+    protected void starting(final Description description) {
+      ThreadContext.put("test", description.getMethodName());
+      ThreadContext.put("class", description.getClassName());
 
-        @Override
-        protected void starting(final Description description) {
-          ThreadContext.put("test", description.getMethodName());
-          ThreadContext.put("class", description.getClassName());
+      final String errorMessage = "Uncaught exception in thread \"{}\"";
+      Thread.currentThread().setUncaughtExceptionHandler(
+          (thread, error) -> LOG.error(errorMessage, thread.getName(), error));
+      Thread.setDefaultUncaughtExceptionHandler(
+          (thread, error) -> LOG.error(errorMessage, thread.getName(), error));
+    }
 
-          final String errorMessage = "Uncaught exception in thread \"{}\"";
-          Thread.currentThread()
-              .setUncaughtExceptionHandler(
-                  (thread, error) -> LOG.error(errorMessage, thread.getName(), error));
-          Thread.setDefaultUncaughtExceptionHandler(
-              (thread, error) -> LOG.error(errorMessage, thread.getName(), error));
-        }
+    @Override
+    protected void failed(final Throwable e, final Description description) {
+      // add the result at the end of the log so it is self-sufficient
+      LOG.error(
+          "==========================================================================================");
+      LOG.error("Test failed. Reported Throwable at the point of failure:", e);
+    }
 
-        @Override
-        protected void failed(final Throwable e, final Description description) {
-          // add the result at the end of the log so it is self-sufficient
-          LOG.error(
-              "==========================================================================================");
-          LOG.error("Test failed. Reported Throwable at the point of failure:", e);
-        }
-
-        @Override
-        protected void succeeded(final Description description) {
-          // if so configured, delete logs of successful tests
-          if (!Boolean.getBoolean("acctests.keepLogsOfPassingTests")) {
-            String pathname =
-                "build/acceptanceTestLogs/"
-                    + description.getClassName()
-                    + "."
-                    + description.getMethodName()
-                    + ".log";
-            LOG.info("Test successful, deleting log at {}", pathname);
-            File file = new File(pathname);
-            file.delete();
-          }
-        }
-      };
+    @Override
+    protected void succeeded(final Description description) {
+      // if so configured, delete logs of successful tests
+      if (!Boolean.getBoolean("acctests.keepLogsOfPassingTests")) {
+        String pathname = "build/acceptanceTestLogs/" +
+                          description.getClassName() + "." +
+                          description.getMethodName() + ".log";
+        LOG.info("Test successful, deleting log at {}", pathname);
+        File file = new File(pathname);
+        file.delete();
+      }
+    }
+  };
 }

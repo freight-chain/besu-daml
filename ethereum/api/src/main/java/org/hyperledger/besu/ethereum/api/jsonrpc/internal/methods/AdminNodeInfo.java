@@ -1,19 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods;
 
+import com.google.common.collect.ImmutableMap;
+import java.math.BigInteger;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
@@ -30,15 +40,6 @@ import org.hyperledger.besu.nat.core.domain.NatPortMapping;
 import org.hyperledger.besu.nat.core.domain.NatServiceType;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
 
-import java.math.BigInteger;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
-import com.google.common.collect.ImmutableMap;
-import org.apache.tuweni.bytes.Bytes;
-
 public class AdminNodeInfo implements JsonRpcMethod {
 
   private final String clientVersion;
@@ -48,13 +49,11 @@ public class AdminNodeInfo implements JsonRpcMethod {
   private final BlockchainQueries blockchainQueries;
   private final NatService natService;
 
-  public AdminNodeInfo(
-      final String clientVersion,
-      final BigInteger networkId,
-      final GenesisConfigOptions genesisConfigOptions,
-      final P2PNetwork peerNetwork,
-      final BlockchainQueries blockchainQueries,
-      final NatService natService) {
+  public AdminNodeInfo(final String clientVersion, final BigInteger networkId,
+                       final GenesisConfigOptions genesisConfigOptions,
+                       final P2PNetwork peerNetwork,
+                       final BlockchainQueries blockchainQueries,
+                       final NatService natService) {
     this.peerNetwork = peerNetwork;
     this.clientVersion = clientVersion;
     this.genesisConfigOptions = genesisConfigOptions;
@@ -74,13 +73,13 @@ public class AdminNodeInfo implements JsonRpcMethod {
     final Map<String, Integer> ports = new HashMap<>();
 
     if (!peerNetwork.isP2pEnabled()) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.P2P_DISABLED);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.P2P_DISABLED);
     }
     final Optional<EnodeURL> maybeEnode = peerNetwork.getLocalEnode();
     if (maybeEnode.isEmpty()) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.P2P_NETWORK_NOT_RUNNING);
     }
     final EnodeURL enode = maybeEnode.get();
 
@@ -92,7 +91,8 @@ public class AdminNodeInfo implements JsonRpcMethod {
     final int listeningPort = getListeningPort(enode);
     final int discoveryPort = getDiscoveryPort(enode);
 
-    response.put("enode", getNodeAsString(enode, ip, listeningPort, discoveryPort));
+    response.put("enode",
+                 getNodeAsString(enode, ip, listeningPort, discoveryPort));
     response.put("ip", ip);
 
     if (enode.isListening()) {
@@ -109,33 +109,31 @@ public class AdminNodeInfo implements JsonRpcMethod {
     }
     response.put("ports", ports);
 
-    final ChainHead chainHead = blockchainQueries.getBlockchain().getChainHead();
+    final ChainHead chainHead =
+        blockchainQueries.getBlockchain().getChainHead();
     response.put(
         "protocols",
         ImmutableMap.of(
             "eth",
             ImmutableMap.of(
-                "config",
-                genesisConfigOptions.asMap(),
-                "difficulty",
-                chainHead.getTotalDifficulty().toBigInteger(),
-                "genesis",
+                "config", genesisConfigOptions.asMap(), "difficulty",
+                chainHead.getTotalDifficulty().toBigInteger(), "genesis",
                 blockchainQueries.getBlockHashByNumber(0).get().toString(),
-                "head",
-                chainHead.getHash().toString(),
-                "network",
-                networkId)));
+                "head", chainHead.getHash().toString(), "network", networkId)));
 
-    return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), response);
+    return new JsonRpcSuccessResponse(requestContext.getRequest().getId(),
+                                      response);
   }
 
-  private String getNodeAsString(
-      final EnodeURL enodeURL, final String ip, final int listeningPort, final int discoveryPort) {
-    final String uri =
-        String.format(
-            "enode://%s@%s:%d", enodeURL.getNodeId().toUnprefixedHexString(), ip, listeningPort);
+  private String getNodeAsString(final EnodeURL enodeURL, final String ip,
+                                 final int listeningPort,
+                                 final int discoveryPort) {
+    final String uri = String.format(
+        "enode://%s@%s:%d", enodeURL.getNodeId().toUnprefixedHexString(), ip,
+        listeningPort);
     if (listeningPort != discoveryPort) {
-      return URI.create(uri + String.format("?discport=%d", discoveryPort)).toString();
+      return URI.create(uri + String.format("?discport=%d", discoveryPort))
+          .toString();
     } else {
       return URI.create(uri).toString();
     }
@@ -153,8 +151,7 @@ public class AdminNodeInfo implements JsonRpcMethod {
   }
 
   private int getListeningPort(final EnodeURL enode) {
-    return natService
-        .getPortMapping(NatServiceType.RLPX, NetworkProtocol.TCP)
+    return natService.getPortMapping(NatServiceType.RLPX, NetworkProtocol.TCP)
         .map(NatPortMapping::getExternalPort)
         .orElseGet(enode::getListeningPortOrZero);
   }

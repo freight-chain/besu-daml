@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,6 +26,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+import java.util.Optional;
+import org.assertj.core.util.Lists;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
 import org.hyperledger.besu.consensus.ibft.IbftContext;
 import org.hyperledger.besu.consensus.ibft.TestHelpers;
@@ -41,11 +47,6 @@ import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.AddressHelpers;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,27 +58,29 @@ public class MessageValidatorTest {
 
   private final NodeKey nodeKey = NodeKeyUtils.generate();
   private final MessageFactory messageFactory = new MessageFactory(nodeKey);
-  private final ConsensusRoundIdentifier roundIdentifier = new ConsensusRoundIdentifier(1, 0);
+  private final ConsensusRoundIdentifier roundIdentifier =
+      new ConsensusRoundIdentifier(1, 0);
 
-  private final SignedDataValidator signedDataValidator = mock(SignedDataValidator.class);
-  private final ProposalBlockConsistencyValidator proposalBlockConsistencyValidator =
-      mock(ProposalBlockConsistencyValidator.class);
+  private final SignedDataValidator signedDataValidator =
+      mock(SignedDataValidator.class);
+  private final ProposalBlockConsistencyValidator
+      proposalBlockConsistencyValidator =
+          mock(ProposalBlockConsistencyValidator.class);
 
   @Mock private BlockValidator<IbftContext> blockValidator;
   private ProtocolContext<IbftContext> protocolContext;
-  private final RoundChangeCertificateValidator roundChangeCertificateValidator =
-      mock(RoundChangeCertificateValidator.class);
+  private final RoundChangeCertificateValidator
+      roundChangeCertificateValidator =
+          mock(RoundChangeCertificateValidator.class);
 
   private MessageValidator messageValidator;
 
   private final List<Address> validators =
-      Lists.newArrayList(
-          AddressHelpers.ofValue(0),
-          AddressHelpers.ofValue(1),
-          AddressHelpers.ofValue(2),
-          AddressHelpers.ofValue(3));
+      Lists.newArrayList(AddressHelpers.ofValue(0), AddressHelpers.ofValue(1),
+                         AddressHelpers.ofValue(2), AddressHelpers.ofValue(3));
 
-  private final Block block = TestHelpers.createProposalBlock(validators, roundIdentifier);
+  private final Block block =
+      TestHelpers.createProposalBlock(validators, roundIdentifier);
 
   @Before
   public void setup() {
@@ -85,30 +88,29 @@ public class MessageValidatorTest {
     when(signedDataValidator.validatePrepare(any())).thenReturn(true);
     when(signedDataValidator.validateCommit(any())).thenReturn(true);
 
-    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any()))
+    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(),
+                                                                        any()))
         .thenReturn(true);
 
-    protocolContext =
-        new ProtocolContext<>(
-            mock(MutableBlockchain.class), mock(WorldStateArchive.class), mock(IbftContext.class));
+    protocolContext = new ProtocolContext<>(mock(MutableBlockchain.class),
+                                            mock(WorldStateArchive.class),
+                                            mock(IbftContext.class));
 
     when(blockValidator.validateAndProcessBlock(any(), any(), any(), any()))
         .thenReturn(Optional.of(new BlockProcessingOutputs(null, null)));
 
-    when(roundChangeCertificateValidator.validateProposalMessageMatchesLatestPrepareCertificate(
-            any(), any()))
+    when(roundChangeCertificateValidator
+             .validateProposalMessageMatchesLatestPrepareCertificate(any(),
+                                                                     any()))
         .thenReturn(true);
-    when(roundChangeCertificateValidator.validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(
-            any(), any()))
+    when(roundChangeCertificateValidator
+             .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(),
+                                                                         any()))
         .thenReturn(true);
 
-    messageValidator =
-        new MessageValidator(
-            signedDataValidator,
-            proposalBlockConsistencyValidator,
-            blockValidator,
-            protocolContext,
-            roundChangeCertificateValidator);
+    messageValidator = new MessageValidator(
+        signedDataValidator, proposalBlockConsistencyValidator, blockValidator,
+        protocolContext, roundChangeCertificateValidator);
   }
 
   @Test
@@ -116,32 +118,37 @@ public class MessageValidatorTest {
     final Proposal proposal =
         messageFactory.createProposal(roundIdentifier, block, Optional.empty());
 
-    final Prepare prepare = messageFactory.createPrepare(roundIdentifier, block.getHash());
+    final Prepare prepare =
+        messageFactory.createPrepare(roundIdentifier, block.getHash());
 
-    final Commit commit =
-        messageFactory.createCommit(
-            roundIdentifier, block.getHash(), nodeKey.sign(block.getHash()));
+    final Commit commit = messageFactory.createCommit(
+        roundIdentifier, block.getHash(), nodeKey.sign(block.getHash()));
 
     assertThat(messageValidator.validateProposal(proposal)).isTrue();
-    verify(signedDataValidator, times(1)).validateProposal(proposal.getSignedPayload());
+    verify(signedDataValidator, times(1))
+        .validateProposal(proposal.getSignedPayload());
 
     messageValidator.validatePrepare(prepare);
-    verify(signedDataValidator, times(1)).validatePrepare(prepare.getSignedPayload());
+    verify(signedDataValidator, times(1))
+        .validatePrepare(prepare.getSignedPayload());
 
     messageValidator.validateCommit(commit);
-    verify(signedDataValidator, times(1)).validateCommit(commit.getSignedPayload());
+    verify(signedDataValidator, times(1))
+        .validateCommit(commit.getSignedPayload());
   }
 
   @Test
   public void ifProposalConsistencyChecksFailProposalIsIllegal() {
     final Proposal proposal =
         messageFactory.createProposal(roundIdentifier, block, Optional.empty());
-    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any()))
+    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(),
+                                                                        any()))
         .thenReturn(false);
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
     verify(proposalBlockConsistencyValidator, times(1))
-        .validateProposalMatchesBlock(proposal.getSignedPayload(), proposal.getBlock());
+        .validateProposalMatchesBlock(proposal.getSignedPayload(),
+                                      proposal.getBlock());
   }
 
   @Test
@@ -156,54 +163,64 @@ public class MessageValidatorTest {
   }
 
   @Test
-  public void proposalFailsValidationIfRoundChangeCertificateDoeNotMatchBlock() {
-    final ConsensusRoundIdentifier nonZeroRound = new ConsensusRoundIdentifier(1, 1);
-    when(roundChangeCertificateValidator.validateProposalMessageMatchesLatestPrepareCertificate(
-            any(), any()))
+  public void
+  proposalFailsValidationIfRoundChangeCertificateDoeNotMatchBlock() {
+    final ConsensusRoundIdentifier nonZeroRound =
+        new ConsensusRoundIdentifier(1, 1);
+    when(roundChangeCertificateValidator
+             .validateProposalMessageMatchesLatestPrepareCertificate(any(),
+                                                                     any()))
         .thenReturn(false);
 
-    final Proposal proposal =
-        messageFactory.createProposal(
-            nonZeroRound, block, Optional.of(new RoundChangeCertificate(emptyList())));
+    final Proposal proposal = messageFactory.createProposal(
+        nonZeroRound, block,
+        Optional.of(new RoundChangeCertificate(emptyList())));
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
   }
 
   @Test
   public void proposalFailsValidationIfRoundChangeIsNotSelfConsistent() {
-    final ConsensusRoundIdentifier nonZeroRound = new ConsensusRoundIdentifier(1, 1);
-    when(roundChangeCertificateValidator.validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(
-            any(), any()))
+    final ConsensusRoundIdentifier nonZeroRound =
+        new ConsensusRoundIdentifier(1, 1);
+    when(roundChangeCertificateValidator
+             .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(),
+                                                                         any()))
         .thenReturn(false);
 
-    final Proposal proposal =
-        messageFactory.createProposal(
-            nonZeroRound, block, Optional.of(new RoundChangeCertificate(emptyList())));
+    final Proposal proposal = messageFactory.createProposal(
+        nonZeroRound, block,
+        Optional.of(new RoundChangeCertificate(emptyList())));
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
   }
 
   @Test
   public void proposalForRoundZeroFailsIfItContainsARoundChangeCertificate() {
-    final Proposal proposal =
-        messageFactory.createProposal(
-            roundIdentifier, block, Optional.of(new RoundChangeCertificate(emptyList())));
+    final Proposal proposal = messageFactory.createProposal(
+        roundIdentifier, block,
+        Optional.of(new RoundChangeCertificate(emptyList())));
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
     verify(roundChangeCertificateValidator, never())
-        .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(), any());
+        .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(),
+                                                                    any());
     verify(roundChangeCertificateValidator, never())
         .validateProposalMessageMatchesLatestPrepareCertificate(any(), any());
   }
 
   @Test
-  public void proposalForRoundsGreaterThanZeroFailIfNoRoundChangeCertificateAvailable() {
-    final ConsensusRoundIdentifier nonZeroRound = new ConsensusRoundIdentifier(1, 1);
-    final Proposal proposal = messageFactory.createProposal(nonZeroRound, block, Optional.empty());
+  public void
+  proposalForRoundsGreaterThanZeroFailIfNoRoundChangeCertificateAvailable() {
+    final ConsensusRoundIdentifier nonZeroRound =
+        new ConsensusRoundIdentifier(1, 1);
+    final Proposal proposal =
+        messageFactory.createProposal(nonZeroRound, block, Optional.empty());
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
     verify(roundChangeCertificateValidator, never())
-        .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(), any());
+        .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(any(),
+                                                                    any());
     verify(roundChangeCertificateValidator, never())
         .validateProposalMessageMatchesLatestPrepareCertificate(any(), any());
   }
