@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -33,15 +38,13 @@ import org.hyperledger.besu.ethereum.vm.ExceptionalHaltReason;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.OperationRegistry;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
 import org.junit.Before;
 import org.junit.Test;
 
 public class JumpOperationTest {
 
-  private static final IstanbulGasCalculator gasCalculator = new IstanbulGasCalculator();
+  private static final IstanbulGasCalculator gasCalculator =
+      new IstanbulGasCalculator();
 
   private static final int CURRENT_PC = 1;
 
@@ -50,7 +53,8 @@ public class JumpOperationTest {
   private WorldUpdater worldStateUpdater;
   private EVM evm;
 
-  private MessageFrameTestFixture createMessageFrameBuilder(final Gas initialGas) {
+  private MessageFrameTestFixture
+  createMessageFrameBuilder(final Gas initialGas) {
     final BlockHeader blockHeader = new BlockHeaderTestFixture().buildHeader();
     return new MessageFrameTestFixture()
         .address(address)
@@ -88,7 +92,8 @@ public class JumpOperationTest {
             .build();
     frame.setPC(CURRENT_PC);
 
-    assertThat(operation.exceptionalHaltCondition(frame, null, evm)).isNotPresent();
+    assertThat(operation.exceptionalHaltCondition(frame, null, evm))
+        .isNotPresent();
     operation.execute(frame);
   }
 
@@ -102,12 +107,14 @@ public class JumpOperationTest {
             .build();
     frame.setPC(CURRENT_PC);
 
-    assertThat(operation.exceptionalHaltCondition(frame, null, evm)).isNotPresent();
+    assertThat(operation.exceptionalHaltCondition(frame, null, evm))
+        .isNotPresent();
     operation.execute(frame);
   }
 
   @Test
-  public void shouldHaltWithInvalidJumDestinationWhenLocationIsOutsideOfCodeRange() {
+  public void
+  shouldHaltWithInvalidJumDestinationWhenLocationIsOutsideOfCodeRange() {
     final JumpOperation operation = new JumpOperation(gasCalculator);
     final MessageFrame frameDestinationGreaterThanCodeSize =
         createMessageFrameBuilder(Gas.of(1))
@@ -116,7 +123,8 @@ public class JumpOperationTest {
             .build();
     frameDestinationGreaterThanCodeSize.setPC(CURRENT_PC);
 
-    assertThat(operation.exceptionalHaltCondition(frameDestinationGreaterThanCodeSize, null, null))
+    assertThat(operation.exceptionalHaltCondition(
+                   frameDestinationGreaterThanCodeSize, null, null))
         .contains(ExceptionalHaltReason.INVALID_JUMP_DESTINATION);
 
     final MessageFrame frameDestinationEqualsToCodeSize =
@@ -127,7 +135,8 @@ public class JumpOperationTest {
             .build();
     frameDestinationEqualsToCodeSize.setPC(CURRENT_PC);
 
-    assertThat(operation.exceptionalHaltCondition(frameDestinationEqualsToCodeSize, null, null))
+    assertThat(operation.exceptionalHaltCondition(
+                   frameDestinationEqualsToCodeSize, null, null))
         .contains(ExceptionalHaltReason.INVALID_JUMP_DESTINATION);
   }
 }

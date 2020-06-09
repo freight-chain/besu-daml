@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,12 +23,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RoutingContext;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.Supplier;
-
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.RoutingContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -37,16 +39,12 @@ public class ContextKeyTest<T> {
   @Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
-        new Object[][] {
-          {REQUEST_BODY_AS_JSON_OBJECT, ctx(null), supplier("default"), "default"},
-          {REQUEST_BODY_AS_JSON_OBJECT, ctx("non-default"), supplier("default"), "non-default"},
-          {
-            REQUEST_BODY_AS_JSON_OBJECT,
-            ctx(new JsonObject(JSON)),
-            supplier(null),
-            new JsonObject(JSON)
-          }
-        });
+        new Object[][] {{REQUEST_BODY_AS_JSON_OBJECT, ctx(null),
+                         supplier("default"), "default"},
+                        {REQUEST_BODY_AS_JSON_OBJECT, ctx("non-default"),
+                         supplier("default"), "non-default"},
+                        {REQUEST_BODY_AS_JSON_OBJECT, ctx(new JsonObject(JSON)),
+                         supplier(null), new JsonObject(JSON)}});
   }
 
   private static final String JSON = "{\"key\": \"value\"}";
@@ -55,11 +53,8 @@ public class ContextKeyTest<T> {
   private final Supplier<T> defaultSupplier;
   private final T expected;
 
-  public ContextKeyTest(
-      final ContextKey key,
-      final RoutingContext ctx,
-      final Supplier<T> defaultSupplier,
-      final T expected) {
+  public ContextKeyTest(final ContextKey key, final RoutingContext ctx,
+                        final Supplier<T> defaultSupplier, final T expected) {
     this.key = key;
     this.ctx = ctx;
     this.defaultSupplier = defaultSupplier;
@@ -77,7 +72,5 @@ public class ContextKeyTest<T> {
     return ctx;
   }
 
-  private static <T> Supplier<T> supplier(final T value) {
-    return () -> value;
-  }
+  private static <T> Supplier<T> supplier(final T value) { return () -> value; }
 }

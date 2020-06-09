@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,23 @@ import static java.util.function.Predicate.isEqual;
 import static java.util.function.Predicate.not;
 import static org.hyperledger.besu.controller.BesuController.CACHE_PATH;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import graphql.GraphQL;
+import io.vertx.core.Vertx;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.cli.config.EthNetworkConfig;
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.crypto.NodeKey;
@@ -102,25 +122,6 @@ import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.services.BesuPluginContextImpl;
 import org.hyperledger.besu.util.NetworkUtility;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import graphql.GraphQL;
-import io.vertx.core.Vertx;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
-
 public class RunnerBuilder {
 
   private static final Logger LOG = LogManager.getLogger();
@@ -128,7 +129,8 @@ public class RunnerBuilder {
   private Vertx vertx;
   private BesuController besuController;
 
-  private NetworkingConfiguration networkingConfiguration = NetworkingConfiguration.create();
+  private NetworkingConfiguration networkingConfiguration =
+      NetworkingConfiguration.create();
   private final Collection<Bytes> bannedNodeIds = new ArrayList<>();
   private boolean p2pEnabled = true;
   private boolean discovery;
@@ -148,7 +150,8 @@ public class RunnerBuilder {
   private Optional<Path> pidPath = Optional.empty();
   private MetricsConfiguration metricsConfiguration;
   private ObservableMetricsSystem metricsSystem;
-  private Optional<PermissioningConfiguration> permissioningConfiguration = Optional.empty();
+  private Optional<PermissioningConfiguration> permissioningConfiguration =
+      Optional.empty();
   private Collection<EnodeURL> staticNodes = Collections.emptyList();
   private Optional<String> identityString = Optional.empty();
   private BesuPluginContextImpl besuPluginContext;
@@ -174,7 +177,8 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder ethNetworkConfig(final EthNetworkConfig ethNetworkConfig) {
+  public RunnerBuilder
+  ethNetworkConfig(final EthNetworkConfig ethNetworkConfig) {
     this.ethNetworkConfig = ethNetworkConfig;
     return this;
   }
@@ -191,7 +195,8 @@ public class RunnerBuilder {
   }
 
   public RunnerBuilder p2pListenInterface(final String ip) {
-    checkArgument(!isNull(ip), "Invalid null value supplied for p2pListenInterface");
+    checkArgument(!isNull(ip),
+                  "Invalid null value supplied for p2pListenInterface");
     this.p2pListenInterface = ip;
     return this;
   }
@@ -223,17 +228,20 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder jsonRpcConfiguration(final JsonRpcConfiguration jsonRpcConfiguration) {
+  public RunnerBuilder
+  jsonRpcConfiguration(final JsonRpcConfiguration jsonRpcConfiguration) {
     this.jsonRpcConfiguration = jsonRpcConfiguration;
     return this;
   }
 
-  public RunnerBuilder graphQLConfiguration(final GraphQLConfiguration graphQLConfiguration) {
+  public RunnerBuilder
+  graphQLConfiguration(final GraphQLConfiguration graphQLConfiguration) {
     this.graphQLConfiguration = graphQLConfiguration;
     return this;
   }
 
-  public RunnerBuilder webSocketConfiguration(final WebSocketConfiguration webSocketConfiguration) {
+  public RunnerBuilder
+  webSocketConfiguration(final WebSocketConfiguration webSocketConfiguration) {
     this.webSocketConfiguration = webSocketConfiguration;
     return this;
   }
@@ -259,12 +267,14 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder metricsConfiguration(final MetricsConfiguration metricsConfiguration) {
+  public RunnerBuilder
+  metricsConfiguration(final MetricsConfiguration metricsConfiguration) {
     this.metricsConfiguration = metricsConfiguration;
     return this;
   }
 
-  public RunnerBuilder metricsSystem(final ObservableMetricsSystem metricsSystem) {
+  public RunnerBuilder
+  metricsSystem(final ObservableMetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
     return this;
   }
@@ -279,7 +289,8 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder besuPluginContext(final BesuPluginContextImpl besuPluginContext) {
+  public RunnerBuilder
+  besuPluginContext(final BesuPluginContextImpl besuPluginContext) {
     this.besuPluginContext = besuPluginContext;
     return this;
   }
@@ -301,12 +312,11 @@ public class RunnerBuilder {
       } else {
         bootstrap = ethNetworkConfig.getBootNodes();
       }
-      discoveryConfiguration =
-          DiscoveryConfiguration.create()
-              .setBindHost(p2pListenInterface)
-              .setBindPort(p2pListenPort)
-              .setAdvertisedHost(p2pAdvertisedHost)
-              .setBootnodes(bootstrap);
+      discoveryConfiguration = DiscoveryConfiguration.create()
+                                   .setBindHost(p2pListenInterface)
+                                   .setBindPort(p2pListenPort)
+                                   .setAdvertisedHost(p2pAdvertisedHost)
+                                   .setBootnodes(bootstrap);
     } else {
       discoveryConfiguration = DiscoveryConfiguration.create().setActive(false);
     }
@@ -316,14 +326,18 @@ public class RunnerBuilder {
     final SubProtocolConfiguration subProtocolConfiguration =
         besuController.getSubProtocolConfiguration();
 
-    final ProtocolSchedule protocolSchedule = besuController.getProtocolSchedule();
+    final ProtocolSchedule protocolSchedule =
+        besuController.getProtocolSchedule();
     final ProtocolContext context = besuController.getProtocolContext();
 
-    final List<SubProtocol> subProtocols = subProtocolConfiguration.getSubProtocols();
-    final List<ProtocolManager> protocolManagers = subProtocolConfiguration.getProtocolManagers();
+    final List<SubProtocol> subProtocols =
+        subProtocolConfiguration.getSubProtocols();
+    final List<ProtocolManager> protocolManagers =
+        subProtocolConfiguration.getProtocolManagers();
     final Set<Capability> supportedCapabilities =
         protocolManagers.stream()
-            .flatMap(protocolManager -> protocolManager.getSupportedCapabilities().stream())
+            .flatMap(protocolManager
+                     -> protocolManager.getSupportedCapabilities().stream())
             .collect(Collectors.toSet());
 
     final RlpxConfiguration rlpxConfiguration =
@@ -333,46 +347,51 @@ public class RunnerBuilder {
             .setMaxPeers(maxPeers)
             .setSupportedProtocols(subProtocols)
             .setClientId(BesuInfo.nodeName(identityString))
-            .setLimitRemoteWireConnectionsEnabled(limitRemoteWireConnectionsEnabled)
-            .setFractionRemoteWireConnectionsAllowed(fractionRemoteConnectionsAllowed);
-    networkingConfiguration.setRlpx(rlpxConfiguration).setDiscovery(discoveryConfiguration);
+            .setLimitRemoteWireConnectionsEnabled(
+                limitRemoteWireConnectionsEnabled)
+            .setFractionRemoteWireConnectionsAllowed(
+                fractionRemoteConnectionsAllowed);
+    networkingConfiguration.setRlpx(rlpxConfiguration)
+        .setDiscovery(discoveryConfiguration);
 
-    final PeerPermissionsBlacklist bannedNodes = PeerPermissionsBlacklist.create();
+    final PeerPermissionsBlacklist bannedNodes =
+        PeerPermissionsBlacklist.create();
     bannedNodeIds.forEach(bannedNodes::add);
 
     final List<EnodeURL> bootnodes = discoveryConfiguration.getBootnodes();
 
     final Synchronizer synchronizer = besuController.getSynchronizer();
 
-    final TransactionSimulator transactionSimulator =
-        new TransactionSimulator(
-            context.getBlockchain(), context.getWorldStateArchive(), protocolSchedule);
+    final TransactionSimulator transactionSimulator = new TransactionSimulator(
+        context.getBlockchain(), context.getWorldStateArchive(),
+        protocolSchedule);
 
     final Bytes localNodeId = nodeKey.getPublicKey().getEncodedBytes();
     final Optional<NodePermissioningController> nodePermissioningController =
-        buildNodePermissioningController(
-            bootnodes, synchronizer, transactionSimulator, localNodeId);
+        buildNodePermissioningController(bootnodes, synchronizer,
+                                         transactionSimulator, localNodeId);
 
     final PeerPermissions peerPermissions =
         nodePermissioningController
-            .map(nodePC -> new PeerPermissionsAdapter(nodePC, bootnodes, context.getBlockchain()))
+            .map(nodePC
+                 -> new PeerPermissionsAdapter(nodePC, bootnodes,
+                                               context.getBlockchain()))
             .map(nodePerms -> PeerPermissions.combine(nodePerms, bannedNodes))
             .orElse(bannedNodes);
 
     LOG.info("Detecting NAT service.");
     final NatService natService = new NatService(buildNatManager(natMethod));
     final NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
-    final NetworkBuilder activeNetwork =
-        (caps) ->
-            DefaultP2PNetwork.builder()
-                .vertx(vertx)
-                .nodeKey(nodeKey)
-                .config(networkingConfiguration)
-                .peerPermissions(peerPermissions)
-                .metricsSystem(metricsSystem)
-                .supportedCapabilities(caps)
-                .natService(natService)
-                .build();
+    final NetworkBuilder activeNetwork = (caps)
+        -> DefaultP2PNetwork.builder()
+               .vertx(vertx)
+               .nodeKey(nodeKey)
+               .config(networkingConfiguration)
+               .peerPermissions(peerPermissions)
+               .metricsSystem(metricsSystem)
+               .supportedCapabilities(caps)
+               .natService(natService)
+               .build();
 
     final NetworkRunner networkRunner =
         NetworkRunner.builder()
@@ -384,21 +403,22 @@ public class RunnerBuilder {
 
     final P2PNetwork network = networkRunner.getNetwork();
     nodePermissioningController.ifPresent(
-        n ->
-            n.setInsufficientPeersPermissioningProvider(
-                new InsufficientPeersPermissioningProvider(network, bootnodes)));
+        n
+        -> n.setInsufficientPeersPermissioningProvider(
+            new InsufficientPeersPermissioningProvider(network, bootnodes)));
 
     final TransactionPool transactionPool = besuController.getTransactionPool();
-    final MiningCoordinator miningCoordinator = besuController.getMiningCoordinator();
+    final MiningCoordinator miningCoordinator =
+        besuController.getMiningCoordinator();
 
-    final BlockchainQueries blockchainQueries =
-        new BlockchainQueries(
-            context.getBlockchain(),
-            context.getWorldStateArchive(),
-            Optional.of(dataDir.resolve(CACHE_PATH)),
-            Optional.of(besuController.getProtocolManager().ethContext().getScheduler()));
+    final BlockchainQueries blockchainQueries = new BlockchainQueries(
+        context.getBlockchain(), context.getWorldStateArchive(),
+        Optional.of(dataDir.resolve(CACHE_PATH)),
+        Optional.of(
+            besuController.getProtocolManager().ethContext().getScheduler()));
 
-    final PrivacyParameters privacyParameters = besuController.getPrivacyParameters();
+    final PrivacyParameters privacyParameters =
+        besuController.getPrivacyParameters();
 
     final FilterManager filterManager =
         new FilterManagerBuilder()
@@ -410,16 +430,14 @@ public class RunnerBuilder {
 
     final P2PNetwork peerNetwork = networkRunner.getNetwork();
 
-    final MiningParameters miningParameters = besuController.getMiningParameters();
+    final MiningParameters miningParameters =
+        besuController.getMiningParameters();
     Optional<StratumServer> stratumServer = Optional.empty();
     if (miningParameters.isStratumMiningEnabled()) {
-      stratumServer =
-          Optional.of(
-              new StratumServer(
-                  vertx,
-                  miningParameters.getStratumPort(),
-                  miningParameters.getStratumNetworkInterface(),
-                  miningParameters.getStratumExtranonce()));
+      stratumServer = Optional.of(
+          new StratumServer(vertx, miningParameters.getStratumPort(),
+                            miningParameters.getStratumNetworkInterface(),
+                            miningParameters.getStratumExtranonce()));
       miningCoordinator.addEthHashObserver(stratumServer.get());
     }
 
@@ -427,64 +445,45 @@ public class RunnerBuilder {
         .map(DefaultPeer::fromEnodeURL)
         .forEach(peerNetwork::addMaintainConnectionPeer);
 
-    final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController =
-        nodePermissioningController.flatMap(NodePermissioningController::localConfigController);
+    final Optional<NodeLocalConfigPermissioningController>
+        nodeLocalConfigPermissioningController =
+            nodePermissioningController.flatMap(
+                NodePermissioningController::localConfigController);
 
-    final Optional<AccountPermissioningController> accountPermissioningController =
-        buildAccountPermissioningController(
+    final Optional<AccountPermissioningController>
+        accountPermissioningController = buildAccountPermissioningController(
             permissioningConfiguration, besuController, transactionSimulator);
 
     final Optional<AccountLocalConfigPermissioningController>
         accountLocalConfigPermissioningController =
             accountPermissioningController.flatMap(
-                AccountPermissioningController::getAccountLocalConfigPermissioningController);
+                AccountPermissioningController::
+                    getAccountLocalConfigPermissioningController);
 
     Optional<JsonRpcHttpService> jsonRpcHttpService = Optional.empty();
     if (jsonRpcConfiguration.isEnabled()) {
-      final Map<String, JsonRpcMethod> jsonRpcMethods =
-          jsonRpcMethods(
-              protocolSchedule,
-              besuController,
-              peerNetwork,
-              blockchainQueries,
-              synchronizer,
-              transactionPool,
-              miningCoordinator,
-              metricsSystem,
-              supportedCapabilities,
-              jsonRpcConfiguration.getRpcApis(),
-              filterManager,
-              accountLocalConfigPermissioningController,
-              nodeLocalConfigPermissioningController,
-              privacyParameters,
-              jsonRpcConfiguration,
-              webSocketConfiguration,
-              metricsConfiguration,
-              natService,
-              besuPluginContext.getNamedPlugins());
-      jsonRpcHttpService =
-          Optional.of(
-              new JsonRpcHttpService(
-                  vertx,
-                  dataDir,
-                  jsonRpcConfiguration,
-                  metricsSystem,
-                  natService,
-                  jsonRpcMethods,
-                  new HealthService(new LivenessCheck()),
-                  new HealthService(new ReadinessCheck(peerNetwork, synchronizer))));
+      final Map<String, JsonRpcMethod> jsonRpcMethods = jsonRpcMethods(
+          protocolSchedule, besuController, peerNetwork, blockchainQueries,
+          synchronizer, transactionPool, miningCoordinator, metricsSystem,
+          supportedCapabilities, jsonRpcConfiguration.getRpcApis(),
+          filterManager, accountLocalConfigPermissioningController,
+          nodeLocalConfigPermissioningController, privacyParameters,
+          jsonRpcConfiguration, webSocketConfiguration, metricsConfiguration,
+          natService, besuPluginContext.getNamedPlugins());
+      jsonRpcHttpService = Optional.of(new JsonRpcHttpService(
+          vertx, dataDir, jsonRpcConfiguration, metricsSystem, natService,
+          jsonRpcMethods, new HealthService(new LivenessCheck()),
+          new HealthService(new ReadinessCheck(peerNetwork, synchronizer))));
     }
 
     Optional<GraphQLHttpService> graphQLHttpService = Optional.empty();
     if (graphQLConfiguration.isEnabled()) {
-      final GraphQLDataFetchers fetchers = new GraphQLDataFetchers(supportedCapabilities);
+      final GraphQLDataFetchers fetchers =
+          new GraphQLDataFetchers(supportedCapabilities);
       final GraphQLDataFetcherContext dataFetcherContext =
-          new GraphQLDataFetcherContext(
-              blockchainQueries,
-              protocolSchedule,
-              transactionPool,
-              miningCoordinator,
-              synchronizer);
+          new GraphQLDataFetcherContext(blockchainQueries, protocolSchedule,
+                                        transactionPool, miningCoordinator,
+                                        synchronizer);
       final GraphQL graphQL;
       try {
         graphQL = GraphQLProvider.buildGraphQL(fetchers);
@@ -492,102 +491,73 @@ public class RunnerBuilder {
         throw new RuntimeException(ioe);
       }
 
-      graphQLHttpService =
-          Optional.of(
-              new GraphQLHttpService(
-                  vertx, dataDir, graphQLConfiguration, graphQL, dataFetcherContext));
+      graphQLHttpService = Optional.of(new GraphQLHttpService(
+          vertx, dataDir, graphQLConfiguration, graphQL, dataFetcherContext));
     }
 
     Optional<WebSocketService> webSocketService = Optional.empty();
     if (webSocketConfiguration.isEnabled()) {
       final Map<String, JsonRpcMethod> webSocketsJsonRpcMethods =
           jsonRpcMethods(
-              protocolSchedule,
-              besuController,
-              peerNetwork,
-              blockchainQueries,
-              synchronizer,
-              transactionPool,
-              miningCoordinator,
-              metricsSystem,
-              supportedCapabilities,
-              webSocketConfiguration.getRpcApis(),
-              filterManager,
-              accountLocalConfigPermissioningController,
-              nodeLocalConfigPermissioningController,
-              privacyParameters,
-              jsonRpcConfiguration,
-              webSocketConfiguration,
-              metricsConfiguration,
-              natService,
+              protocolSchedule, besuController, peerNetwork, blockchainQueries,
+              synchronizer, transactionPool, miningCoordinator, metricsSystem,
+              supportedCapabilities, webSocketConfiguration.getRpcApis(),
+              filterManager, accountLocalConfigPermissioningController,
+              nodeLocalConfigPermissioningController, privacyParameters,
+              jsonRpcConfiguration, webSocketConfiguration,
+              metricsConfiguration, natService,
               besuPluginContext.getNamedPlugins());
 
       final SubscriptionManager subscriptionManager =
           createSubscriptionManager(vertx, transactionPool);
 
-      createLogsSubscriptionService(
-          context.getBlockchain(),
-          context.getWorldStateArchive(),
-          subscriptionManager,
-          privacyParameters);
+      createLogsSubscriptionService(context.getBlockchain(),
+                                    context.getWorldStateArchive(),
+                                    subscriptionManager, privacyParameters);
 
       createNewBlockHeadersSubscriptionService(
           context.getBlockchain(), blockchainQueries, subscriptionManager);
 
       createSyncingSubscriptionService(synchronizer, subscriptionManager);
 
-      webSocketService =
-          Optional.of(
-              createWebsocketService(
-                  vertx,
-                  webSocketConfiguration,
-                  subscriptionManager,
-                  webSocketsJsonRpcMethods,
-                  privacyParameters,
-                  protocolSchedule,
-                  blockchainQueries,
-                  transactionPool));
+      webSocketService = Optional.of(createWebsocketService(
+          vertx, webSocketConfiguration, subscriptionManager,
+          webSocketsJsonRpcMethods, privacyParameters, protocolSchedule,
+          blockchainQueries, transactionPool));
     }
 
     Optional<MetricsService> metricsService = Optional.empty();
-    if (metricsConfiguration.isEnabled() || metricsConfiguration.isPushEnabled()) {
-      metricsService = Optional.of(createMetricsService(vertx, metricsConfiguration));
+    if (metricsConfiguration.isEnabled() ||
+        metricsConfiguration.isPushEnabled()) {
+      metricsService =
+          Optional.of(createMetricsService(vertx, metricsConfiguration));
     }
 
-    return new Runner(
-        vertx,
-        networkRunner,
-        natService,
-        jsonRpcHttpService,
-        graphQLHttpService,
-        webSocketService,
-        stratumServer,
-        metricsService,
-        besuController,
-        dataDir,
-        pidPath,
-        autoLogBloomCaching ? blockchainQueries.getTransactionLogBloomCacher() : Optional.empty(),
-        context.getBlockchain());
+    return new Runner(vertx, networkRunner, natService, jsonRpcHttpService,
+                      graphQLHttpService, webSocketService, stratumServer,
+                      metricsService, besuController, dataDir, pidPath,
+                      autoLogBloomCaching
+                          ? blockchainQueries.getTransactionLogBloomCacher()
+                          : Optional.empty(),
+                      context.getBlockchain());
   }
 
-  private Optional<NodePermissioningController> buildNodePermissioningController(
-      final List<EnodeURL> bootnodesAsEnodeURLs,
-      final Synchronizer synchronizer,
-      final TransactionSimulator transactionSimulator,
-      final Bytes localNodeId) {
-    final Collection<EnodeURL> fixedNodes = getFixedNodes(bootnodesAsEnodeURLs, staticNodes);
+  private Optional<NodePermissioningController>
+  buildNodePermissioningController(final List<EnodeURL> bootnodesAsEnodeURLs,
+                                   final Synchronizer synchronizer,
+                                   final TransactionSimulator
+                                       transactionSimulator,
+                                   final Bytes localNodeId) {
+    final Collection<EnodeURL> fixedNodes =
+        getFixedNodes(bootnodesAsEnodeURLs, staticNodes);
 
     if (permissioningConfiguration.isPresent()) {
-      final PermissioningConfiguration configuration = this.permissioningConfiguration.get();
+      final PermissioningConfiguration configuration =
+          this.permissioningConfiguration.get();
       final NodePermissioningController nodePermissioningController =
-          new NodePermissioningControllerFactory()
-              .create(
-                  configuration,
-                  synchronizer,
-                  fixedNodes,
-                  localNodeId,
-                  transactionSimulator,
-                  metricsSystem);
+          new NodePermissioningControllerFactory().create(
+              configuration, synchronizer, fixedNodes, localNodeId,
+              transactionSimulator, metricsSystem);
 
       return Optional.of(nodePermissioningController);
     } else {
@@ -595,21 +565,23 @@ public class RunnerBuilder {
     }
   }
 
-  private Optional<AccountPermissioningController> buildAccountPermissioningController(
+  private Optional<AccountPermissioningController>
+  buildAccountPermissioningController(
       final Optional<PermissioningConfiguration> permissioningConfiguration,
       final BesuController besuController,
       final TransactionSimulator transactionSimulator) {
 
     if (permissioningConfiguration.isPresent()) {
-      final Optional<AccountPermissioningController> accountPermissioningController =
-          AccountPermissioningControllerFactory.create(
-              permissioningConfiguration.get(), transactionSimulator, metricsSystem);
+      final Optional<AccountPermissioningController>
+          accountPermissioningController =
+              AccountPermissioningControllerFactory.create(
+                  permissioningConfiguration.get(), transactionSimulator,
+                  metricsSystem);
 
       accountPermissioningController.ifPresent(
-          permissioningController ->
-              besuController
-                  .getProtocolSchedule()
-                  .setTransactionFilter(permissioningController::isPermitted));
+          permissioningController
+          -> besuController.getProtocolSchedule().setTransactionFilter(
+              permissioningController::isPermitted));
 
       return accountPermissioningController;
     } else {
@@ -622,24 +594,26 @@ public class RunnerBuilder {
     final NatMethod detectedNatMethod =
         Optional.of(natMethod)
             .filter(not(isEqual(NatMethod.AUTO)))
-            .orElse(NatService.autoDetectNatMethod(new KubernetesDetector(), new DockerDetector()));
+            .orElse(NatService.autoDetectNatMethod(new KubernetesDetector(),
+                                                   new DockerDetector()));
     switch (detectedNatMethod) {
-      case UPNP:
-        return Optional.of(new UpnpNatManager());
-      case DOCKER:
-        return Optional.of(
-            new DockerNatManager(p2pAdvertisedHost, p2pListenPort, jsonRpcConfiguration.getPort()));
-      case KUBERNETES:
-        return Optional.of(new KubernetesNatManager());
-      case NONE:
-      default:
-        return Optional.empty();
+    case UPNP:
+      return Optional.of(new UpnpNatManager());
+    case DOCKER:
+      return Optional.of(new DockerNatManager(p2pAdvertisedHost, p2pListenPort,
+                                              jsonRpcConfiguration.getPort()));
+    case KUBERNETES:
+      return Optional.of(new KubernetesNatManager());
+    case NONE:
+    default:
+      return Optional.empty();
     }
   }
 
   @VisibleForTesting
-  public static Collection<EnodeURL> getFixedNodes(
-      final Collection<EnodeURL> someFixedNodes, final Collection<EnodeURL> moreFixedNodes) {
+  public static Collection<EnodeURL>
+  getFixedNodes(final Collection<EnodeURL> someFixedNodes,
+                final Collection<EnodeURL> moreFixedNodes) {
     final Collection<EnodeURL> fixedNodes = new ArrayList<>(someFixedNodes);
     fixedNodes.addAll(moreFixedNodes);
     return fixedNodes;
@@ -647,59 +621,47 @@ public class RunnerBuilder {
 
   private Map<String, JsonRpcMethod> jsonRpcMethods(
       final ProtocolSchedule protocolSchedule,
-      final BesuController besuController,
-      final P2PNetwork network,
+      final BesuController besuController, final P2PNetwork network,
       final BlockchainQueries blockchainQueries,
-      final Synchronizer synchronizer,
-      final TransactionPool transactionPool,
+      final Synchronizer synchronizer, final TransactionPool transactionPool,
       final MiningCoordinator miningCoordinator,
       final ObservableMetricsSystem metricsSystem,
       final Set<Capability> supportedCapabilities,
-      final Collection<RpcApi> jsonRpcApis,
-      final FilterManager filterManager,
-      final Optional<AccountLocalConfigPermissioningController> accountWhitelistController,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
+      final Collection<RpcApi> jsonRpcApis, final FilterManager filterManager,
+      final Optional<AccountLocalConfigPermissioningController>
+          accountWhitelistController,
+      final Optional<NodeLocalConfigPermissioningController>
+          nodeWhitelistController,
       final PrivacyParameters privacyParameters,
       final JsonRpcConfiguration jsonRpcConfiguration,
       final WebSocketConfiguration webSocketConfiguration,
       final MetricsConfiguration metricsConfiguration,
-      final NatService natService,
-      final Map<String, BesuPlugin> namedPlugins) {
+      final NatService natService, final Map<String, BesuPlugin> namedPlugins) {
     final Map<String, JsonRpcMethod> methods =
-        new JsonRpcMethodsFactory()
-            .methods(
-                BesuInfo.nodeName(identityString),
-                ethNetworkConfig.getNetworkId(),
-                besuController.getGenesisConfigOptions(),
-                network,
-                blockchainQueries,
-                synchronizer,
-                protocolSchedule,
-                filterManager,
-                transactionPool,
-                miningCoordinator,
-                metricsSystem,
-                supportedCapabilities,
-                accountWhitelistController,
-                nodeWhitelistController,
-                jsonRpcApis,
-                privacyParameters,
-                jsonRpcConfiguration,
-                webSocketConfiguration,
-                metricsConfiguration,
-                natService,
-                namedPlugins);
+        new JsonRpcMethodsFactory().methods(
+            BesuInfo.nodeName(identityString), ethNetworkConfig.getNetworkId(),
+            besuController.getGenesisConfigOptions(), network,
+            blockchainQueries, synchronizer, protocolSchedule, filterManager,
+            transactionPool, miningCoordinator, metricsSystem,
+            supportedCapabilities, accountWhitelistController,
+            nodeWhitelistController, jsonRpcApis, privacyParameters,
+            jsonRpcConfiguration, webSocketConfiguration, metricsConfiguration,
+            natService, namedPlugins);
     methods.putAll(besuController.getAdditionalJsonRpcMethods(jsonRpcApis));
     return methods;
   }
 
-  private SubscriptionManager createSubscriptionManager(
-      final Vertx vertx, final TransactionPool transactionPool) {
-    final SubscriptionManager subscriptionManager = new SubscriptionManager(metricsSystem);
+  private SubscriptionManager
+  createSubscriptionManager(final Vertx vertx,
+                            final TransactionPool transactionPool) {
+    final SubscriptionManager subscriptionManager =
+        new SubscriptionManager(metricsSystem);
     final PendingTransactionSubscriptionService pendingTransactions =
         new PendingTransactionSubscriptionService(subscriptionManager);
-    final PendingTransactionDroppedSubscriptionService pendingTransactionsRemoved =
-        new PendingTransactionDroppedSubscriptionService(subscriptionManager);
+    final PendingTransactionDroppedSubscriptionService
+        pendingTransactionsRemoved =
+            new PendingTransactionDroppedSubscriptionService(
+                subscriptionManager);
     transactionPool.subscribePendingTransactions(pendingTransactions);
     transactionPool.subscribeDroppedTransactions(pendingTransactionsRemoved);
     vertx.deployVerticle(subscriptionManager);
@@ -707,20 +669,18 @@ public class RunnerBuilder {
     return subscriptionManager;
   }
 
-  private void createLogsSubscriptionService(
-      final Blockchain blockchain,
-      final WorldStateArchive worldStateArchive,
-      final SubscriptionManager subscriptionManager,
-      final PrivacyParameters privacyParameters) {
+  private void
+  createLogsSubscriptionService(final Blockchain blockchain,
+                                final WorldStateArchive worldStateArchive,
+                                final SubscriptionManager subscriptionManager,
+                                final PrivacyParameters privacyParameters) {
 
     Optional<PrivacyQueries> privacyQueries = Optional.empty();
     if (privacyParameters.isEnabled()) {
       final BlockchainQueries blockchainQueries =
           new BlockchainQueries(blockchain, worldStateArchive);
-      privacyQueries =
-          Optional.of(
-              new PrivacyQueries(
-                  blockchainQueries, privacyParameters.getPrivateWorldStateReader()));
+      privacyQueries = Optional.of(new PrivacyQueries(
+          blockchainQueries, privacyParameters.getPrivateWorldStateReader()));
     }
 
     final LogsSubscriptionService logsSubscriptionService =
@@ -735,30 +695,32 @@ public class RunnerBuilder {
     }
   }
 
-  private void createSyncingSubscriptionService(
-      final Synchronizer synchronizer, final SubscriptionManager subscriptionManager) {
+  private void createSyncingSubscriptionService(final Synchronizer synchronizer,
+                                                final SubscriptionManager
+                                                    subscriptionManager) {
     new SyncingSubscriptionService(subscriptionManager, synchronizer);
   }
 
   private void createNewBlockHeadersSubscriptionService(
-      final Blockchain blockchain,
-      final BlockchainQueries blockchainQueries,
+      final Blockchain blockchain, final BlockchainQueries blockchainQueries,
       final SubscriptionManager subscriptionManager) {
-    final NewBlockHeadersSubscriptionService newBlockHeadersSubscriptionService =
-        new NewBlockHeadersSubscriptionService(subscriptionManager, blockchainQueries);
+    final NewBlockHeadersSubscriptionService
+        newBlockHeadersSubscriptionService =
+            new NewBlockHeadersSubscriptionService(subscriptionManager,
+                                                   blockchainQueries);
 
     blockchain.observeBlockAdded(newBlockHeadersSubscriptionService);
   }
 
-  private WebSocketService createWebsocketService(
-      final Vertx vertx,
-      final WebSocketConfiguration configuration,
-      final SubscriptionManager subscriptionManager,
-      final Map<String, JsonRpcMethod> jsonRpcMethods,
-      final PrivacyParameters privacyParameters,
-      final ProtocolSchedule protocolSchedule,
-      final BlockchainQueries blockchainQueries,
-      final TransactionPool transactionPool) {
+  private WebSocketService
+  createWebsocketService(final Vertx vertx,
+                         final WebSocketConfiguration configuration,
+                         final SubscriptionManager subscriptionManager,
+                         final Map<String, JsonRpcMethod> jsonRpcMethods,
+                         final PrivacyParameters privacyParameters,
+                         final ProtocolSchedule protocolSchedule,
+                         final BlockchainQueries blockchainQueries,
+                         final TransactionPool transactionPool) {
 
     final WebSocketMethodsFactory websocketMethodsFactory =
         new WebSocketMethodsFactory(subscriptionManager, jsonRpcMethods);
@@ -766,13 +728,11 @@ public class RunnerBuilder {
     if (privacyParameters.isEnabled()) {
       final PrivateWebSocketMethodsFactory privateWebSocketMethodsFactory =
           new PrivateWebSocketMethodsFactory(
-              privacyParameters,
-              subscriptionManager,
-              protocolSchedule,
-              blockchainQueries,
-              transactionPool);
+              privacyParameters, subscriptionManager, protocolSchedule,
+              blockchainQueries, transactionPool);
 
-      privateWebSocketMethodsFactory.methods().forEach(websocketMethodsFactory::addMethods);
+      privateWebSocketMethodsFactory.methods().forEach(
+          websocketMethodsFactory::addMethods);
     }
 
     final WebSocketRequestHandler websocketRequestHandler =
@@ -781,8 +741,9 @@ public class RunnerBuilder {
     return new WebSocketService(vertx, configuration, websocketRequestHandler);
   }
 
-  private MetricsService createMetricsService(
-      final Vertx vertx, final MetricsConfiguration configuration) {
+  private MetricsService
+  createMetricsService(final Vertx vertx,
+                       final MetricsConfiguration configuration) {
     return MetricsService.create(vertx, configuration, metricsSystem);
   }
 }
