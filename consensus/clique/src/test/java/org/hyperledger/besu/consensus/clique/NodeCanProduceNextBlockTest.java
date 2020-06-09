@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import java.util.List;
 import org.hyperledger.besu.consensus.clique.headervalidationrules.SignerRateLimitValidationRule;
 import org.hyperledger.besu.consensus.common.VoteProposer;
 import org.hyperledger.besu.consensus.common.VoteTally;
@@ -36,10 +41,6 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Util;
-
-import java.util.List;
-
-import com.google.common.collect.Lists;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,17 +50,20 @@ public class NodeCanProduceNextBlockTest {
   private Address localAddress;
   private final KeyPair otherNodeKeyPair = KeyPair.generate();
   private final List<Address> validatorList = Lists.newArrayList();
-  private final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
-  private ProtocolContext<CliqueContext> cliqueProtocolContext;
-  private final CliqueBlockInterface blockInterface = new CliqueBlockInterface();
+  private final BlockHeaderTestFixture headerBuilder =
+      new BlockHeaderTestFixture();
+  private ProtocolContext cliqueProtocolContext;
+  private final CliqueBlockInterface blockInterface =
+      new CliqueBlockInterface();
 
   MutableBlockchain blockChain;
   private Block genesisBlock;
 
   private Block createEmptyBlock(final KeyPair blockSigner) {
-    final BlockHeader header =
-        TestHelpers.createCliqueSignedBlockHeader(headerBuilder, blockSigner, validatorList);
-    return new Block(header, new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
+    final BlockHeader header = TestHelpers.createCliqueSignedBlockHeader(
+        headerBuilder, blockSigner, validatorList);
+    return new Block(header,
+                     new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
   }
 
   @Before
@@ -70,32 +74,36 @@ public class NodeCanProduceNextBlockTest {
 
   @Test
   public void networkWithOneValidatorIsAllowedToCreateConsecutiveBlocks() {
-    final Address localAddress = Util.publicKeyToAddress(proposerKeyPair.getPublicKey());
+    final Address localAddress =
+        Util.publicKeyToAddress(proposerKeyPair.getPublicKey());
 
     genesisBlock = createEmptyBlock(proposerKeyPair);
 
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.number(1).parentHash(genesisBlock.getHash());
     final Block block_1 = createEmptyBlock(proposerKeyPair);
     blockChain.appendBlock(block_1, Lists.newArrayList());
 
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_1.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_1.getHeader()))
         .isTrue();
   }
 
   @Test
-  public void networkWithTwoValidatorsIsAllowedToProduceBlockIfNotPreviousBlockProposer() {
-    final Address otherAddress = Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
+  public void
+  networkWithTwoValidatorsIsAllowedToProduceBlockIfNotPreviousBlockProposer() {
+    final Address otherAddress =
+        Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
     validatorList.add(otherAddress);
 
     genesisBlock = createEmptyBlock(otherNodeKeyPair);
@@ -103,11 +111,13 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.number(1).parentHash(genesisBlock.getHash());
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -117,20 +127,20 @@ public class NodeCanProduceNextBlockTest {
     final Block block_2 = createEmptyBlock(otherNodeKeyPair);
     blockChain.appendBlock(block_2, Lists.newArrayList());
 
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_1.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_1.getHeader()))
         .isFalse();
 
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_2.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_2.getHeader()))
         .isTrue();
   }
 
   @Test
-  public void networkWithTwoValidatorsIsNotAllowedToProduceBlockIfIsPreviousBlockProposer() {
-    final Address otherAddress = Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
+  public void
+  networkWithTwoValidatorsIsNotAllowedToProduceBlockIfIsPreviousBlockProposer() {
+    final Address otherAddress =
+        Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
     validatorList.add(otherAddress);
 
     genesisBlock = createEmptyBlock(proposerKeyPair);
@@ -138,29 +148,34 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(proposerKeyPair);
     blockChain.appendBlock(block_1, Lists.newArrayList());
 
     headerBuilder.parentHash(block_1.getHeader().getHash()).number(2);
-    final BlockHeader block_2 =
-        TestHelpers.createCliqueSignedBlockHeader(headerBuilder, proposerKeyPair, validatorList);
+    final BlockHeader block_2 = TestHelpers.createCliqueSignedBlockHeader(
+        headerBuilder, proposerKeyPair, validatorList);
 
-    final SignerRateLimitValidationRule validationRule = new SignerRateLimitValidationRule();
+    final SignerRateLimitValidationRule validationRule =
+        new SignerRateLimitValidationRule();
 
-    assertThat(validationRule.validate(block_2, block_1.getHeader(), cliqueProtocolContext))
+    assertThat(validationRule.validate(block_2, block_1.getHeader(),
+                                       cliqueProtocolContext))
         .isFalse();
   }
 
   @Test
   public void withThreeValidatorsMustHaveOneBlockBetweenSignings() {
-    final Address otherAddress = Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
+    final Address otherAddress =
+        Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
     validatorList.add(otherAddress);
     validatorList.add(AddressHelpers.ofValue(1));
 
@@ -169,11 +184,13 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -187,23 +204,21 @@ public class NodeCanProduceNextBlockTest {
     final Block block_3 = createEmptyBlock(otherNodeKeyPair);
     blockChain.appendBlock(block_3, Lists.newArrayList());
 
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_1.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_1.getHeader()))
         .isFalse();
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_2.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_2.getHeader()))
         .isTrue();
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_3.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_3.getHeader()))
         .isTrue();
   }
 
   @Test
   public void signerIsValidIfInsufficientBlocksExistInHistory() {
-    final Address otherAddress = Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
+    final Address otherAddress =
+        Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
     validatorList.add(otherAddress);
     validatorList.add(AddressHelpers.ofValue(1));
     validatorList.add(AddressHelpers.ofValue(2));
@@ -215,29 +230,31 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(otherNodeKeyPair);
     blockChain.appendBlock(block_1, Lists.newArrayList());
 
     assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, genesisBlock.getHeader()))
+        CliqueHelpers.addressIsAllowedToProduceNextBlock(
+            localAddress, cliqueProtocolContext, genesisBlock.getHeader()))
         .isTrue();
-    assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                localAddress, cliqueProtocolContext, block_1.getHeader()))
+    assertThat(CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                   localAddress, cliqueProtocolContext, block_1.getHeader()))
         .isTrue();
   }
 
   @Test
   public void exceptionIsThrownIfOnAnOrphanedChain() {
-    final Address otherAddress = Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
+    final Address otherAddress =
+        Util.publicKeyToAddress(otherNodeKeyPair.getPublicKey());
     validatorList.add(otherAddress);
 
     genesisBlock = createEmptyBlock(proposerKeyPair);
@@ -245,20 +262,22 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(Hash.ZERO).number(3);
-    final BlockHeader parentHeader =
-        TestHelpers.createCliqueSignedBlockHeader(headerBuilder, otherNodeKeyPair, validatorList);
+    final BlockHeader parentHeader = TestHelpers.createCliqueSignedBlockHeader(
+        headerBuilder, otherNodeKeyPair, validatorList);
 
     assertThatThrownBy(
-            () ->
-                CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                    localAddress, cliqueProtocolContext, parentHeader))
+        ()
+            -> CliqueHelpers.addressIsAllowedToProduceNextBlock(
+                localAddress, cliqueProtocolContext, parentHeader))
         .isInstanceOf(RuntimeException.class)
         .hasMessage("The block was on a orphaned chain.");
   }
@@ -270,17 +289,19 @@ public class NodeCanProduceNextBlockTest {
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTallyCache voteTallyCache = mock(VoteTallyCache.class);
-    when(voteTallyCache.getVoteTallyAfterBlock(any())).thenReturn(new VoteTally(validatorList));
+    when(voteTallyCache.getVoteTallyAfterBlock(any()))
+        .thenReturn(new VoteTally(validatorList));
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext =
+        new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(Hash.ZERO).number(3);
     final BlockHeader parentHeader = headerBuilder.buildHeader();
     assertThat(
-            CliqueHelpers.addressIsAllowedToProduceNextBlock(
-                AddressHelpers.ofValue(1), cliqueProtocolContext, parentHeader))
+        CliqueHelpers.addressIsAllowedToProduceNextBlock(
+            AddressHelpers.ofValue(1), cliqueProtocolContext, parentHeader))
         .isFalse();
   }
 }

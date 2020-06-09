@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,19 +24,22 @@ import org.hyperledger.besu.ethereum.core.ParsedExtraData;
 import org.hyperledger.besu.ethereum.core.SealableBlockHeader;
 
 /**
- * Looks up the correct {@link BlockHeaderFunctions} to use based on a {@link ProtocolSchedule} to
- * ensure that the correct hash is created given the block number.
+ * Looks up the correct {@link BlockHeaderFunctions} to use based on a {@link
+ * ProtocolSchedule} to ensure that the correct hash is created given the block
+ * number.
  */
-public class ScheduleBasedBlockHeaderFunctions<C> implements BlockHeaderFunctions {
+public class ScheduleBasedBlockHeaderFunctions implements BlockHeaderFunctions {
 
-  private final ProtocolSchedule<C> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
 
-  private ScheduleBasedBlockHeaderFunctions(final ProtocolSchedule<C> protocolSchedule) {
+  private ScheduleBasedBlockHeaderFunctions(
+      final ProtocolSchedule protocolSchedule) {
     this.protocolSchedule = protocolSchedule;
   }
 
-  public static <C> BlockHeaderFunctions create(final ProtocolSchedule<C> protocolSchedule) {
-    return new ScheduleBasedBlockHeaderFunctions<>(protocolSchedule);
+  public static BlockHeaderFunctions
+  create(final ProtocolSchedule protocolSchedule) {
+    return new ScheduleBasedBlockHeaderFunctions(protocolSchedule);
   }
 
   @Override
@@ -46,7 +52,9 @@ public class ScheduleBasedBlockHeaderFunctions<C> implements BlockHeaderFunction
     return getBlockHeaderFunctions(header).parseExtraData(header);
   }
 
-  private BlockHeaderFunctions getBlockHeaderFunctions(final SealableBlockHeader header) {
-    return protocolSchedule.getByBlockNumber(header.getNumber()).getBlockHeaderFunctions();
+  private BlockHeaderFunctions
+  getBlockHeaderFunctions(final SealableBlockHeader header) {
+    return protocolSchedule.getByBlockNumber(header.getNumber())
+        .getBlockHeaderFunctions();
   }
 }

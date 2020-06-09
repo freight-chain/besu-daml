@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -29,32 +32,30 @@ import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-public class MainnetBesuControllerBuilder extends BesuControllerBuilder<Void> {
+public class MainnetBesuControllerBuilder extends BesuControllerBuilder {
 
   @Override
-  protected MiningCoordinator createMiningCoordinator(
-      final ProtocolSchedule<Void> protocolSchedule,
-      final ProtocolContext<Void> protocolContext,
-      final TransactionPool transactionPool,
-      final MiningParameters miningParameters,
-      final SyncState syncState,
-      final EthProtocolManager ethProtocolManager) {
-    final EthHashMinerExecutor executor =
-        new EthHashMinerExecutor(
-            protocolContext,
-            protocolSchedule,
-            transactionPool.getPendingTransactions(),
-            miningParameters,
-            new DefaultBlockScheduler(
-                MainnetBlockHeaderValidator.MINIMUM_SECONDS_SINCE_PARENT,
-                MainnetBlockHeaderValidator.TIMESTAMP_TOLERANCE_S,
-                clock),
-            gasLimitCalculator);
+  protected MiningCoordinator
+  createMiningCoordinator(final ProtocolSchedule protocolSchedule,
+                          final ProtocolContext protocolContext,
+                          final TransactionPool transactionPool,
+                          final MiningParameters miningParameters,
+                          final SyncState syncState,
+                          final EthProtocolManager ethProtocolManager) {
+    final EthHashMinerExecutor executor = new EthHashMinerExecutor(
+        protocolContext, protocolSchedule,
+        transactionPool.getPendingTransactions(), miningParameters,
+        new DefaultBlockScheduler(
+            MainnetBlockHeaderValidator.MINIMUM_SECONDS_SINCE_PARENT,
+            MainnetBlockHeaderValidator.TIMESTAMP_TOLERANCE_S, clock),
+        gasLimitCalculator);
 
     final EthHashMiningCoordinator miningCoordinator =
-        new EthHashMiningCoordinator(protocolContext.getBlockchain(), executor, syncState);
+        new EthHashMiningCoordinator(protocolContext.getBlockchain(), executor,
+                                     syncState);
     miningCoordinator.addMinedBlockObserver(ethProtocolManager);
-    miningCoordinator.setStratumMiningEnabled(miningParameters.isStratumMiningEnabled());
+    miningCoordinator.setStratumMiningEnabled(
+        miningParameters.isStratumMiningEnabled());
     if (miningParameters.isMiningEnabled()) {
       miningCoordinator.enable();
     }
@@ -63,21 +64,22 @@ public class MainnetBesuControllerBuilder extends BesuControllerBuilder<Void> {
   }
 
   @Override
-  protected Void createConsensusContext(
-      final Blockchain blockchain, final WorldStateArchive worldStateArchive) {
+  protected Void
+  createConsensusContext(final Blockchain blockchain,
+                         final WorldStateArchive worldStateArchive) {
     return null;
   }
 
   @Override
-  protected PluginServiceFactory createAdditionalPluginServices(final Blockchain blockchain) {
+  protected PluginServiceFactory
+  createAdditionalPluginServices(final Blockchain blockchain) {
     return new NoopPluginServiceFactory();
   }
 
   @Override
-  protected ProtocolSchedule<Void> createProtocolSchedule() {
+  protected ProtocolSchedule createProtocolSchedule() {
     return MainnetProtocolSchedule.fromConfig(
         genesisConfig.getConfigOptions(genesisConfigOverrides),
-        privacyParameters,
-        isRevertReasonEnabled);
+        privacyParameters, isRevertReasonEnabled);
   }
 }

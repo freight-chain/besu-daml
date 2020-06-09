@@ -1,19 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.methods;
 
+import java.util.Map;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
@@ -28,22 +32,19 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 
-import java.util.Map;
-
 public class NetJsonRpcMethods extends ApiGroupJsonRpcMethods {
 
   private final P2PNetwork p2pNetwork;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final JsonRpcConfiguration jsonRpcConfiguration;
   private final WebSocketConfiguration webSocketConfiguration;
   private final MetricsConfiguration metricsConfiguration;
 
-  public NetJsonRpcMethods(
-      final P2PNetwork p2pNetwork,
-      final ProtocolSchedule<?> protocolSchedule,
-      final JsonRpcConfiguration jsonRpcConfiguration,
-      final WebSocketConfiguration webSocketConfiguration,
-      final MetricsConfiguration metricsConfiguration) {
+  public NetJsonRpcMethods(final P2PNetwork p2pNetwork,
+                           final ProtocolSchedule protocolSchedule,
+                           final JsonRpcConfiguration jsonRpcConfiguration,
+                           final WebSocketConfiguration webSocketConfiguration,
+                           final MetricsConfiguration metricsConfiguration) {
     this.p2pNetwork = p2pNetwork;
     this.protocolSchedule = protocolSchedule;
     this.jsonRpcConfiguration = jsonRpcConfiguration;
@@ -58,12 +59,10 @@ public class NetJsonRpcMethods extends ApiGroupJsonRpcMethods {
 
   @Override
   protected Map<String, JsonRpcMethod> create() {
-    return mapOf(
-        new NetVersion(protocolSchedule.getChainId()),
-        new NetListening(p2pNetwork),
-        new NetPeerCount(p2pNetwork),
-        new NetEnode(p2pNetwork),
-        new NetServices(
-            jsonRpcConfiguration, webSocketConfiguration, p2pNetwork, metricsConfiguration));
+    return mapOf(new NetVersion(protocolSchedule.getChainId()),
+                 new NetListening(p2pNetwork), new NetPeerCount(p2pNetwork),
+                 new NetEnode(p2pNetwork),
+                 new NetServices(jsonRpcConfiguration, webSocketConfiguration,
+                                 p2pNetwork, metricsConfiguration));
   }
 }

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,11 +19,7 @@ package org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis;
 
 import static java.util.stream.Collectors.toList;
 
-import org.hyperledger.besu.consensus.clique.CliqueExtraData;
-import org.hyperledger.besu.consensus.ibft.IbftExtraData;
-import org.hyperledger.besu.ethereum.core.Address;
-import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
-
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -29,8 +28,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-
-import com.google.common.io.Resources;
+import org.hyperledger.besu.consensus.clique.CliqueExtraData;
+import org.hyperledger.besu.consensus.ibft.IbftExtraData;
+import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
 
 public class GenesisConfigurationFactory {
 
@@ -43,16 +44,34 @@ public class GenesisConfigurationFactory {
 
   public Optional<String> createIbft2GenesisConfig(
       final Collection<? extends RunnableNode> validators) {
-    final String template = readGenesisFile("/ibft/ibft.json");
-    return updateGenesisExtraData(
-        validators, template, IbftExtraData::createGenesisExtraDataString);
+    return createIbft2GenesisConfig(validators, "/ibft/ibft.json");
+  }
+
+  public Optional<String>
+  createIbft2GenesisConfig(final Collection<? extends RunnableNode> validators,
+                           final String genesisFile) {
+    final String template = readGenesisFile(genesisFile);
+    return updateGenesisExtraData(validators, template,
+                                  IbftExtraData::createGenesisExtraDataString);
+  }
+
+  public Optional<String> createIbft2GenesisConfigFilterBootnode(
+      final Collection<? extends RunnableNode> validators,
+      final String genesisFile) {
+    final String template = readGenesisFile(genesisFile);
+    final List<? extends RunnableNode> filteredList =
+        validators.stream()
+            .filter(node -> !node.getConfiguration().isBootnodeEligible())
+            .collect(toList());
+    return updateGenesisExtraData(filteredList, template,
+                                  IbftExtraData::createGenesisExtraDataString);
   }
 
   public Optional<String> createPrivacyIbft2GenesisConfig(
       final Collection<? extends RunnableNode> validators) {
     final String template = readGenesisFile("/ibft/privacy-ibft.json");
-    return updateGenesisExtraData(
-        validators, template, IbftExtraData::createGenesisExtraDataString);
+    return updateGenesisExtraData(validators, template,
+                                  IbftExtraData::createGenesisExtraDataString);
   }
 
   private Optional<String> updateGenesisExtraData(
@@ -62,7 +81,8 @@ public class GenesisConfigurationFactory {
     final List<Address> addresses =
         validators.stream().map(RunnableNode::getAddress).collect(toList());
     final String extraDataString = extraDataCreator.apply(addresses);
-    final String genesis = genesisTemplate.replaceAll("%extraData%", extraDataString);
+    final String genesis =
+        genesisTemplate.replaceAll("%extraData%", extraDataString);
     return Optional.of(genesis);
   }
 
@@ -72,7 +92,8 @@ public class GenesisConfigurationFactory {
       final URI uri = this.getClass().getResource(filepath).toURI();
       return Resources.toString(uri.toURL(), Charset.defaultCharset());
     } catch (final URISyntaxException | IOException e) {
-      throw new IllegalStateException("Unable to get test genesis config " + filepath);
+      throw new IllegalStateException("Unable to get test genesis config " +
+                                      filepath);
     }
   }
 }

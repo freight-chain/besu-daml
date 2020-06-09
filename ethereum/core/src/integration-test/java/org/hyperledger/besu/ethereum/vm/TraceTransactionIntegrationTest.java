@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,12 @@ package org.hyperledger.besu.ethereum.vm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.stream.Stream;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Account;
@@ -35,14 +44,6 @@ import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor.Result;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPInput;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
-
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.stream.Stream;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,12 +64,15 @@ public class TraceTransactionIntegrationTest {
 
   @Before
   public void setUp() {
-    final ExecutionContextTestFixture contextTestFixture = ExecutionContextTestFixture.create();
+    final ExecutionContextTestFixture contextTestFixture =
+        ExecutionContextTestFixture.create();
     genesisBlock = contextTestFixture.getGenesis();
     blockchain = contextTestFixture.getBlockchain();
     worldStateArchive = contextTestFixture.getStateArchive();
-    final ProtocolSchedule<Void> protocolSchedule = contextTestFixture.getProtocolSchedule();
-    transactionProcessor = protocolSchedule.getByBlockNumber(0).getTransactionProcessor();
+    final ProtocolSchedule protocolSchedule =
+        contextTestFixture.getProtocolSchedule();
+    transactionProcessor =
+        protocolSchedule.getByBlockNumber(0).getTransactionProcessor();
     blockHashLookup = new BlockHashLookup(genesisBlock.getHeader(), blockchain);
   }
 
@@ -85,21 +89,17 @@ public class TraceTransactionIntegrationTest {
             .signAndBuild(keyPair);
 
     final MutableWorldState worldState =
-        worldStateArchive.getMutable(genesisBlock.getHeader().getStateRoot()).get();
+        worldStateArchive.getMutable(genesisBlock.getHeader().getStateRoot())
+            .get();
     final WorldUpdater createTransactionUpdater = worldState.updater();
-    Result result =
-        transactionProcessor.processTransaction(
-            blockchain,
-            createTransactionUpdater,
-            genesisBlock.getHeader(),
-            createTransaction,
-            genesisBlock.getHeader().getCoinbase(),
-            blockHashLookup,
-            false,
-            TransactionValidationParams.blockReplay());
+    Result result = transactionProcessor.processTransaction(
+        blockchain, createTransactionUpdater, genesisBlock.getHeader(),
+        createTransaction, genesisBlock.getHeader().getCoinbase(),
+        blockHashLookup, false, TransactionValidationParams.blockReplay());
     assertThat(result.isSuccessful()).isTrue();
     final Account createdContract =
-        createTransactionUpdater.getTouchedAccounts().stream()
+        createTransactionUpdater.getTouchedAccounts()
+            .stream()
             .filter(account -> !account.getCode().isEmpty())
             .findAny()
             .get();
@@ -118,16 +118,9 @@ public class TraceTransactionIntegrationTest {
             .value(Wei.ZERO)
             .signAndBuild(keyPair);
     final WorldUpdater storeUpdater = worldState.updater();
-    result =
-        transactionProcessor.processTransaction(
-            blockchain,
-            storeUpdater,
-            genesisBlock.getHeader(),
-            executeTransaction,
-            genesisBlock.getHeader().getCoinbase(),
-            tracer,
-            blockHashLookup,
-            false);
+    result = transactionProcessor.processTransaction(
+        blockchain, storeUpdater, genesisBlock.getHeader(), executeTransaction,
+        genesisBlock.getHeader().getCoinbase(), tracer, blockHashLookup, false);
 
     assertThat(result.isSuccessful()).isTrue();
 
@@ -140,33 +133,38 @@ public class TraceTransactionIntegrationTest {
     frame = tracer.getTraceFrames().get(171);
     assertThat(frame.getOpcode()).isEqualTo("SSTORE");
     assertStorageContainsExactly(
-        frame, entry("0x01", "0x6261720000000000000000000000000000000000000000000000000000000006"));
+        frame,
+        entry(
+            "0x01",
+            "0x6261720000000000000000000000000000000000000000000000000000000006"));
 
     // And storage changes are still present in future frames.
     frame = tracer.getTraceFrames().get(172);
     assertThat(frame.getOpcode()).isEqualTo("PUSH2");
     assertStorageContainsExactly(
-        frame, entry("0x01", "0x6261720000000000000000000000000000000000000000000000000000000006"));
+        frame,
+        entry(
+            "0x01",
+            "0x6261720000000000000000000000000000000000000000000000000000000006"));
   }
 
   @Test
   public void shouldTraceContractCreation() {
     final DebugOperationTracer tracer =
         new DebugOperationTracer(new TraceOptions(true, true, true));
-    final Transaction transaction =
-        Transaction.readFrom(
-            new BytesValueRLPInput(Bytes.fromHexString(CONTRACT_CREATION_TX), false));
+    final Transaction transaction = Transaction.readFrom(new BytesValueRLPInput(
+        Bytes.fromHexString(CONTRACT_CREATION_TX), false));
     transactionProcessor.processTransaction(
         blockchain,
-        worldStateArchive.getMutable(genesisBlock.getHeader().getStateRoot()).get().updater(),
-        genesisBlock.getHeader(),
-        transaction,
-        genesisBlock.getHeader().getCoinbase(),
-        tracer,
-        new BlockHashLookup(genesisBlock.getHeader(), blockchain),
-        false);
+        worldStateArchive.getMutable(genesisBlock.getHeader().getStateRoot())
+            .get()
+            .updater(),
+        genesisBlock.getHeader(), transaction,
+        genesisBlock.getHeader().getCoinbase(), tracer,
+        new BlockHashLookup(genesisBlock.getHeader(), blockchain), false);
 
-    final int expectedDepth = 0; // Reference impl returned 1. Why the difference?
+    final int expectedDepth =
+        0; // Reference impl returned 1. Why the difference?
 
     final List<TraceFrame> traceFrames = tracer.getTraceFrames();
     assertThat(traceFrames).hasSize(17);
@@ -188,7 +186,8 @@ public class TraceTransactionIntegrationTest {
     assertThat(frame.getOpcode()).isEqualTo("PUSH1");
     assertThat(frame.getPc()).isEqualTo(2);
     assertStackContainsExactly(
-        frame, "0000000000000000000000000000000000000000000000000000000000000080");
+        frame,
+        "0000000000000000000000000000000000000000000000000000000000000080");
     assertMemoryContainsExactly(frame);
     assertStorageContainsExactly(frame);
 
@@ -208,7 +207,8 @@ public class TraceTransactionIntegrationTest {
         "0x0000000000000000000000000000000000000000000000000000000000000000",
         "0x0000000000000000000000000000000000000000000000000000000000000080");
     assertStorageContainsExactly(frame);
-    // Reference implementation actually records the memory after expansion but before the store.
+    // Reference implementation actually records the memory after expansion but
+    // before the store.
     //    assertMemoryContainsExactly(frame,
     //        "0000000000000000000000000000000000000000000000000000000000000000",
     //        "0000000000000000000000000000000000000000000000000000000000000000",
@@ -229,35 +229,36 @@ public class TraceTransactionIntegrationTest {
     assertStorageContainsExactly(frame);
   }
 
-  private void assertStackContainsExactly(
-      final TraceFrame frame, final String... stackEntriesAsHex) {
+  private void assertStackContainsExactly(final TraceFrame frame,
+                                          final String... stackEntriesAsHex) {
     assertThat(frame.getStack()).isPresent();
-    final Bytes32[] stackEntries =
-        Stream.of(stackEntriesAsHex).map(Bytes32::fromHexString).toArray(Bytes32[]::new);
+    final Bytes32[] stackEntries = Stream.of(stackEntriesAsHex)
+                                       .map(Bytes32::fromHexString)
+                                       .toArray(Bytes32[] ::new);
     assertThat(frame.getStack().get()).containsExactly(stackEntries);
   }
 
-  private void assertMemoryContainsExactly(
-      final TraceFrame frame, final String... memoryEntriesAsHex) {
+  private void assertMemoryContainsExactly(final TraceFrame frame,
+                                           final String... memoryEntriesAsHex) {
     assertThat(frame.getMemory()).isPresent();
-    final Bytes32[] memoryEntries =
-        Stream.of(memoryEntriesAsHex).map(Bytes32::fromHexString).toArray(Bytes32[]::new);
+    final Bytes32[] memoryEntries = Stream.of(memoryEntriesAsHex)
+                                        .map(Bytes32::fromHexString)
+                                        .toArray(Bytes32[] ::new);
     assertThat(frame.getMemory().get()).containsExactly(memoryEntries);
   }
 
   @SuppressWarnings("unchecked")
   @SafeVarargs
   private final void assertStorageContainsExactly(
-      final TraceFrame frame, final Entry<String, String>... memoryEntriesAsHex) {
+      final TraceFrame frame,
+      final Entry<String, String>... memoryEntriesAsHex) {
     assertThat(frame.getMemory()).isPresent();
     final Entry<UInt256, UInt256>[] memoryEntries =
         Stream.of(memoryEntriesAsHex)
-            .map(
-                entry ->
-                    entry(
-                        UInt256.fromHexString(entry.getKey()),
-                        UInt256.fromHexString(entry.getValue())))
-            .toArray(Entry[]::new);
+            .map(entry
+                 -> entry(UInt256.fromHexString(entry.getKey()),
+                          UInt256.fromHexString(entry.getValue())))
+            .toArray(Entry[] ::new);
     assertThat(frame.getStorage().get()).containsExactly(memoryEntries);
   }
 }

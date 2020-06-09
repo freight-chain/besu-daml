@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,14 +19,6 @@ package org.hyperledger.besu.tests.acceptance.dsl.node;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
-
-import org.hyperledger.besu.cli.options.NetworkingOptions;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
-import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
-import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
-import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
-import org.hyperledger.besu.tests.acceptance.dsl.StaticNodesUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,10 +39,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.hyperledger.besu.cli.options.NetworkingOptions;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
+import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
+import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
+import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
+import org.hyperledger.besu.tests.acceptance.dsl.StaticNodesUtils;
 
 public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
@@ -56,7 +57,8 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       LogManager.getLogger("org.hyperledger.besu.SubProcessLog");
 
   private final Map<String, Process> besuProcesses = new HashMap<>();
-  private final ExecutorService outputProcessorExecutor = Executors.newCachedThreadPool();
+  private final ExecutorService outputProcessorExecutor =
+      Executors.newCachedThreadPool();
 
   ProcessBesuNodeRunner() {
     Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
@@ -66,7 +68,8 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
   public void startNode(final BesuNode node) {
 
     if (ThreadContext.containsKey("node")) {
-      LOG.error("ThreadContext node is already set to {}", ThreadContext.get("node"));
+      LOG.error("ThreadContext node is already set to {}",
+                ThreadContext.get("node"));
     }
     ThreadContext.put("node", node.getName());
 
@@ -84,6 +87,9 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       params.add("--network");
       params.add("DEV");
     }
+
+    params.add("--sync-mode");
+    params.add("FULL");
 
     params.add("--discovery-enabled");
     params.add(Boolean.toString(node.isDiscoveryEnabled()));
@@ -103,8 +109,8 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       params.add("--miner-stratum-host");
       params.add(node.getMiningParameters().getStratumNetworkInterface());
       params.add("--min-gas-price");
-      params.add(
-          Integer.toString(node.getMiningParameters().getMinTransactionGasPrice().intValue()));
+      params.add(Integer.toString(
+          node.getMiningParameters().getMinTransactionGasPrice().intValue()));
     }
     if (node.getMiningParameters().isStratumMiningEnabled()) {
       params.add("--miner-stratum-enabled");
@@ -118,10 +124,13 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
         params.add("--privacy-multi-tenancy-enabled");
       } else {
         params.add("--privacy-public-key-file");
-        params.add(node.getPrivacyParameters().getEnclavePublicKeyFile().getAbsolutePath());
+        params.add(node.getPrivacyParameters()
+                       .getEnclavePublicKeyFile()
+                       .getAbsolutePath());
       }
       params.add("--privacy-precompiled-address");
-      params.add(String.valueOf(node.getPrivacyParameters().getPrivacyAddress()));
+      params.add(
+          String.valueOf(node.getPrivacyParameters().getPrivacyAddress()));
       params.add("--privacy-marker-transaction-signing-key-file");
       params.add(node.homeDirectory().resolve("key").toString());
 
@@ -133,7 +142,10 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     params.add("--bootnodes");
 
     if (!node.getBootnodes().isEmpty()) {
-      params.add(node.getBootnodes().stream().map(URI::toString).collect(Collectors.joining(",")));
+      params.add(node.getBootnodes()
+                     .stream()
+                     .map(URI::toString)
+                     .collect(Collectors.joining(",")));
     }
 
     if (node.hasStaticNodes()) {
@@ -151,13 +163,18 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       if (node.jsonRpcConfiguration().isAuthenticationEnabled()) {
         params.add("--rpc-http-authentication-enabled");
       }
-      if (node.jsonRpcConfiguration().getAuthenticationCredentialsFile() != null) {
+      if (node.jsonRpcConfiguration().getAuthenticationCredentialsFile() !=
+          null) {
         params.add("--rpc-http-authentication-credentials-file");
-        params.add(node.jsonRpcConfiguration().getAuthenticationCredentialsFile());
+        params.add(
+            node.jsonRpcConfiguration().getAuthenticationCredentialsFile());
       }
-      if (node.jsonRpcConfiguration().getAuthenticationPublicKeyFile() != null) {
+      if (node.jsonRpcConfiguration().getAuthenticationPublicKeyFile() !=
+          null) {
         params.add("--rpc-http-authentication-jwt-public-key-file");
-        params.add(node.jsonRpcConfiguration().getAuthenticationPublicKeyFile().getAbsolutePath());
+        params.add(node.jsonRpcConfiguration()
+                       .getAuthenticationPublicKeyFile()
+                       .getAbsolutePath());
       }
     }
 
@@ -172,27 +189,33 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       if (node.webSocketConfiguration().isAuthenticationEnabled()) {
         params.add("--rpc-ws-authentication-enabled");
       }
-      if (node.webSocketConfiguration().getAuthenticationCredentialsFile() != null) {
+      if (node.webSocketConfiguration().getAuthenticationCredentialsFile() !=
+          null) {
         params.add("--rpc-ws-authentication-credentials-file");
-        params.add(node.webSocketConfiguration().getAuthenticationCredentialsFile());
-      }
-      if (node.webSocketConfiguration().getAuthenticationPublicKeyFile() != null) {
-        params.add("--rpc-ws-authentication-jwt-public-key-file");
         params.add(
-            node.webSocketConfiguration().getAuthenticationPublicKeyFile().getAbsolutePath());
+            node.webSocketConfiguration().getAuthenticationCredentialsFile());
+      }
+      if (node.webSocketConfiguration().getAuthenticationPublicKeyFile() !=
+          null) {
+        params.add("--rpc-ws-authentication-jwt-public-key-file");
+        params.add(node.webSocketConfiguration()
+                       .getAuthenticationPublicKeyFile()
+                       .getAbsolutePath());
       }
     }
 
     if (node.isMetricsEnabled()) {
-      final MetricsConfiguration metricsConfiguration = node.getMetricsConfiguration();
+      final MetricsConfiguration metricsConfiguration =
+          node.getMetricsConfiguration();
       params.add("--metrics-enabled");
       params.add("--metrics-host");
       params.add(metricsConfiguration.getHost());
       params.add("--metrics-port");
       params.add(Integer.toString(metricsConfiguration.getPort()));
-      for (final MetricCategory category : metricsConfiguration.getMetricCategories()) {
+      for (final MetricCategory category :
+           metricsConfiguration.getMetricCategories()) {
         params.add("--metrics-category");
-        params.add(((Enum<?>) category).name());
+        params.add(((Enum<?>)category).name());
       }
       if (metricsConfiguration.isPushEnabled()) {
         params.add("--metrics-push-enabled");
@@ -207,20 +230,19 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       }
     }
 
-    node.getGenesisConfig()
-        .ifPresent(
-            genesis -> {
-              final Path genesisFile = createGenesisFile(node, genesis);
-              params.add("--genesis-file");
-              params.add(genesisFile.toAbsolutePath().toString());
-            });
+    node.getGenesisConfig().ifPresent(genesis -> {
+      final Path genesisFile = createGenesisFile(node, genesis);
+      params.add("--genesis-file");
+      params.add(genesisFile.toAbsolutePath().toString());
+    });
 
     if (!node.isP2pEnabled()) {
       params.add("--p2p-enabled");
       params.add("false");
     } else {
       final List<String> networkConfigParams =
-          NetworkingOptions.fromConfig(node.getNetworkingConfiguration()).getCLIOptions();
+          NetworkingOptions.fromConfig(node.getNetworkingConfiguration())
+              .getCLIOptions();
       params.addAll(networkConfigParams);
     }
 
@@ -233,43 +255,52 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
     node.getPermissioningConfiguration()
         .flatMap(PermissioningConfiguration::getLocalConfig)
-        .ifPresent(
-            permissioningConfiguration -> {
-              if (permissioningConfiguration.isNodeWhitelistEnabled()) {
-                params.add("--permissions-nodes-config-file-enabled");
-              }
-              if (permissioningConfiguration.getNodePermissioningConfigFilePath() != null) {
-                params.add("--permissions-nodes-config-file");
-                params.add(permissioningConfiguration.getNodePermissioningConfigFilePath());
-              }
-              if (permissioningConfiguration.isAccountWhitelistEnabled()) {
-                params.add("--permissions-accounts-config-file-enabled");
-              }
-              if (permissioningConfiguration.getAccountPermissioningConfigFilePath() != null) {
-                params.add("--permissions-accounts-config-file");
-                params.add(permissioningConfiguration.getAccountPermissioningConfigFilePath());
-              }
-            });
+        .ifPresent(permissioningConfiguration -> {
+          if (permissioningConfiguration.isNodeWhitelistEnabled()) {
+            params.add("--permissions-nodes-config-file-enabled");
+          }
+          if (permissioningConfiguration.getNodePermissioningConfigFilePath() !=
+              null) {
+            params.add("--permissions-nodes-config-file");
+            params.add(permissioningConfiguration
+                           .getNodePermissioningConfigFilePath());
+          }
+          if (permissioningConfiguration.isAccountWhitelistEnabled()) {
+            params.add("--permissions-accounts-config-file-enabled");
+          }
+          if (permissioningConfiguration
+                  .getAccountPermissioningConfigFilePath() != null) {
+            params.add("--permissions-accounts-config-file");
+            params.add(permissioningConfiguration
+                           .getAccountPermissioningConfigFilePath());
+          }
+        });
 
     node.getPermissioningConfiguration()
         .flatMap(PermissioningConfiguration::getSmartContractConfig)
-        .ifPresent(
-            permissioningConfiguration -> {
-              if (permissioningConfiguration.isSmartContractNodeWhitelistEnabled()) {
-                params.add("--permissions-nodes-contract-enabled");
-              }
-              if (permissioningConfiguration.getNodeSmartContractAddress() != null) {
-                params.add("--permissions-nodes-contract-address");
-                params.add(permissioningConfiguration.getNodeSmartContractAddress().toString());
-              }
-              if (permissioningConfiguration.isSmartContractAccountWhitelistEnabled()) {
-                params.add("--permissions-accounts-contract-enabled");
-              }
-              if (permissioningConfiguration.getAccountSmartContractAddress() != null) {
-                params.add("--permissions-accounts-contract-address");
-                params.add(permissioningConfiguration.getAccountSmartContractAddress().toString());
-              }
-            });
+        .ifPresent(permissioningConfiguration -> {
+          if (permissioningConfiguration
+                  .isSmartContractNodeWhitelistEnabled()) {
+            params.add("--permissions-nodes-contract-enabled");
+          }
+          if (permissioningConfiguration.getNodeSmartContractAddress() !=
+              null) {
+            params.add("--permissions-nodes-contract-address");
+            params.add(permissioningConfiguration.getNodeSmartContractAddress()
+                           .toString());
+          }
+          if (permissioningConfiguration
+                  .isSmartContractAccountWhitelistEnabled()) {
+            params.add("--permissions-accounts-contract-enabled");
+          }
+          if (permissioningConfiguration.getAccountSmartContractAddress() !=
+              null) {
+            params.add("--permissions-accounts-contract-address");
+            params.add(
+                permissioningConfiguration.getAccountSmartContractAddress()
+                    .toString());
+          }
+        });
     params.addAll(node.getExtraCLIOptions());
 
     params.add("--key-value-storage");
@@ -278,7 +309,7 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     params.add("--auto-log-bloom-caching-enabled");
     params.add("false");
 
-    String level = System.getProperty("root.log.level");
+    final String level = System.getProperty("root.log.level");
     if (level != null) {
       params.add("--logging=" + level);
     }
@@ -286,17 +317,23 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     LOG.info("Creating besu process with params {}", params);
     final ProcessBuilder processBuilder =
         new ProcessBuilder(params)
-            .directory(new File(System.getProperty("user.dir")).getParentFile().getParentFile())
+            .directory(new File(System.getProperty("user.dir"))
+                           .getParentFile()
+                           .getParentFile())
             .redirectErrorStream(true)
             .redirectInput(Redirect.INHERIT);
     if (!node.getPlugins().isEmpty()) {
-      processBuilder
-          .environment()
-          .put(
-              "BESU_OPTS",
-              "-Dbesu.plugins.dir=" + dataDir.resolve("plugins").toAbsolutePath().toString());
+      processBuilder.environment().put(
+          "BESU_OPTS",
+          "-Dbesu.plugins.dir=" +
+              dataDir.resolve("plugins").toAbsolutePath().toString());
     }
-
+    // Use non-blocking randomness for acceptance tests
+    processBuilder.environment().put(
+        "JAVA_OPTS",
+        "-Djava.security.properties="
+            +
+            "acceptance-tests/tests/build/resources/test/acceptanceTesting.security");
     try {
       checkState(
           isNotAliveOrphan(node.getName()),
@@ -324,8 +361,8 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
   }
 
   private void printOutput(final BesuNode node, final Process process) {
-    try (final BufferedReader in =
-        new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
+    try (final BufferedReader in = new BufferedReader(
+             new InputStreamReader(process.getInputStream(), UTF_8))) {
       String line = in.readLine();
       while (line != null) {
         // would be nice to pass up the log level of the incoming log line
@@ -334,16 +371,19 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       }
     } catch (final IOException e) {
       if (besuProcesses.containsKey(node.getName())) {
-        LOG.error("Failed to read output from process for node " + node.getName(), e);
+        LOG.error(
+            "Failed to read output from process for node " + node.getName(), e);
       } else {
         LOG.debug("Stdout from process {} closed", node.getName());
       }
     }
   }
 
-  private Path createGenesisFile(final BesuNode node, final String genesisConfig) {
+  private Path createGenesisFile(final BesuNode node,
+                                 final String genesisConfig) {
     try {
-      final Path genesisFile = Files.createTempFile(node.homeDirectory(), "genesis", "");
+      final Path genesisFile =
+          Files.createTempFile(node.homeDirectory(), "genesis", "");
       genesisFile.toFile().deleteOnExit();
       Files.write(genesisFile, genesisConfig.getBytes(UTF_8));
       return genesisFile;
@@ -353,11 +393,14 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
   }
 
   private void createStaticNodes(final BesuNode node) {
-    StaticNodesUtils.createStaticNodesFile(node.homeDirectory(), node.getStaticNodes());
+    StaticNodesUtils.createStaticNodesFile(node.homeDirectory(),
+                                           node.getStaticNodes());
   }
 
   private String apiList(final Collection<RpcApi> rpcApis) {
-    return rpcApis.stream().map(RpcApis::getValue).collect(Collectors.joining(","));
+    return rpcApis.stream()
+        .map(RpcApis::getValue)
+        .collect(Collectors.joining(","));
   }
 
   @Override
@@ -366,7 +409,8 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     if (besuProcesses.containsKey(node.getName())) {
       killBesuProcess(node.getName());
     } else {
-      LOG.error("There was a request to stop an unknown node: {}", node.getName());
+      LOG.error("There was a request to stop an unknown node: {}",
+                node.getName());
     }
   }
 
@@ -405,7 +449,7 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
     process.destroy();
     try {
-      process.waitFor(2, TimeUnit.SECONDS);
+      process.waitFor(30, TimeUnit.SECONDS);
     } catch (final InterruptedException e) {
       LOG.warn("Wait for death of process {} was interrupted", name, e);
     }
@@ -413,7 +457,7 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     if (process.isAlive()) {
       LOG.warn("Process {} still alive, destroying forcibly now", name);
       try {
-        process.destroyForcibly().waitFor(2, TimeUnit.SECONDS);
+        process.destroyForcibly().waitFor(30, TimeUnit.SECONDS);
       } catch (final Exception e) {
         // just die already
       }

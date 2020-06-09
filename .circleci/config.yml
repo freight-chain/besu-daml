@@ -27,7 +27,7 @@ executors:
 
 notify:
   webhooks:
-    - url: https://hyperledger-rocket-chat-hubot.herokuapp.com/hubot/circleci
+    - url: $HUBOT_URL
 
 commands:
   prepare:
@@ -76,10 +76,6 @@ jobs:
     executor: besu_executor_xl
     steps:
       - prepare
-      - run:
-          name: DCO check
-          command: |
-            ./scripts/dco_check.sh
       - run:
           name: Assemble
           command: |

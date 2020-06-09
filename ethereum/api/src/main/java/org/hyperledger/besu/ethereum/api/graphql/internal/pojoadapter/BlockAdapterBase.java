@@ -1,19 +1,32 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter;
 
+import com.google.common.primitives.Longs;
+import graphql.schema.DataFetchingEnvironment;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.api.graphql.GraphQLDataFetcherContext;
 import org.hyperledger.besu.ethereum.api.query.BlockWithMetadata;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
@@ -32,28 +45,15 @@ import org.hyperledger.besu.ethereum.transaction.CallParameter;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulatorResult;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import com.google.common.primitives.Longs;
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
-
 @SuppressWarnings("unused") // reflected by GraphQL
 public class BlockAdapterBase extends AdapterBase {
 
   private final BlockHeader header;
 
-  BlockAdapterBase(final BlockHeader header) {
-    this.header = header;
-  }
+  BlockAdapterBase(final BlockHeader header) { this.header = header; }
 
-  public Optional<NormalBlockAdapter> getParent(final DataFetchingEnvironment environment) {
+  public Optional<NormalBlockAdapter>
+  getParent(final DataFetchingEnvironment environment) {
     final BlockchainQueries query = getBlockchainQueries(environment);
     final Hash parentHash = header.getParentHash();
     final Optional<BlockWithMetadata<TransactionWithMetadata, Hash>> block =
@@ -61,9 +61,7 @@ public class BlockAdapterBase extends AdapterBase {
     return block.map(NormalBlockAdapter::new);
   }
 
-  public Optional<Bytes32> getHash() {
-    return Optional.of(header.getHash());
-  }
+  public Optional<Bytes32> getHash() { return Optional.of(header.getHash()); }
 
   public Optional<Bytes> getNonce() {
     final long nonce = header.getNonce();
@@ -83,7 +81,8 @@ public class BlockAdapterBase extends AdapterBase {
     return Optional.of(header.getReceiptsRoot());
   }
 
-  public Optional<AccountAdapter> getMiner(final DataFetchingEnvironment environment) {
+  public Optional<AccountAdapter>
+  getMiner(final DataFetchingEnvironment environment) {
 
     final BlockchainQueries query = getBlockchainQueries(environment);
     long blockNumber = header.getNumber();
@@ -91,8 +90,8 @@ public class BlockAdapterBase extends AdapterBase {
     if (bn != null) {
       blockNumber = bn;
     }
-    return Optional.of(
-        new AccountAdapter(query.getWorldState(blockNumber).get().get(header.getCoinbase())));
+    return Optional.of(new AccountAdapter(
+        query.getWorldState(blockNumber).get().get(header.getCoinbase())));
   }
 
   public Optional<Bytes> getExtraData() {
@@ -132,7 +131,8 @@ public class BlockAdapterBase extends AdapterBase {
     return Optional.of(bn);
   }
 
-  public Optional<AccountAdapter> getAccount(final DataFetchingEnvironment environment) {
+  public Optional<AccountAdapter>
+  getAccount(final DataFetchingEnvironment environment) {
 
     final BlockchainQueries query = getBlockchainQueries(environment);
     final long bn = header.getNumber();
@@ -150,16 +150,20 @@ public class BlockAdapterBase extends AdapterBase {
     final Map<String, Object> filter = environment.getArgument("filter");
 
     @SuppressWarnings("unchecked")
-    final List<Address> addrs = (List<Address>) filter.get("addresses");
+    final List<Address> addrs = (List<Address>)filter.get("addresses");
     @SuppressWarnings("unchecked")
-    final List<List<Bytes32>> topics = (List<List<Bytes32>>) filter.get("topics");
+    final List<List<Bytes32>> topics =
+        (List<List<Bytes32>>)filter.get("topics");
 
     final List<List<LogTopic>> transformedTopics = new ArrayList<>();
     for (final List<Bytes32> topic : topics) {
-      transformedTopics.add(topic.stream().map(LogTopic::of).collect(Collectors.toList()));
+      transformedTopics.add(
+          topic.stream().map(LogTopic::of).collect(Collectors.toList()));
     }
-    final LogsQuery query =
-        new LogsQuery.Builder().addresses(addrs).topics(transformedTopics).build();
+    final LogsQuery query = new LogsQuery.Builder()
+                                .addresses(addrs)
+                                .topics(transformedTopics)
+                                .build();
 
     final BlockchainQueries blockchain = getBlockchainQueries(environment);
 
@@ -172,32 +176,35 @@ public class BlockAdapterBase extends AdapterBase {
     return results;
   }
 
-  public Optional<Long> getEstimateGas(final DataFetchingEnvironment environment) {
+  public Optional<Long>
+  getEstimateGas(final DataFetchingEnvironment environment) {
     final Optional<CallResult> result = executeCall(environment);
     return result.map(CallResult::getGasUsed);
   }
 
-  public Optional<CallResult> getCall(final DataFetchingEnvironment environment) {
+  public Optional<CallResult>
+  getCall(final DataFetchingEnvironment environment) {
     return executeCall(environment);
   }
 
-  private Optional<CallResult> executeCall(final DataFetchingEnvironment environment) {
+  private Optional<CallResult>
+  executeCall(final DataFetchingEnvironment environment) {
     final Map<String, Object> callData = environment.getArgument("data");
-    final Address from = (Address) callData.get("from");
-    final Address to = (Address) callData.get("to");
-    final Long gas = (Long) callData.get("gas");
-    final UInt256 gasPrice = (UInt256) callData.get("gasPrice");
-    final UInt256 value = (UInt256) callData.get("value");
-    final Bytes data = (Bytes) callData.get("data");
+    final Address from = (Address)callData.get("from");
+    final Address to = (Address)callData.get("to");
+    final Long gas = (Long)callData.get("gas");
+    final UInt256 gasPrice = (UInt256)callData.get("gasPrice");
+    final UInt256 value = (UInt256)callData.get("value");
+    final Bytes data = (Bytes)callData.get("data");
 
     final BlockchainQueries query = getBlockchainQueries(environment);
-    final ProtocolSchedule<?> protocolSchedule =
-        ((GraphQLDataFetcherContext) environment.getContext()).getProtocolSchedule();
+    final ProtocolSchedule protocolSchedule =
+        ((GraphQLDataFetcherContext)environment.getContext())
+            .getProtocolSchedule();
     final long bn = header.getNumber();
 
-    final TransactionSimulator transactionSimulator =
-        new TransactionSimulator(
-            query.getBlockchain(), query.getWorldStateArchive(), protocolSchedule);
+    final TransactionSimulator transactionSimulator = new TransactionSimulator(
+        query.getBlockchain(), query.getWorldStateArchive(), protocolSchedule);
 
     long gasParam = -1;
     Wei gasPriceParam = null;
@@ -214,7 +221,8 @@ public class BlockAdapterBase extends AdapterBase {
     final CallParameter param =
         new CallParameter(from, to, gasParam, gasPriceParam, valueParam, data);
 
-    final Optional<TransactionSimulatorResult> opt = transactionSimulator.process(param, bn);
+    final Optional<TransactionSimulatorResult> opt =
+        transactionSimulator.process(param, bn);
     if (opt.isPresent()) {
       final TransactionSimulatorResult result = opt.get();
       long status = 0;

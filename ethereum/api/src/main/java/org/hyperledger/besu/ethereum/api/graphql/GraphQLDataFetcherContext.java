@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,15 +28,14 @@ public class GraphQLDataFetcherContext {
   private final BlockchainQueries blockchainQueries;
   private final MiningCoordinator miningCoordinator;
   private final Synchronizer synchronizer;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final TransactionPool transactionPool;
 
-  public GraphQLDataFetcherContext(
-      final BlockchainQueries blockchainQueries,
-      final ProtocolSchedule<?> protocolSchedule,
-      final TransactionPool transactionPool,
-      final MiningCoordinator miningCoordinator,
-      final Synchronizer synchronizer) {
+  public GraphQLDataFetcherContext(final BlockchainQueries blockchainQueries,
+                                   final ProtocolSchedule protocolSchedule,
+                                   final TransactionPool transactionPool,
+                                   final MiningCoordinator miningCoordinator,
+                                   final Synchronizer synchronizer) {
     this.blockchainQueries = blockchainQueries;
     this.protocolSchedule = protocolSchedule;
     this.miningCoordinator = miningCoordinator;
@@ -41,23 +43,13 @@ public class GraphQLDataFetcherContext {
     this.transactionPool = transactionPool;
   }
 
-  public TransactionPool getTransactionPool() {
-    return transactionPool;
-  }
+  public TransactionPool getTransactionPool() { return transactionPool; }
 
-  public BlockchainQueries getBlockchainQueries() {
-    return blockchainQueries;
-  }
+  public BlockchainQueries getBlockchainQueries() { return blockchainQueries; }
 
-  public MiningCoordinator getMiningCoordinator() {
-    return miningCoordinator;
-  }
+  public MiningCoordinator getMiningCoordinator() { return miningCoordinator; }
 
-  public Synchronizer getSynchronizer() {
-    return synchronizer;
-  }
+  public Synchronizer getSynchronizer() { return synchronizer; }
 
-  public ProtocolSchedule<?> getProtocolSchedule() {
-    return protocolSchedule;
-  }
+  public ProtocolSchedule getProtocolSchedule() { return protocolSchedule; }
 }

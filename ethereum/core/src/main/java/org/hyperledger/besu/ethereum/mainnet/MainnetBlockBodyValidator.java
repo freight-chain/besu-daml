@@ -1,19 +1,29 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -27,48 +37,43 @@ import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.core.fees.EIP1559;
 import org.hyperledger.besu.ethereum.core.fees.TransactionPriceCalculator;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes32;
-
-public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
+public class MainnetBlockBodyValidator implements BlockBodyValidator {
 
   private static final Logger LOG = LogManager.getLogger();
 
   private static final int MAX_OMMERS = 2;
 
   private static final int MAX_GENERATION = 6;
-  private final ProtocolSchedule<C> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final Optional<EIP1559> maybeEip1559;
 
-  public MainnetBlockBodyValidator(final ProtocolSchedule<C> protocolSchedule) {
+  public MainnetBlockBodyValidator(final ProtocolSchedule protocolSchedule) {
     this(protocolSchedule, Optional.empty());
   }
 
-  public MainnetBlockBodyValidator(
-      final ProtocolSchedule<C> protocolSchedule, final Optional<EIP1559> maybeEip1559) {
+  public MainnetBlockBodyValidator(final ProtocolSchedule protocolSchedule,
+                                   final Optional<EIP1559> maybeEip1559) {
     this.protocolSchedule = protocolSchedule;
     this.maybeEip1559 = maybeEip1559;
   }
 
   @Override
-  public boolean validateBody(
-      final ProtocolContext<C> context,
-      final Block block,
-      final List<TransactionReceipt> receipts,
-      final Hash worldStateRootHash,
-      final HeaderValidationMode ommerValidationMode) {
+  public boolean validateBody(final ProtocolContext context, final Block block,
+                              final List<TransactionReceipt> receipts,
+                              final Hash worldStateRootHash,
+                              final HeaderValidationMode ommerValidationMode) {
 
     if (!validateBodyLight(context, block, receipts, ommerValidationMode)) {
       return false;
     }
 
-    if (!validateStateRoot(block.getHeader().getStateRoot(), worldStateRootHash)) {
+    if (!validateStateRoot(block.getHeader().getStateRoot(),
+                           worldStateRootHash)) {
+      LOG.warn("Invalid block RLP : {}", block.toRlp().toHexString());
+      receipts.forEach(
+          receipt
+          -> LOG.warn("Transaction receipt found in the invalid block {}",
+                      receipt.toString()));
       return false;
     }
 
@@ -76,16 +81,17 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
   }
 
   @Override
-  public boolean validateBodyLight(
-      final ProtocolContext<C> context,
-      final Block block,
-      final List<TransactionReceipt> receipts,
-      final HeaderValidationMode ommerValidationMode) {
+  public boolean
+  validateBodyLight(final ProtocolContext context, final Block block,
+                    final List<TransactionReceipt> receipts,
+                    final HeaderValidationMode ommerValidationMode) {
     final BlockHeader header = block.getHeader();
     final BlockBody body = block.getBody();
 
-    final Bytes32 transactionsRoot = BodyValidation.transactionsRoot(body.getTransactions());
-    if (!validateTransactionsRoot(header.getTransactionsRoot(), transactionsRoot)) {
+    final Bytes32 transactionsRoot =
+        BodyValidation.transactionsRoot(body.getTransactions());
+    if (!validateTransactionsRoot(header.getTransactionsRoot(),
+                                  transactionsRoot)) {
       return false;
     }
 
@@ -95,12 +101,15 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
     }
 
     final long gasUsed =
-        receipts.isEmpty() ? 0 : receipts.get(receipts.size() - 1).getCumulativeGasUsed();
+        receipts.isEmpty()
+            ? 0
+            : receipts.get(receipts.size() - 1).getCumulativeGasUsed();
     if (!validateGasUsed(header.getGasUsed(), gasUsed)) {
       return false;
     }
 
-    if (!validateLogsBloom(header.getLogsBloom(), BodyValidation.logsBloom(receipts))) {
+    if (!validateLogsBloom(header.getLogsBloom(),
+                           BodyValidation.logsBloom(receipts))) {
       return false;
     }
 
@@ -115,58 +124,66 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
     return true;
   }
 
-  private static boolean validateTransactionsRoot(final Bytes32 expected, final Bytes32 actual) {
+  private static boolean validateTransactionsRoot(final Bytes32 expected,
+                                                  final Bytes32 actual) {
     if (!expected.equals(actual)) {
       LOG.warn(
-          "Invalid block: transaction root mismatch (expected={}, actual={})", expected, actual);
+          "Invalid block: transaction root mismatch (expected={}, actual={})",
+          expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private static boolean validateLogsBloom(
-      final LogsBloomFilter expected, final LogsBloomFilter actual) {
+  private static boolean validateLogsBloom(final LogsBloomFilter expected,
+                                           final LogsBloomFilter actual) {
     if (!expected.equals(actual)) {
       LOG.warn(
-          "Invalid block: logs bloom filter mismatch (expected={}, actual={})", expected, actual);
+          "Invalid block: logs bloom filter mismatch (expected={}, actual={})",
+          expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private static boolean validateGasUsed(final long expected, final long actual) {
+  private static boolean validateGasUsed(final long expected,
+                                         final long actual) {
     if (expected != actual) {
-      LOG.warn("Invalid block: gas used mismatch (expected={}, actual={})", expected, actual);
+      LOG.warn("Invalid block: gas used mismatch (expected={}, actual={})",
+               expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private static boolean validateReceiptsRoot(final Bytes32 expected, final Bytes32 actual) {
+  private static boolean validateReceiptsRoot(final Bytes32 expected,
+                                              final Bytes32 actual) {
     if (!expected.equals(actual)) {
-      LOG.warn("Invalid block: receipts root mismatch (expected={}, actual={})", expected, actual);
+      LOG.warn("Invalid block: receipts root mismatch (expected={}, actual={})",
+               expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private static boolean validateStateRoot(final Bytes32 expected, final Bytes32 actual) {
+  private static boolean validateStateRoot(final Bytes32 expected,
+                                           final Bytes32 actual) {
     if (!expected.equals(actual)) {
-      LOG.warn("Invalid block: state root mismatch (expected={}, actual={})", expected, actual);
+      LOG.warn("Invalid block: state root mismatch (expected={}, actual={})",
+               expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private boolean validateEthHash(
-      final ProtocolContext<C> context,
-      final Block block,
-      final HeaderValidationMode ommerValidationMode) {
+  private boolean
+  validateEthHash(final ProtocolContext context, final Block block,
+                  final HeaderValidationMode ommerValidationMode) {
     final BlockHeader header = block.getHeader();
     final BlockBody body = block.getBody();
 
@@ -175,29 +192,32 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
       return false;
     }
 
-    if (!validateOmmers(context, header, body.getOmmers(), ommerValidationMode)) {
+    if (!validateOmmers(context, header, body.getOmmers(),
+                        ommerValidationMode)) {
       return false;
     }
 
     return true;
   }
 
-  private static boolean validateOmmersHash(final Bytes32 expected, final Bytes32 actual) {
+  private static boolean validateOmmersHash(final Bytes32 expected,
+                                            final Bytes32 actual) {
     if (!expected.equals(actual)) {
-      LOG.warn("Invalid block: ommers hash mismatch (expected={}, actual={})", expected, actual);
+      LOG.warn("Invalid block: ommers hash mismatch (expected={}, actual={})",
+               expected, actual);
       return false;
     }
 
     return true;
   }
 
-  private boolean validateOmmers(
-      final ProtocolContext<C> context,
-      final BlockHeader header,
-      final List<BlockHeader> ommers,
-      final HeaderValidationMode ommerValidationMode) {
+  private boolean
+  validateOmmers(final ProtocolContext context, final BlockHeader header,
+                 final List<BlockHeader> ommers,
+                 final HeaderValidationMode ommerValidationMode) {
     if (ommers.size() > MAX_OMMERS) {
-      LOG.warn("Invalid block: ommer count {} exceeds ommer limit {}", ommers.size(), MAX_OMMERS);
+      LOG.warn("Invalid block: ommer count {} exceeds ommer limit {}",
+               ommers.size(), MAX_OMMERS);
       return false;
     }
 
@@ -231,15 +251,14 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
     return a.getParentHash().equals(b.getParentHash());
   }
 
-  private boolean isOmmerValid(
-      final ProtocolContext<C> context,
-      final BlockHeader current,
-      final BlockHeader ommer,
-      final HeaderValidationMode ommerValidationMode) {
-    final ProtocolSpec<C> protocolSpec = protocolSchedule.getByBlockNumber(ommer.getNumber());
-    if (!protocolSpec
-        .getOmmerHeaderValidator()
-        .validateHeader(ommer, context, ommerValidationMode)) {
+  private boolean isOmmerValid(final ProtocolContext context,
+                               final BlockHeader current,
+                               final BlockHeader ommer,
+                               final HeaderValidationMode ommerValidationMode) {
+    final ProtocolSpec protocolSpec =
+        protocolSchedule.getByBlockNumber(ommer.getNumber());
+    if (!protocolSpec.getOmmerHeaderValidator().validateHeader(
+            ommer, context, ommerValidationMode)) {
       return false;
     }
 
@@ -250,15 +269,19 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
     }
   }
 
-  private boolean isOmmerSiblingOfAncestor(
-      final ProtocolContext<C> context, final BlockHeader current, final BlockHeader ommer) {
-    // The current block is guaranteed to have a parent because it's a valid header.
-    final long lastAncestorBlockNumber = Math.max(current.getNumber() - MAX_GENERATION, 0);
+  private boolean isOmmerSiblingOfAncestor(final ProtocolContext context,
+                                           final BlockHeader current,
+                                           final BlockHeader ommer) {
+    // The current block is guaranteed to have a parent because it's a valid
+    // header.
+    final long lastAncestorBlockNumber =
+        Math.max(current.getNumber() - MAX_GENERATION, 0);
 
     BlockHeader previous = current;
     while (previous.getNumber() > lastAncestorBlockNumber) {
-      final BlockHeader ancestor =
-          context.getBlockchain().getBlockHeader(previous.getParentHash()).get();
+      final BlockHeader ancestor = context.getBlockchain()
+                                       .getBlockHeader(previous.getParentHash())
+                                       .get();
       if (areSiblings(ommer, ancestor)) {
         return true;
       }
@@ -291,8 +314,7 @@ public class MainnetBlockBodyValidator<C> implements BlockBodyValidator<C> {
       if (price.compareTo(Wei.of(baseFee.orElseThrow())) < 0) {
         LOG.warn(
             "Invalid block: transaction gas price {} must be greater than base fee {}",
-            price.toString(),
-            baseFee.orElseThrow());
+            price.toString(), baseFee.orElseThrow());
         return false;
       }
     }

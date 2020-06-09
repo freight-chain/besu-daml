@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,32 +21,34 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import org.awaitility.Awaitility;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
+import org.hyperledger.besu.ethereum.eth.manager.EthContext;
+import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManager;
+import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import org.hyperledger.besu.ethereum.eth.sync.tasks.exceptions.InvalidBlockException;
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.awaitility.Awaitility;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class PersistBlockTaskTest {
 
-  private BlockchainSetupUtil<Void> blockchainUtil;
-  private ProtocolSchedule<Void> protocolSchedule;
-  private ProtocolContext<Void> protocolContext;
+  private BlockchainSetupUtil blockchainUtil;
+  private ProtocolSchedule protocolSchedule;
+  private ProtocolContext protocolContext;
+  private EthContext ethContext;
   private MutableBlockchain blockchain;
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
@@ -53,6 +58,9 @@ public class PersistBlockTaskTest {
     protocolSchedule = blockchainUtil.getProtocolSchedule();
     protocolContext = blockchainUtil.getProtocolContext();
     blockchain = blockchainUtil.getBlockchain();
+    final EthProtocolManager ethProtocolManager =
+        EthProtocolManagerTestUtil.create();
+    ethContext = ethProtocolManager.ethContext();
   }
 
   @Test
@@ -64,9 +72,9 @@ public class PersistBlockTaskTest {
     assertThat(blockchain.contains(nextBlock.getHash())).isFalse();
 
     // Create task
-    final PersistBlockTask<Void> task =
-        PersistBlockTask.create(
-            protocolSchedule, protocolContext, nextBlock, HeaderValidationMode.FULL, metricsSystem);
+    final PersistBlockTask task = PersistBlockTask.create(
+        protocolSchedule, protocolContext, ethContext, nextBlock,
+        HeaderValidationMode.FULL, metricsSystem);
     final CompletableFuture<Block> result = task.run();
 
     Awaitility.await().atMost(30, SECONDS).until(result::isDone);
@@ -86,15 +94,16 @@ public class PersistBlockTaskTest {
     assertThat(blockchain.contains(nextBlock.getHash())).isFalse();
 
     // Create task
-    final PersistBlockTask<Void> task =
-        PersistBlockTask.create(
-            protocolSchedule, protocolContext, nextBlock, HeaderValidationMode.FULL, metricsSystem);
+    final PersistBlockTask task = PersistBlockTask.create(
+        protocolSchedule, protocolContext, ethContext, nextBlock,
+        HeaderValidationMode.FULL, metricsSystem);
     final CompletableFuture<Block> result = task.run();
 
     Awaitility.await().atMost(30, SECONDS).until(result::isDone);
 
     assertThat(result.isCompletedExceptionally()).isTrue();
-    assertThatThrownBy(result::get).hasCauseInstanceOf(InvalidBlockException.class);
+    assertThatThrownBy(result::get)
+        .hasCauseInstanceOf(InvalidBlockException.class);
     assertThat(blockchain.contains(nextBlock.getHash())).isFalse();
   }
 
@@ -111,12 +120,10 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forSequentialBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forSequentialBlocks(protocolSchedule, protocolContext, ethContext,
+                                 nextBlocks, HeaderValidationMode.FULL,
+                                 metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
@@ -129,10 +136,11 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void failsToImportInvalidBlockSequenceWhereSecondBlockFails() throws Exception {
+  public void failsToImportInvalidBlockSequenceWhereSecondBlockFails() {
     final BlockDataGenerator gen = new BlockDataGenerator();
     blockchainUtil.importFirstBlocks(3);
-    final List<Block> nextBlocks = Arrays.asList(blockchainUtil.getBlock(3), gen.block());
+    final List<Block> nextBlocks =
+        Arrays.asList(blockchainUtil.getBlock(3), gen.block());
 
     // Sanity check
     for (final Block nextBlock : nextBlocks) {
@@ -141,27 +149,27 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forSequentialBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forSequentialBlocks(protocolSchedule, protocolContext, ethContext,
+                                 nextBlocks, HeaderValidationMode.FULL,
+                                 metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
 
     assertThat(task.isCompletedExceptionally()).isTrue();
-    assertThatThrownBy(task::get).hasCauseInstanceOf(InvalidBlockException.class);
+    assertThatThrownBy(task::get).hasCauseInstanceOf(
+        InvalidBlockException.class);
     assertThat(blockchain.contains(nextBlocks.get(0).getHash())).isTrue();
     assertThat(blockchain.contains(nextBlocks.get(1).getHash())).isFalse();
   }
 
   @Test
-  public void failsToImportInvalidBlockSequenceWhereFirstBlockFails() throws Exception {
+  public void failsToImportInvalidBlockSequenceWhereFirstBlockFails() {
     final BlockDataGenerator gen = new BlockDataGenerator();
     blockchainUtil.importFirstBlocks(3);
-    final List<Block> nextBlocks = Arrays.asList(gen.block(), blockchainUtil.getBlock(3));
+    final List<Block> nextBlocks =
+        Arrays.asList(gen.block(), blockchainUtil.getBlock(3));
 
     // Sanity check
     for (final Block nextBlock : nextBlocks) {
@@ -170,18 +178,17 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forSequentialBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forSequentialBlocks(protocolSchedule, protocolContext, ethContext,
+                                 nextBlocks, HeaderValidationMode.FULL,
+                                 metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
 
     assertThat(task.isCompletedExceptionally()).isTrue();
-    assertThatThrownBy(task::get).hasCauseInstanceOf(InvalidBlockException.class);
+    assertThatThrownBy(task::get).hasCauseInstanceOf(
+        InvalidBlockException.class);
     assertThat(blockchain.contains(nextBlocks.get(0).getHash())).isFalse();
     assertThat(blockchain.contains(nextBlocks.get(1).getHash())).isFalse();
   }
@@ -199,12 +206,10 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forUnorderedBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forUnorderedBlocks(protocolSchedule, protocolContext, ethContext,
+                                nextBlocks, HeaderValidationMode.FULL,
+                                metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
@@ -218,7 +223,7 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void importsInvalidUnorderedBlock() throws Exception {
+  public void importsInvalidUnorderedBlock() {
     final BlockDataGenerator gen = new BlockDataGenerator();
     blockchainUtil.importFirstBlocks(3);
     final Block invalid = gen.block();
@@ -231,12 +236,10 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forUnorderedBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forUnorderedBlocks(protocolSchedule, protocolContext, ethContext,
+                                nextBlocks, HeaderValidationMode.FULL,
+                                metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
@@ -248,7 +251,7 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void importsInvalidUnorderedBlocks() throws Exception {
+  public void importsInvalidUnorderedBlocks() {
     final BlockDataGenerator gen = new BlockDataGenerator();
     blockchainUtil.importFirstBlocks(3);
     final List<Block> nextBlocks = Arrays.asList(gen.block(), gen.block());
@@ -260,12 +263,10 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forUnorderedBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forUnorderedBlocks(protocolSchedule, protocolContext, ethContext,
+                                nextBlocks, HeaderValidationMode.FULL,
+                                metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
@@ -277,7 +278,8 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void importsUnorderedBlocksWithMixOfValidAndInvalidBlocks() throws Exception {
+  public void importsUnorderedBlocksWithMixOfValidAndInvalidBlocks()
+      throws Exception {
     final BlockDataGenerator gen = new BlockDataGenerator();
     blockchainUtil.importFirstBlocks(3);
     final Block valid = blockchainUtil.getBlock(3);
@@ -291,12 +293,10 @@ public class PersistBlockTaskTest {
 
     // Create task
     final CompletableFuture<List<Block>> task =
-        PersistBlockTask.forUnorderedBlocks(
-                protocolSchedule,
-                protocolContext,
-                nextBlocks,
-                HeaderValidationMode.FULL,
-                metricsSystem)
+        PersistBlockTask
+            .forUnorderedBlocks(protocolSchedule, protocolContext, ethContext,
+                                nextBlocks, HeaderValidationMode.FULL,
+                                metricsSystem)
             .get();
 
     Awaitility.await().atMost(30, SECONDS).until(task::isDone);
@@ -309,7 +309,7 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void cancelBeforeRunning() throws Exception {
+  public void cancelBeforeRunning() {
     blockchainUtil.importFirstBlocks(3);
     final Block nextBlock = blockchainUtil.getBlock(3);
 
@@ -317,9 +317,9 @@ public class PersistBlockTaskTest {
     assertThat(blockchain.contains(nextBlock.getHash())).isFalse();
 
     // Create task
-    final PersistBlockTask<Void> task =
-        PersistBlockTask.create(
-            protocolSchedule, protocolContext, nextBlock, HeaderValidationMode.FULL, metricsSystem);
+    final PersistBlockTask task = PersistBlockTask.create(
+        protocolSchedule, protocolContext, ethContext, nextBlock,
+        HeaderValidationMode.FULL, metricsSystem);
 
     task.cancel();
     final CompletableFuture<Block> result = task.run();
@@ -329,7 +329,7 @@ public class PersistBlockTaskTest {
   }
 
   @Test
-  public void cancelAfterRunning() throws Exception {
+  public void cancelAfterRunning() {
     blockchainUtil.importFirstBlocks(3);
     final Block nextBlock = blockchainUtil.getBlock(3);
 
@@ -337,10 +337,10 @@ public class PersistBlockTaskTest {
     assertThat(blockchain.contains(nextBlock.getHash())).isFalse();
 
     // Create task
-    final PersistBlockTask<Void> task =
-        PersistBlockTask.create(
-            protocolSchedule, protocolContext, nextBlock, HeaderValidationMode.FULL, metricsSystem);
-    final PersistBlockTask<Void> taskSpy = Mockito.spy(task);
+    final PersistBlockTask task = PersistBlockTask.create(
+        protocolSchedule, protocolContext, ethContext, nextBlock,
+        HeaderValidationMode.FULL, metricsSystem);
+    final PersistBlockTask taskSpy = Mockito.spy(task);
     Mockito.doNothing().when(taskSpy).executeTaskTimed();
 
     final CompletableFuture<Block> result = taskSpy.run();

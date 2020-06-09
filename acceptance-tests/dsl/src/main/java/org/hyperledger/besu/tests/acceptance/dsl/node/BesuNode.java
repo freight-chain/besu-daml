@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,26 @@ import static java.util.Collections.unmodifiableList;
 import static org.apache.logging.log4j.LogManager.getLogger;
 import static org.apache.tuweni.io.file.Files.copyResource;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.io.MoreFiles;
+import com.google.common.io.RecursiveDeleteOption;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.Logger;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ConditionTimeoutException;
 import org.hyperledger.besu.crypto.KeyPairUtil;
 import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
@@ -43,28 +66,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.CustomRequestFa
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.perm.PermissioningJsonRpcRequestFactory;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.privacy.PrivacyRequestFactory;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolRequestFactory;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.io.MoreFiles;
-import com.google.common.io.RecursiveDeleteOption;
-import org.apache.logging.log4j.Logger;
-import org.awaitility.Awaitility;
-import org.awaitility.core.ConditionTimeoutException;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.web3j.protocol.Web3jService;
 import org.web3j.protocol.core.JsonRpc2_0Web3j;
@@ -74,7 +75,8 @@ import org.web3j.protocol.websocket.WebSocketListener;
 import org.web3j.protocol.websocket.WebSocketService;
 import org.web3j.utils.Async;
 
-public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable {
+public class BesuNode
+    implements NodeConfiguration, RunnableNode, AutoCloseable {
 
   private static final String LOCALHOST = "127.0.0.1";
   private static final Logger LOG = getLogger();
@@ -93,7 +95,7 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   private final JsonRpcConfiguration jsonRpcConfiguration;
   private final WebSocketConfiguration webSocketConfiguration;
   private final MetricsConfiguration metricsConfiguration;
-  private final Optional<PermissioningConfiguration> permissioningConfiguration;
+  private Optional<PermissioningConfiguration> permissioningConfiguration;
   private final GenesisConfigurationProvider genesisConfigProvider;
   private final boolean devMode;
   private final boolean discoveryEnabled;
@@ -112,38 +114,30 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   private Optional<Integer> exitCode = Optional.empty();
 
   public BesuNode(
-      final String name,
-      final Optional<Path> dataPath,
+      final String name, final Optional<Path> dataPath,
       final MiningParameters miningParameters,
       final JsonRpcConfiguration jsonRpcConfiguration,
       final WebSocketConfiguration webSocketConfiguration,
       final MetricsConfiguration metricsConfiguration,
       final Optional<PermissioningConfiguration> permissioningConfiguration,
-      final Optional<String> keyfilePath,
-      final boolean devMode,
+      final Optional<String> keyfilePath, final boolean devMode,
       final GenesisConfigurationProvider genesisConfigProvider,
       final boolean p2pEnabled,
       final NetworkingConfiguration networkingConfiguration,
-      final boolean discoveryEnabled,
-      final boolean bootnodeEligible,
-      final boolean revertReasonEnabled,
-      final boolean secp256k1Native,
-      final boolean altbn128Native,
-      final List<String> plugins,
-      final List<String> extraCLIOptions,
-      final List<String> staticNodes,
+      final boolean discoveryEnabled, final boolean bootnodeEligible,
+      final boolean revertReasonEnabled, final boolean secp256k1Native,
+      final boolean altbn128Native, final List<String> plugins,
+      final List<String> extraCLIOptions, final List<String> staticNodes,
       final Optional<PrivacyParameters> privacyParameters,
-      final Optional<String> runCommand)
-      throws IOException {
+      final Optional<String> runCommand) throws IOException {
     this.homeDirectory = dataPath.orElseGet(BesuNode::createTmpDataDirectory);
-    keyfilePath.ifPresent(
-        path -> {
-          try {
-            copyResource(path, homeDirectory.resolve("key"));
-          } catch (final IOException e) {
-            LOG.error("Could not find key file \"{}\" in resources", path);
-          }
-        });
+    keyfilePath.ifPresent(path -> {
+      try {
+        copyResource(path, homeDirectory.resolve("key"));
+      } catch (final IOException e) {
+        LOG.error("Could not find key file \"{}\" in resources", path);
+      }
+    });
     this.keyPair = KeyPairUtil.loadKeyPair(homeDirectory);
     this.name = name;
     this.miningParameters = miningParameters;
@@ -161,17 +155,16 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     this.secp256k1Native = secp256k1Native;
     this.altbn128Native = altbn128Native;
     this.runCommand = runCommand;
-    plugins.forEach(
-        pluginName -> {
-          try {
-            homeDirectory.resolve("plugins").toFile().mkdirs();
-            copyResource(
-                pluginName + ".jar", homeDirectory.resolve("plugins/" + pluginName + ".jar"));
-            BesuNode.this.plugins.add(pluginName);
-          } catch (final IOException e) {
-            LOG.error("Could not find plugin \"{}\" in resources", pluginName);
-          }
-        });
+    plugins.forEach(pluginName -> {
+      try {
+        homeDirectory.resolve("plugins").toFile().mkdirs();
+        copyResource(pluginName + ".jar",
+                     homeDirectory.resolve("plugins/" + pluginName + ".jar"));
+        BesuNode.this.plugins.add(pluginName);
+      } catch (final IOException e) {
+        LOG.error("Could not find plugin \"{}\" in resources", pluginName);
+      }
+    });
     this.extraCLIOptions = extraCLIOptions;
     this.staticNodes = staticNodes;
     privacyParameters.ifPresent(this::setPrivacyParameters);
@@ -182,7 +175,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     try {
       return Files.createTempDirectory("acctest");
     } catch (final IOException e) {
-      throw new RuntimeException("Unable to create temporary data directory", e);
+      throw new RuntimeException("Unable to create temporary data directory",
+                                 e);
     }
   }
 
@@ -195,9 +189,7 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     return webSocketConfiguration().isEnabled();
   }
 
-  boolean isMetricsEnabled() {
-    return metricsConfiguration.isEnabled();
-  }
+  boolean isMetricsEnabled() { return metricsConfiguration.isEnabled(); }
 
   @Override
   public String getName() {
@@ -216,14 +208,17 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   @Override
   public URI enodeUrl() {
-    final String discport = isDiscoveryEnabled() ? "?discport=" + getDiscoveryPort() : "";
-    return URI.create("enode://" + getNodeId() + "@" + LOCALHOST + ":" + getP2pPort() + discport);
+    final String discport =
+        isDiscoveryEnabled() ? "?discport=" + getDiscoveryPort() : "";
+    return URI.create("enode://" + getNodeId() + "@" + LOCALHOST + ":" +
+                      getP2pPort() + discport);
   }
 
   private String getP2pPort() {
     final String port = portsProperties.getProperty("p2p");
     if (port == null) {
-      throw new IllegalStateException("Requested p2p port before ports properties was written");
+      throw new IllegalStateException(
+          "Requested p2p port before ports properties was written");
     }
     return port;
   }
@@ -239,11 +234,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   private Optional<String> jsonRpcBaseUrl() {
     if (isJsonRpcEnabled()) {
-      return Optional.of(
-          "http://"
-              + jsonRpcConfiguration.getHost()
-              + ":"
-              + portsProperties.getProperty("json-rpc"));
+      return Optional.of("http://" + jsonRpcConfiguration.getHost() + ":" +
+                         portsProperties.getProperty("json-rpc"));
     } else {
       return Optional.empty();
     }
@@ -251,8 +243,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   private Optional<String> wsRpcBaseUrl() {
     if (isWebSocketsRpcEnabled()) {
-      return Optional.of(
-          "ws://" + webSocketConfiguration.getHost() + ":" + portsProperties.getProperty("ws-rpc"));
+      return Optional.of("ws://" + webSocketConfiguration.getHost() + ":" +
+                         portsProperties.getProperty("ws-rpc"));
     } else {
       return Optional.empty();
     }
@@ -260,11 +252,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   private Optional<String> wsRpcBaseHttpUrl() {
     if (isWebSocketsRpcEnabled()) {
-      return Optional.of(
-          "http://"
-              + webSocketConfiguration.getHost()
-              + ":"
-              + portsProperties.getProperty("ws-rpc"));
+      return Optional.of("http://" + webSocketConfiguration.getHost() + ":" +
+                         portsProperties.getProperty("ws-rpc"));
     } else {
       return Optional.empty();
     }
@@ -272,12 +261,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   public Optional<String> metricsHttpUrl() {
     if (isMetricsEnabled()) {
-      return Optional.of(
-          "http://"
-              + metricsConfiguration.getHost()
-              + ":"
-              + portsProperties.getProperty("metrics")
-              + "/metrics");
+      return Optional.of("http://" + metricsConfiguration.getHost() + ":" +
+                         portsProperties.getProperty("metrics") + "/metrics");
     } else {
       return Optional.empty();
     }
@@ -286,7 +271,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   @Override
   public Optional<Integer> getJsonRpcWebSocketPort() {
     if (isWebSocketsRpcEnabled()) {
-      return Optional.of(Integer.valueOf(portsProperties.getProperty("ws-rpc")));
+      return Optional.of(
+          Integer.valueOf(portsProperties.getProperty("ws-rpc")));
     } else {
       return Optional.empty();
     }
@@ -294,7 +280,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
 
   public Optional<Integer> getJsonRpcSocketPort() {
     if (isWebSocketsRpcEnabled()) {
-      return Optional.of(Integer.valueOf(portsProperties.getProperty("json-rpc")));
+      return Optional.of(
+          Integer.valueOf(portsProperties.getProperty("json-rpc")));
     } else {
       return Optional.empty();
     }
@@ -311,44 +298,46 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
       final Web3jService web3jService;
 
       if (useWsForJsonRpc) {
-        final String url = wsRpcBaseUrl().orElse("ws://" + LOCALHOST + ":" + 8546);
+        final String url =
+            wsRpcBaseUrl().orElse("ws://" + LOCALHOST + ":" + 8546);
         final Map<String, String> headers = new HashMap<>();
         if (token != null) {
           headers.put("Authorization", "Bearer " + token);
         }
-        final WebSocketClient wsClient = new WebSocketClient(URI.create(url), headers);
+        final WebSocketClient wsClient =
+            new WebSocketClient(URI.create(url), headers);
 
         web3jService = new WebSocketService(wsClient, false);
         try {
-          ((WebSocketService) web3jService).connect();
+          ((WebSocketService)web3jService).connect();
         } catch (final ConnectException e) {
           throw new RuntimeException(e);
         }
 
-        websocketService = Optional.of((WebSocketService) web3jService);
+        websocketService = Optional.of((WebSocketService)web3jService);
       } else {
         web3jService =
             jsonRpcBaseUrl()
                 .map(HttpService::new)
                 .orElse(new HttpService("http://" + LOCALHOST + ":" + 8545));
         if (token != null) {
-          ((HttpService) web3jService).addHeader("Authorization", "Bearer " + token);
+          ((HttpService)web3jService)
+              .addHeader("Authorization", "Bearer " + token);
         }
       }
 
       nodeRequests =
-          new NodeRequests(
-              new JsonRpc2_0Web3j(web3jService, 2000, Async.defaultExecutorService()),
-              new CliqueRequestFactory(web3jService),
-              new Ibft2RequestFactory(web3jService),
-              new PermissioningJsonRpcRequestFactory(web3jService),
-              new AdminRequestFactory(web3jService),
-              new PrivacyRequestFactory(web3jService),
-              new CustomRequestFactory(web3jService),
-              new MinerRequestFactory(web3jService),
-              new TxPoolRequestFactory(web3jService),
-              websocketService,
-              loginRequestFactory());
+          new NodeRequests(new JsonRpc2_0Web3j(web3jService, 2000,
+                                               Async.defaultExecutorService()),
+                           new CliqueRequestFactory(web3jService),
+                           new Ibft2RequestFactory(web3jService),
+                           new PermissioningJsonRpcRequestFactory(web3jService),
+                           new AdminRequestFactory(web3jService),
+                           new PrivacyRequestFactory(web3jService),
+                           new CustomRequestFactory(web3jService),
+                           new MinerRequestFactory(web3jService),
+                           new TxPoolRequestFactory(web3jService),
+                           websocketService, loginRequestFactory());
     }
 
     return nodeRequests;
@@ -365,8 +354,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
         baseUrl = jsonRpcBaseUrl();
         port = "8545";
       }
-      loginRequestFactory =
-          new LoginRequestFactory(baseUrl.orElse("http://" + LOCALHOST + ":" + port));
+      loginRequestFactory = new LoginRequestFactory(
+          baseUrl.orElse("http://" + LOCALHOST + ":" + port));
     }
     return loginRequestFactory;
   }
@@ -374,7 +363,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   /** All future JSON-RPC calls are made via a web sockets connection. */
   @Override
   public void useWebSocketsForJsonRpc() {
-    final String url = wsRpcBaseUrl().isPresent() ? wsRpcBaseUrl().get() : "ws://127.0.0.1:8546";
+    final String url = wsRpcBaseUrl().isPresent() ? wsRpcBaseUrl().get()
+                                                  : "ws://127.0.0.1:8546";
 
     checkIfWebSocketEndpointIsAvailable(url);
 
@@ -407,32 +397,36 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   }
 
   private void checkIfWebSocketEndpointIsAvailable(final String url) {
-    final WebSocketClient webSocketClient = new WebSocketClient(URI.create(url));
-    // Web3j implementation always invoke the listener (even when one hasn't been set). We are using
-    // this stub implementation to avoid a NullPointerException.
-    webSocketClient.setListener(
-        new WebSocketListener() {
-          @Override
-          public void onMessage(final String message) {
-            // DO NOTHING
-          }
+    final WebSocketClient webSocketClient =
+        new WebSocketClient(URI.create(url));
+    // Web3j implementation always invoke the listener (even when one hasn't
+    // been set). We are using this stub implementation to avoid a
+    // NullPointerException.
+    webSocketClient.setListener(new WebSocketListener() {
+      @Override
+      public void onMessage(final String message) {
+        // DO NOTHING
+      }
 
-          @Override
-          public void onError(final Exception e) {
-            // DO NOTHING
-          }
+      @Override
+      public void onError(final Exception e) {
+        // DO NOTHING
+      }
 
-          @Override
-          public void onClose() {
-            // DO NOTHING
-          }
-        });
+      @Override
+      public void onClose() {
+        // DO NOTHING
+      }
+    });
 
-    // Because we can't trust the connection timeout of the WebSocket client implementation, we are
-    // using this approach to verify if the endpoint is enabled.
+    // Because we can't trust the connection timeout of the WebSocket client
+    // implementation, we are using this approach to verify if the endpoint is
+    // enabled.
     webSocketClient.connect();
     try {
-      Awaitility.await().atMost(5, TimeUnit.SECONDS).until(webSocketClient::isOpen);
+      Awaitility.await()
+          .atMost(5, TimeUnit.SECONDS)
+          .until(webSocketClient::isOpen);
     } catch (final ConditionTimeoutException e) {
       throw new WebsocketNotConnectedException();
     } finally {
@@ -461,8 +455,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   }
 
   private void loadPortsFile() {
-    try (final FileInputStream fis =
-        new FileInputStream(new File(homeDirectory.toFile(), "besu.ports"))) {
+    try (final FileInputStream fis = new FileInputStream(
+             new File(homeDirectory.toFile(), "besu.ports"))) {
       portsProperties.load(fis);
       LOG.info("Ports for node {}: {}", name, portsProperties);
     } catch (final IOException e) {
@@ -475,17 +469,11 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     return Util.publicKeyToAddress(keyPair.getPublicKey());
   }
 
-  public KeyPair keyPair() {
-    return keyPair;
-  }
+  public KeyPair keyPair() { return keyPair; }
 
-  public Path homeDirectory() {
-    return homeDirectory;
-  }
+  public Path homeDirectory() { return homeDirectory; }
 
-  JsonRpcConfiguration jsonRpcConfiguration() {
-    return jsonRpcConfiguration;
-  }
+  JsonRpcConfiguration jsonRpcConfiguration() { return jsonRpcConfiguration; }
 
   Optional<String> jsonRpcListenHost() {
     if (isJsonRpcEnabled()) {
@@ -503,9 +491,7 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     }
   }
 
-  boolean wsRpcEnabled() {
-    return isWebSocketsRpcEnabled();
-  }
+  boolean wsRpcEnabled() { return isWebSocketsRpcEnabled(); }
 
   WebSocketConfiguration webSocketConfiguration() {
     return webSocketConfiguration;
@@ -523,9 +509,7 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     return metricsConfiguration;
   }
 
-  String p2pListenHost() {
-    return LOCALHOST;
-  }
+  String p2pListenHost() { return LOCALHOST; }
 
   @Override
   public List<URI> getBootnodes() {
@@ -552,29 +536,19 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     this.bootnodes.addAll(bootnodes);
   }
 
-  MiningParameters getMiningParameters() {
-    return miningParameters;
-  }
+  MiningParameters getMiningParameters() { return miningParameters; }
 
-  public PrivacyParameters getPrivacyParameters() {
-    return privacyParameters;
-  }
+  public PrivacyParameters getPrivacyParameters() { return privacyParameters; }
 
   public void setPrivacyParameters(final PrivacyParameters privacyParameters) {
     this.privacyParameters = privacyParameters;
   }
 
-  public boolean isDevMode() {
-    return devMode;
-  }
+  public boolean isDevMode() { return devMode; }
 
-  public boolean isSecp256k1Native() {
-    return secp256k1Native;
-  }
+  public boolean isSecp256k1Native() { return secp256k1Native; }
 
-  public boolean isAltbn128Native() {
-    return altbn128Native;
-  }
+  public boolean isAltbn128Native() { return altbn128Native; }
 
   @Override
   public boolean isDiscoveryEnabled() {
@@ -585,9 +559,12 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     return permissioningConfiguration;
   }
 
-  public List<String> getPlugins() {
-    return plugins;
+  public void setPermissioningConfiguration(
+      final PermissioningConfiguration permissioningConfiguration) {
+    this.permissioningConfiguration = Optional.of(permissioningConfiguration);
   }
+
+  public List<String> getPlugins() { return plugins; }
 
   @Override
   public List<String> getExtraCLIOptions() {
@@ -608,9 +585,7 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
     return staticNodes != null && !staticNodes.isEmpty();
   }
 
-  public Optional<String> getRunCommand() {
-    return runCommand;
-  }
+  public Optional<String> getRunCommand() { return runCommand; }
 
   @Override
   public String toString() {
@@ -637,7 +612,8 @@ public class BesuNode implements NodeConfiguration, RunnableNode, AutoCloseable 
   public void close() {
     stop();
     try {
-      MoreFiles.deleteRecursively(homeDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
+      MoreFiles.deleteRecursively(homeDirectory,
+                                  RecursiveDeleteOption.ALLOW_INSECURE);
     } catch (final IOException e) {
       LOG.info("Failed to clean up temporary file: {}", homeDirectory, e);
     }

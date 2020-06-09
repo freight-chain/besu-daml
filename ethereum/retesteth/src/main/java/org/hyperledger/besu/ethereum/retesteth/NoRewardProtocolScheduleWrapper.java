@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.retesteth;
 
+import java.math.BigInteger;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.BlockValidator;
 import org.hyperledger.besu.ethereum.MainnetBlockValidator;
 import org.hyperledger.besu.ethereum.core.BlockImporter;
@@ -27,57 +32,43 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-import java.math.BigInteger;
-import java.util.Optional;
+public class NoRewardProtocolScheduleWrapper implements ProtocolSchedule {
 
-public class NoRewardProtocolScheduleWrapper<C> implements ProtocolSchedule<C> {
+  private final ProtocolSchedule delegate;
 
-  private final ProtocolSchedule<C> delegate;
-
-  NoRewardProtocolScheduleWrapper(final ProtocolSchedule<C> delegate) {
+  NoRewardProtocolScheduleWrapper(final ProtocolSchedule delegate) {
     this.delegate = delegate;
   }
 
   @Override
-  public ProtocolSpec<C> getByBlockNumber(final long number) {
-    final ProtocolSpec<C> original = delegate.getByBlockNumber(number);
-    final BlockProcessor noRewardBlockProcessor =
-        new MainnetBlockProcessor(
-            original.getTransactionProcessor(),
-            original.getTransactionReceiptFactory(),
-            Wei.ZERO,
-            original.getMiningBeneficiaryCalculator(),
-            original.isSkipZeroBlockRewards(),
-            TransactionGasBudgetCalculator.frontier());
-    final BlockValidator<C> noRewardBlockValidator =
-        new MainnetBlockValidator<>(
-            original.getBlockHeaderValidator(),
-            original.getBlockBodyValidator(),
-            noRewardBlockProcessor);
-    final BlockImporter<C> noRewardBlockImporter =
-        new MainnetBlockImporter<>(noRewardBlockValidator);
-    return new ProtocolSpec<>(
-        original.getName(),
-        original.getEvm(),
-        original.getTransactionValidator(),
+  public ProtocolSpec getByBlockNumber(final long number) {
+    final ProtocolSpec original = delegate.getByBlockNumber(number);
+    final BlockProcessor noRewardBlockProcessor = new MainnetBlockProcessor(
         original.getTransactionProcessor(),
+        original.getTransactionReceiptFactory(), Wei.ZERO,
+        original.getMiningBeneficiaryCalculator(),
+        original.isSkipZeroBlockRewards(),
+        TransactionGasBudgetCalculator.frontier());
+    final BlockValidator noRewardBlockValidator = new MainnetBlockValidator(
+        original.getBlockHeaderValidator(), original.getBlockBodyValidator(),
+        noRewardBlockProcessor);
+    final BlockImporter noRewardBlockImporter =
+        new MainnetBlockImporter(noRewardBlockValidator);
+    return new ProtocolSpec(
+        original.getName(), original.getEvm(),
+        original.getTransactionValidator(), original.getTransactionProcessor(),
         original.getPrivateTransactionProcessor(),
-        original.getBlockHeaderValidator(),
-        original.getOmmerHeaderValidator(),
-        original.getBlockBodyValidator(),
-        noRewardBlockProcessor,
-        noRewardBlockImporter,
-        noRewardBlockValidator,
+        original.getBlockHeaderValidator(), original.getOmmerHeaderValidator(),
+        original.getBlockBodyValidator(), noRewardBlockProcessor,
+        noRewardBlockImporter, noRewardBlockValidator,
         original.getBlockHeaderFunctions(),
         original.getTransactionReceiptFactory(),
         original.getDifficultyCalculator(),
         Wei.ZERO, // block reward
         original.getMiningBeneficiaryCalculator(),
         original.getPrecompileContractRegistry(),
-        original.isSkipZeroBlockRewards(),
-        original.getGasCalculator(),
-        original.getTransactionPriceCalculator(),
-        original.getEip1559(),
+        original.isSkipZeroBlockRewards(), original.getGasCalculator(),
+        original.getTransactionPriceCalculator(), original.getEip1559(),
         original.getGasBudgetCalculator());
   }
 
@@ -94,6 +85,7 @@ public class NoRewardProtocolScheduleWrapper<C> implements ProtocolSchedule<C> {
   @Override
   public void setPublicWorldStateArchiveForPrivacyBlockProcessor(
       final WorldStateArchive publicWorldStateArchive) {
-    delegate.setPublicWorldStateArchiveForPrivacyBlockProcessor(publicWorldStateArchive);
+    delegate.setPublicWorldStateArchiveForPrivacyBlockProcessor(
+        publicWorldStateArchive);
   }
 }

@@ -1,19 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.blockcreation;
 
+import java.math.BigInteger;
+import java.util.Optional;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -27,55 +36,41 @@ import org.hyperledger.besu.ethereum.mainnet.EthHashSolver;
 import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 
-import java.math.BigInteger;
-import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
-
-import org.apache.tuweni.units.bigints.UInt256;
-
-public class EthHashBlockCreator extends AbstractBlockCreator<Void> {
+public class EthHashBlockCreator extends AbstractBlockCreator {
 
   private final EthHashSolver nonceSolver;
 
-  public EthHashBlockCreator(
-      final Address coinbase,
-      final ExtraDataCalculator extraDataCalculator,
-      final PendingTransactions pendingTransactions,
-      final ProtocolContext<Void> protocolContext,
-      final ProtocolSchedule<Void> protocolSchedule,
-      final Function<Long, Long> gasLimitCalculator,
-      final EthHashSolver nonceSolver,
-      final Wei minTransactionGasPrice,
-      final Double minBlockOccupancyRatio,
-      final BlockHeader parentHeader) {
-    super(
-        coinbase,
-        extraDataCalculator,
-        pendingTransactions,
-        protocolContext,
-        protocolSchedule,
-        gasLimitCalculator,
-        minTransactionGasPrice,
-        coinbase,
-        minBlockOccupancyRatio,
-        parentHeader);
+  public EthHashBlockCreator(final Address coinbase,
+                             final ExtraDataCalculator extraDataCalculator,
+                             final PendingTransactions pendingTransactions,
+                             final ProtocolContext protocolContext,
+                             final ProtocolSchedule protocolSchedule,
+                             final Function<Long, Long> gasLimitCalculator,
+                             final EthHashSolver nonceSolver,
+                             final Wei minTransactionGasPrice,
+                             final Double minBlockOccupancyRatio,
+                             final BlockHeader parentHeader) {
+    super(coinbase, extraDataCalculator, pendingTransactions, protocolContext,
+          protocolSchedule, gasLimitCalculator, minTransactionGasPrice,
+          coinbase, minBlockOccupancyRatio, parentHeader);
 
     this.nonceSolver = nonceSolver;
   }
 
   @Override
-  protected BlockHeader createFinalBlockHeader(final SealableBlockHeader sealableBlockHeader) {
-    final EthHashSolverInputs workDefinition = generateNonceSolverInputs(sealableBlockHeader);
+  protected BlockHeader
+  createFinalBlockHeader(final SealableBlockHeader sealableBlockHeader) {
+    final EthHashSolverInputs workDefinition =
+        generateNonceSolverInputs(sealableBlockHeader);
     final EthHashSolution solution;
     try {
-      solution =
-          nonceSolver.solveFor(EthHashSolver.EthHashSolverJob.createFromInputs(workDefinition));
+      solution = nonceSolver.solveFor(
+          EthHashSolver.EthHashSolverJob.createFromInputs(workDefinition));
     } catch (final InterruptedException ex) {
       throw new CancellationException();
     } catch (final ExecutionException ex) {
-      throw new RuntimeException("Failure occurred during nonce calculations.", ex);
+      throw new RuntimeException("Failure occurred during nonce calculations.",
+                                 ex);
     }
     return BlockHeaderBuilder.create()
         .populateFrom(sealableBlockHeader)
@@ -85,16 +80,18 @@ public class EthHashBlockCreator extends AbstractBlockCreator<Void> {
         .buildBlockHeader();
   }
 
-  private EthHashSolverInputs generateNonceSolverInputs(
-      final SealableBlockHeader sealableBlockHeader) {
-    final BigInteger difficulty = sealableBlockHeader.getDifficulty().toBigInteger();
+  private EthHashSolverInputs
+  generateNonceSolverInputs(final SealableBlockHeader sealableBlockHeader) {
+    final BigInteger difficulty =
+        sealableBlockHeader.getDifficulty().toBigInteger();
     final UInt256 target =
         difficulty.equals(BigInteger.ONE)
             ? UInt256.MAX_VALUE
             : UInt256.valueOf(EthHash.TARGET_UPPER_BOUND.divide(difficulty));
 
-    return new EthHashSolverInputs(
-        target, EthHash.hashHeader(sealableBlockHeader), sealableBlockHeader.getNumber());
+    return new EthHashSolverInputs(target,
+                                   EthHash.hashHeader(sealableBlockHeader),
+                                   sealableBlockHeader.getNumber());
   }
 
   public Optional<EthHashSolverInputs> getWorkDefinition() {

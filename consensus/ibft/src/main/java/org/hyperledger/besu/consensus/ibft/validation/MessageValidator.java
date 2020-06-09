@@ -1,21 +1,26 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.consensus.ibft.validation;
 
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
-import org.hyperledger.besu.consensus.ibft.IbftContext;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Commit;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Prepare;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Proposal;
@@ -26,26 +31,21 @@ import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
 
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class MessageValidator {
 
   private static final Logger LOG = LogManager.getLogger();
 
   private final SignedDataValidator signedDataValidator;
   private final ProposalBlockConsistencyValidator proposalConsistencyValidator;
-  private final BlockValidator<IbftContext> blockValidator;
-  private final ProtocolContext<IbftContext> protocolContext;
+  private final BlockValidator blockValidator;
+  private final ProtocolContext protocolContext;
   private final RoundChangeCertificateValidator roundChangeCertificateValidator;
 
   public MessageValidator(
       final SignedDataValidator signedDataValidator,
       final ProposalBlockConsistencyValidator proposalConsistencyValidator,
-      final BlockValidator<IbftContext> blockValidator,
-      final ProtocolContext<IbftContext> protocolContext,
+      final BlockValidator blockValidator,
+      final ProtocolContext protocolContext,
       final RoundChangeCertificateValidator roundChangeCertificateValidator) {
     this.signedDataValidator = signedDataValidator;
     this.proposalConsistencyValidator = proposalConsistencyValidator;
@@ -57,7 +57,8 @@ public class MessageValidator {
   public boolean validateProposal(final Proposal msg) {
 
     if (!signedDataValidator.validateProposal(msg.getSignedPayload())) {
-      LOG.info("Illegal Proposal message, embedded signed data failed validation");
+      LOG.info(
+          "Illegal Proposal message, embedded signed data failed validation");
       return false;
     }
 
@@ -66,7 +67,8 @@ public class MessageValidator {
     }
 
     if (!validateProposalAndRoundChangeAreConsistent(msg)) {
-      LOG.info("Illegal Proposal message, embedded roundChange does not match proposal.");
+      LOG.info(
+          "Illegal Proposal message, embedded roundChange does not match proposal.");
       return false;
     }
 
@@ -76,8 +78,9 @@ public class MessageValidator {
 
   private boolean validateBlock(final Block block) {
     final Optional<BlockProcessingOutputs> validationResult =
-        blockValidator.validateAndProcessBlock(
-            protocolContext, block, HeaderValidationMode.LIGHT, HeaderValidationMode.FULL);
+        blockValidator.validateAndProcessBlock(protocolContext, block,
+                                               HeaderValidationMode.LIGHT,
+                                               HeaderValidationMode.FULL);
 
     if (!validationResult.isPresent()) {
       LOG.info("Invalid Proposal message, block did not pass validation.");
@@ -87,17 +90,21 @@ public class MessageValidator {
     return true;
   }
 
-  private boolean validateProposalAndRoundChangeAreConsistent(final Proposal proposal) {
-    final ConsensusRoundIdentifier proposalRoundIdentifier = proposal.getRoundIdentifier();
+  private boolean
+  validateProposalAndRoundChangeAreConsistent(final Proposal proposal) {
+    final ConsensusRoundIdentifier proposalRoundIdentifier =
+        proposal.getRoundIdentifier();
 
     if (proposalRoundIdentifier.getRoundNumber() == 0) {
       return validateRoundZeroProposalHasNoRoundChangeCertificate(proposal);
     } else {
-      return validateRoundChangeCertificateIsValidAndMatchesProposedBlock(proposal);
+      return validateRoundChangeCertificateIsValidAndMatchesProposedBlock(
+          proposal);
     }
   }
 
-  private boolean validateRoundZeroProposalHasNoRoundChangeCertificate(final Proposal proposal) {
+  private boolean validateRoundZeroProposalHasNoRoundChangeCertificate(
+      final Proposal proposal) {
     if (proposal.getRoundChangeCertificate().isPresent()) {
       LOG.info(
           "Illegal Proposal message, round-0 proposal must not contain a round change certificate.");
@@ -120,14 +127,17 @@ public class MessageValidator {
 
     final RoundChangeCertificate roundChangeCert = roundChangeCertificate.get();
 
-    if (!roundChangeCertificateValidator.validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(
-        proposal.getRoundIdentifier(), roundChangeCert)) {
-      LOG.info("Illegal Proposal message, embedded RoundChangeCertificate is not self-consistent");
+    if (!roundChangeCertificateValidator
+             .validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(
+                 proposal.getRoundIdentifier(), roundChangeCert)) {
+      LOG.info(
+          "Illegal Proposal message, embedded RoundChangeCertificate is not self-consistent");
       return false;
     }
 
-    if (!roundChangeCertificateValidator.validateProposalMessageMatchesLatestPrepareCertificate(
-        roundChangeCert, proposal.getBlock())) {
+    if (!roundChangeCertificateValidator
+             .validateProposalMessageMatchesLatestPrepareCertificate(
+                 roundChangeCert, proposal.getBlock())) {
       LOG.info(
           "Illegal Proposal message, piggybacked block does not match latest PrepareCertificate");
       return false;

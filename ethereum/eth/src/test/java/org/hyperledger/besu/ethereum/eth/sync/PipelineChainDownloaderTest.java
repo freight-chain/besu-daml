@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,6 +29,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
@@ -36,13 +44,6 @@ import org.hyperledger.besu.ethereum.eth.sync.tasks.exceptions.InvalidBlockExcep
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.services.pipeline.Pipeline;
-
-import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +53,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class PipelineChainDownloaderTest {
 
-  @Mock private SyncTargetManager<Void> syncTargetManager;
+  @Mock private SyncTargetManager syncTargetManager;
   @Mock private DownloadPipelineFactory downloadPipelineFactory;
   @Mock private EthScheduler scheduler;
   @Mock private Pipeline<?> downloadPipeline;
@@ -60,27 +61,25 @@ public class PipelineChainDownloaderTest {
   @Mock private EthPeer peer1;
   @Mock private EthPeer peer2;
   @Mock private SyncState syncState;
-  private final BlockHeader commonAncestor = new BlockHeaderTestFixture().buildHeader();
+  private final BlockHeader commonAncestor =
+      new BlockHeaderTestFixture().buildHeader();
   private SyncTarget syncTarget;
-  private PipelineChainDownloader<Void> chainDownloader;
+  private PipelineChainDownloader chainDownloader;
 
   @Before
   public void setUp() {
     syncTarget = new SyncTarget(peer1, commonAncestor);
-    chainDownloader =
-        new PipelineChainDownloader<>(
-            syncState,
-            syncTargetManager,
-            downloadPipelineFactory,
-            scheduler,
-            new NoOpMetricsSystem());
+    chainDownloader = new PipelineChainDownloader(
+        syncState, syncTargetManager, downloadPipelineFactory, scheduler,
+        new NoOpMetricsSystem());
 
     immediatelyCompletePauseAfterError();
   }
 
   @Test
   public void shouldSelectSyncTargetWhenStarted() {
-    when(syncTargetManager.findSyncTarget(Optional.empty())).thenReturn(new CompletableFuture<>());
+    when(syncTargetManager.findSyncTarget(Optional.empty()))
+        .thenReturn(new CompletableFuture<>());
     chainDownloader.start();
 
     verify(syncTargetManager).findSyncTarget(Optional.empty());
@@ -88,25 +87,32 @@ public class PipelineChainDownloaderTest {
 
   @Test
   public void shouldStartChainDownloadWhenTargetSelected() {
-    final CompletableFuture<SyncTarget> selectTargetFuture = new CompletableFuture<>();
-    when(syncTargetManager.findSyncTarget(Optional.empty())).thenReturn(selectTargetFuture);
+    final CompletableFuture<SyncTarget> selectTargetFuture =
+        new CompletableFuture<>();
+    when(syncTargetManager.findSyncTarget(Optional.empty()))
+        .thenReturn(selectTargetFuture);
     expectPipelineCreation(syncTarget, downloadPipeline);
-    when(scheduler.startPipeline(downloadPipeline)).thenReturn(new CompletableFuture<>());
+    when(scheduler.startPipeline(downloadPipeline))
+        .thenReturn(new CompletableFuture<>());
     chainDownloader.start();
     verifyZeroInteractions(downloadPipelineFactory);
 
     selectTargetFuture.complete(syncTarget);
 
-    verify(downloadPipelineFactory).createDownloadPipelineForSyncTarget(syncTarget);
+    verify(downloadPipelineFactory)
+        .createDownloadPipelineForSyncTarget(syncTarget);
     verify(scheduler).startPipeline(downloadPipeline);
   }
 
   @Test
   public void shouldUpdateSyncStateWhenTargetSelected() {
-    final CompletableFuture<SyncTarget> selectTargetFuture = new CompletableFuture<>();
-    when(syncTargetManager.findSyncTarget(Optional.empty())).thenReturn(selectTargetFuture);
+    final CompletableFuture<SyncTarget> selectTargetFuture =
+        new CompletableFuture<>();
+    when(syncTargetManager.findSyncTarget(Optional.empty()))
+        .thenReturn(selectTargetFuture);
     expectPipelineCreation(syncTarget, downloadPipeline);
-    when(scheduler.startPipeline(downloadPipeline)).thenReturn(new CompletableFuture<>());
+    when(scheduler.startPipeline(downloadPipeline))
+        .thenReturn(new CompletableFuture<>());
     chainDownloader.start();
     verifyZeroInteractions(downloadPipelineFactory);
 
@@ -116,8 +122,10 @@ public class PipelineChainDownloaderTest {
   }
 
   @Test
-  public void shouldRetryWhenSyncTargetSelectionFailsAndSyncTargetManagerShouldContinue() {
-    final CompletableFuture<SyncTarget> selectTargetFuture = new CompletableFuture<>();
+  public void
+  shouldRetryWhenSyncTargetSelectionFailsAndSyncTargetManagerShouldContinue() {
+    final CompletableFuture<SyncTarget> selectTargetFuture =
+        new CompletableFuture<>();
     when(syncTargetManager.shouldContinueDownloading()).thenReturn(true);
     when(syncTargetManager.findSyncTarget(Optional.empty()))
         .thenReturn(selectTargetFuture)
@@ -132,8 +140,10 @@ public class PipelineChainDownloaderTest {
   }
 
   @Test
-  public void shouldBeCompleteWhenSyncTargetSelectionFailsAndSyncTargetManagerShouldNotContinue() {
-    final CompletableFuture<SyncTarget> selectTargetFuture = new CompletableFuture<>();
+  public void
+  shouldBeCompleteWhenSyncTargetSelectionFailsAndSyncTargetManagerShouldNotContinue() {
+    final CompletableFuture<SyncTarget> selectTargetFuture =
+        new CompletableFuture<>();
     when(syncTargetManager.shouldContinueDownloading()).thenReturn(false);
     when(syncTargetManager.findSyncTarget(Optional.empty()))
         .thenReturn(selectTargetFuture)
@@ -149,8 +159,10 @@ public class PipelineChainDownloaderTest {
   }
 
   @Test
-  public void shouldBeCompleteWhenPipelineCompletesAndSyncTargetManagerShouldNotContinue() {
-    final CompletableFuture<Void> pipelineFuture = expectPipelineStarted(syncTarget);
+  public void
+  shouldBeCompleteWhenPipelineCompletesAndSyncTargetManagerShouldNotContinue() {
+    final CompletableFuture<Void> pipelineFuture =
+        expectPipelineStarted(syncTarget);
     final CompletableFuture<Void> result = chainDownloader.start();
 
     verify(syncTargetManager).findSyncTarget(Optional.empty());
@@ -165,9 +177,11 @@ public class PipelineChainDownloaderTest {
   }
 
   @Test
-  public void shouldSelectNewSyncTargetWhenPipelineCompletesIfSyncTargetManagerShouldContinue() {
+  public void
+  shouldSelectNewSyncTargetWhenPipelineCompletesIfSyncTargetManagerShouldContinue() {
     when(syncTargetManager.shouldContinueDownloading()).thenReturn(true);
-    final CompletableFuture<Void> pipelineFuture = expectPipelineStarted(syncTarget);
+    final CompletableFuture<Void> pipelineFuture =
+        expectPipelineStarted(syncTarget);
 
     final CompletableFuture<Void> result = chainDownloader.start();
 
@@ -188,17 +202,21 @@ public class PipelineChainDownloaderTest {
   public void shouldNotNestExceptionHandling() {
     when(syncTargetManager.shouldContinueDownloading())
         .thenReturn(true) // Allow continuing after first successful download
-        .thenReturn(false); // But not after finding the second sync target fails
+        .thenReturn(
+            false); // But not after finding the second sync target fails
 
-    final CompletableFuture<SyncTarget> findSecondSyncTargetFuture = new CompletableFuture<>();
-    final CompletableFuture<Void> pipelineFuture = expectPipelineStarted(syncTarget);
+    final CompletableFuture<SyncTarget> findSecondSyncTargetFuture =
+        new CompletableFuture<>();
+    final CompletableFuture<Void> pipelineFuture =
+        expectPipelineStarted(syncTarget);
 
     final CompletableFuture<Void> result = chainDownloader.start();
 
     verify(syncTargetManager).findSyncTarget(Optional.empty());
 
     // Setup expectation for second call
-    when(syncTargetManager.findSyncTarget(Optional.empty())).thenReturn(findSecondSyncTargetFuture);
+    when(syncTargetManager.findSyncTarget(Optional.empty()))
+        .thenReturn(findSecondSyncTargetFuture);
 
     pipelineFuture.complete(null);
     assertThat(result).isNotDone();
@@ -211,16 +229,21 @@ public class PipelineChainDownloaderTest {
 
     assertExceptionallyCompletedWith(result, exception);
     // Should only need to check if it should continue twice.
-    // We'll wind up doing this check more than necessary if we keep wrapping additional exception
-    // handlers when restarting the sequence which wastes memory.
+    // We'll wind up doing this check more than necessary if we keep wrapping
+    // additional exception handlers when restarting the sequence which wastes
+    // memory.
     verify(syncTargetManager, times(2)).shouldContinueDownloading();
   }
 
   @Test
   public void shouldNotStartDownloadIfCancelledWhileSelectingSyncTarget() {
-    final CompletableFuture<SyncTarget> selectSyncTargetFuture = new CompletableFuture<>();
-    lenient().when(syncTargetManager.shouldContinueDownloading()).thenReturn(true);
-    when(syncTargetManager.findSyncTarget(Optional.empty())).thenReturn(selectSyncTargetFuture);
+    final CompletableFuture<SyncTarget> selectSyncTargetFuture =
+        new CompletableFuture<>();
+    lenient()
+        .when(syncTargetManager.shouldContinueDownloading())
+        .thenReturn(true);
+    when(syncTargetManager.findSyncTarget(Optional.empty()))
+        .thenReturn(selectSyncTargetFuture);
 
     final CompletableFuture<Void> result = chainDownloader.start();
     verify(syncTargetManager).findSyncTarget(Optional.empty());
@@ -236,12 +259,16 @@ public class PipelineChainDownloaderTest {
 
   @Test
   public void shouldAbortPipelineIfCancelledAfterDownloadStarts() {
-    lenient().when(syncTargetManager.shouldContinueDownloading()).thenReturn(true);
-    final CompletableFuture<Void> pipelineFuture = expectPipelineStarted(syncTarget);
+    lenient()
+        .when(syncTargetManager.shouldContinueDownloading())
+        .thenReturn(true);
+    final CompletableFuture<Void> pipelineFuture =
+        expectPipelineStarted(syncTarget);
 
     final CompletableFuture<Void> result = chainDownloader.start();
     verify(syncTargetManager).findSyncTarget(Optional.empty());
-    verify(downloadPipelineFactory).createDownloadPipelineForSyncTarget(syncTarget);
+    verify(downloadPipelineFactory)
+        .createDownloadPipelineForSyncTarget(syncTarget);
 
     chainDownloader.cancel();
     // Pipeline is aborted immediately.
@@ -250,35 +277,41 @@ public class PipelineChainDownloaderTest {
     assertThat(result).isNotDone();
 
     // And then things are complete when the pipeline is actually complete.
-    pipelineFuture.completeExceptionally(new CancellationException("Pipeline aborted"));
+    pipelineFuture.completeExceptionally(
+        new CancellationException("Pipeline aborted"));
     assertCancelled(result);
   }
 
   @Test
-  public void shouldDisconnectSyncTargetOnInvalidBlockException_finishedDownloading_cancelled() {
+  public void
+  shouldDisconnectSyncTargetOnInvalidBlockException_finishedDownloading_cancelled() {
     testInvalidBlockHandling(true, true);
   }
 
   @Test
   public void
-      shouldDisconnectSyncTargetOnInvalidBlockException_notFinishedDownloading_notCancelled() {
+  shouldDisconnectSyncTargetOnInvalidBlockException_notFinishedDownloading_notCancelled() {
     testInvalidBlockHandling(false, false);
   }
 
   @Test
-  public void shouldDisconnectSyncTargetOnInvalidBlockException_finishedDownloading_notCancelled() {
+  public void
+  shouldDisconnectSyncTargetOnInvalidBlockException_finishedDownloading_notCancelled() {
     testInvalidBlockHandling(true, false);
   }
 
   @Test
-  public void shouldDisconnectSyncTargetOnInvalidBlockException_notFinishedDownloading_cancelled() {
+  public void
+  shouldDisconnectSyncTargetOnInvalidBlockException_notFinishedDownloading_cancelled() {
     testInvalidBlockHandling(false, true);
   }
 
-  public void testInvalidBlockHandling(
-      final boolean isFinishedDownloading, final boolean isCancelled) {
-    final CompletableFuture<SyncTarget> selectTargetFuture = new CompletableFuture<>();
-    when(syncTargetManager.shouldContinueDownloading()).thenReturn(isFinishedDownloading);
+  public void testInvalidBlockHandling(final boolean isFinishedDownloading,
+                                       final boolean isCancelled) {
+    final CompletableFuture<SyncTarget> selectTargetFuture =
+        new CompletableFuture<>();
+    when(syncTargetManager.shouldContinueDownloading())
+        .thenReturn(isFinishedDownloading);
     when(syncTargetManager.findSyncTarget(Optional.empty()))
         .thenReturn(selectTargetFuture)
         .thenReturn(new CompletableFuture<>());
@@ -288,17 +321,21 @@ public class PipelineChainDownloaderTest {
     if (isCancelled) {
       chainDownloader.cancel();
     }
-    selectTargetFuture.completeExceptionally(new InvalidBlockException("", 1, null));
+    selectTargetFuture.completeExceptionally(
+        new InvalidBlockException("", 1, null));
 
-    verify(syncState, times(1)).disconnectSyncTarget(DisconnectReason.BREACH_OF_PROTOCOL);
+    verify(syncState, times(1))
+        .disconnectSyncTarget(DisconnectReason.BREACH_OF_PROTOCOL);
   }
 
-  private CompletableFuture<Void> expectPipelineStarted(final SyncTarget syncTarget) {
+  private CompletableFuture<Void>
+  expectPipelineStarted(final SyncTarget syncTarget) {
     return expectPipelineStarted(syncTarget, downloadPipeline);
   }
 
-  private CompletableFuture<Void> expectPipelineStarted(
-      final SyncTarget syncTarget, final Pipeline<?> pipeline) {
+  private CompletableFuture<Void>
+  expectPipelineStarted(final SyncTarget syncTarget,
+                        final Pipeline<?> pipeline) {
     final CompletableFuture<Void> pipelineFuture = new CompletableFuture<>();
     when(syncTargetManager.findSyncTarget(Optional.empty()))
         .thenReturn(completedFuture(syncTarget));
@@ -307,16 +344,22 @@ public class PipelineChainDownloaderTest {
     return pipelineFuture;
   }
 
-  @SuppressWarnings("unchecked") // Mockito really doesn't like Pipeline<?>
-  private void expectPipelineCreation(final SyncTarget syncTarget, final Pipeline<?> pipeline) {
-    when(downloadPipelineFactory.createDownloadPipelineForSyncTarget(syncTarget))
-        .thenReturn((Pipeline) pipeline);
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  // Mockito really doesn't like Pipeline<?>
+  private void expectPipelineCreation(final SyncTarget syncTarget,
+                                      final Pipeline<?> pipeline) {
+    when(
+        downloadPipelineFactory.createDownloadPipelineForSyncTarget(syncTarget))
+        .thenReturn((Pipeline)pipeline);
   }
 
-  private void assertExceptionallyCompletedWith(
-      final CompletableFuture<?> future, final Throwable error) {
+  private void
+  assertExceptionallyCompletedWith(final CompletableFuture<?> future,
+                                   final Throwable error) {
     assertThat(future).isCompletedExceptionally();
-    assertThatThrownBy(future::get).isInstanceOf(ExecutionException.class).hasRootCause(error);
+    assertThatThrownBy(future::get)
+        .isInstanceOf(ExecutionException.class)
+        .hasRootCause(error);
   }
 
   private void assertCancelled(final CompletableFuture<?> future) {
@@ -329,7 +372,10 @@ public class PipelineChainDownloaderTest {
   @SuppressWarnings("unchecked")
   private void immediatelyCompletePauseAfterError() {
     when(scheduler.scheduleFutureTask(
-            any(Supplier.class), same(PipelineChainDownloader.PAUSE_AFTER_ERROR_DURATION)))
-        .then(invocation -> ((Supplier<CompletableFuture<?>>) invocation.getArgument(0)).get());
+             any(Supplier.class),
+             same(PipelineChainDownloader.PAUSE_AFTER_ERROR_DURATION)))
+        .then(invocation
+              -> ((Supplier<CompletableFuture<?>>)invocation.getArgument(0))
+                     .get());
   }
 }

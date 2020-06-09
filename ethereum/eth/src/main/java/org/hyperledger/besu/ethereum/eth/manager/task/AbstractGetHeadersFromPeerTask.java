@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,12 @@ package org.hyperledger.besu.ethereum.eth.manager.task;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
@@ -26,31 +35,20 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /** Retrieves a sequence of headers from a peer. */
 public abstract class AbstractGetHeadersFromPeerTask
     extends AbstractPeerRequestTask<List<BlockHeader>> {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   protected final int count;
   protected final int skip;
   protected final boolean reverse;
 
   protected AbstractGetHeadersFromPeerTask(
-      final ProtocolSchedule<?> protocolSchedule,
-      final EthContext ethContext,
-      final int count,
-      final int skip,
-      final boolean reverse,
+      final ProtocolSchedule protocolSchedule, final EthContext ethContext,
+      final int count, final int skip, final boolean reverse,
       final MetricsSystem metricsSystem) {
     super(ethContext, EthPV62.GET_BLOCK_HEADERS, metricsSystem);
     checkArgument(count > 0);
@@ -61,17 +59,21 @@ public abstract class AbstractGetHeadersFromPeerTask
   }
 
   @Override
-  protected Optional<List<BlockHeader>> processResponse(
-      final boolean streamClosed, final MessageData message, final EthPeer peer) {
+  protected Optional<List<BlockHeader>>
+  processResponse(final boolean streamClosed, final MessageData message,
+                  final EthPeer peer) {
     if (streamClosed) {
-      // All outstanding requests have been responded to and we still haven't found the response
-      // we wanted. It must have been empty or contain data that didn't match.
+      // All outstanding requests have been responded to and we still haven't
+      // found the response we wanted. It must have been empty or contain data
+      // that didn't match.
       peer.recordUselessResponse("headers");
       return Optional.of(Collections.emptyList());
     }
 
-    final BlockHeadersMessage headersMessage = BlockHeadersMessage.readFrom(message);
-    final List<BlockHeader> headers = headersMessage.getHeaders(protocolSchedule);
+    final BlockHeadersMessage headersMessage =
+        BlockHeadersMessage.readFrom(message);
+    final List<BlockHeader> headers =
+        headersMessage.getHeaders(protocolSchedule);
     if (headers.isEmpty()) {
       // Message contains no data - nothing to do
       return Optional.empty();
@@ -105,7 +107,8 @@ public abstract class AbstractGetHeadersFromPeerTask
           LOG.debug(
               "Sequential headers must form a chain through hashes, disconnecting peer: {}",
               peer.toString());
-          peer.disconnect(DisconnectMessage.DisconnectReason.BREACH_OF_PROTOCOL);
+          peer.disconnect(
+              DisconnectMessage.DisconnectReason.BREACH_OF_PROTOCOL);
           return Optional.empty();
         }
       }
@@ -113,7 +116,8 @@ public abstract class AbstractGetHeadersFromPeerTask
       headersList.add(header);
     }
 
-    LOG.debug("Received {} of {} headers requested from peer.", headersList.size(), count);
+    LOG.debug("Received {} of {} headers requested from peer.",
+              headersList.size(), count);
     return Optional.of(headersList);
   }
 

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,9 +21,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.cli.util.TomlConfigFileDefaultProvider;
-import org.hyperledger.besu.ethereum.core.Wei;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +28,8 @@ import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-
+import org.hyperledger.besu.cli.util.TomlConfigFileDefaultProvider;
+import org.hyperledger.besu.ethereum.core.Wei;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -61,7 +62,7 @@ public class TomlConfigFileDefaultProviderTest {
 
     final File tempConfigFile = temp.newFile("config.toml");
     try (final BufferedWriter fileWriter =
-        Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
+             Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
 
       fileWriter.write("a-short-option='123'");
       fileWriter.newLine();
@@ -72,21 +73,24 @@ public class TomlConfigFileDefaultProviderTest {
           new TomlConfigFileDefaultProvider(mockCommandLine, tempConfigFile);
 
       // this option must be found in config
-      assertThat(providerUnderTest.defaultValue(OptionSpec.builder("a-short-option").build()))
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("a-short-option").build()))
           .isEqualTo("123");
 
-      // this option must be found in config as one of its names is present in the file.
-      // also this is the shortest one.
+      // this option must be found in config as one of its names is present in
+      // the file. also this is the shortest one.
       assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("a-short-option", "another-name-for-the-option").build()))
+          providerUnderTest.defaultValue(
+              OptionSpec
+                  .builder("a-short-option", "another-name-for-the-option")
+                  .build()))
           .isEqualTo("123");
 
-      // this option must be found in config as one of its names is present in the file.
-      // also this is the longest one.
+      // this option must be found in config as one of its names is present in
+      // the file. also this is the longest one.
       assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("l", "longer", "a-longer-option").build()))
+          providerUnderTest.defaultValue(
+              OptionSpec.builder("l", "longer", "a-longer-option").build()))
           .isEqualTo("1234");
     }
   }
@@ -101,12 +105,13 @@ public class TomlConfigFileDefaultProviderTest {
     validOptionsMap.put("--an-int-value-option", null);
     validOptionsMap.put("--a-wei-value-option", null);
     validOptionsMap.put("--a-string-value-option", null);
+    validOptionsMap.put("--a-nested-multi-value-option", null);
 
     when(mockCommandSpec.optionsMap()).thenReturn(validOptionsMap);
 
     final File tempConfigFile = temp.newFile("config.toml");
     try (final BufferedWriter fileWriter =
-        Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
+             Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
 
       fileWriter.write("a-boolean-option=true");
       fileWriter.newLine();
@@ -119,40 +124,54 @@ public class TomlConfigFileDefaultProviderTest {
       fileWriter.write("a-wei-value-option=1");
       fileWriter.newLine();
       fileWriter.write("a-string-value-option='my value'");
+      fileWriter.newLine();
+      fileWriter.write(
+          "a-nested-multi-value-option=[ [\"value1\", \"value2\"], [\"value3\", \"value4\"] ]");
       fileWriter.flush();
 
       final TomlConfigFileDefaultProvider providerUnderTest =
           new TomlConfigFileDefaultProvider(mockCommandLine, tempConfigFile);
 
       assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("a-boolean-option").type(Boolean.class).build()))
+          providerUnderTest.defaultValue(OptionSpec.builder("a-boolean-option")
+                                             .type(Boolean.class)
+                                             .build()))
           .isEqualTo("true");
 
-      assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("another-boolean-option").type(Boolean.class).build()))
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("another-boolean-option")
+                         .type(Boolean.class)
+                         .build()))
           .isEqualTo("false");
 
-      assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("a-multi-value-option").type(Collection.class).build()))
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("a-multi-value-option")
+                         .type(Collection.class)
+                         .build()))
           .isEqualTo("value1,value2");
 
-      assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("an-int-value-option").type(Integer.class).build()))
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("an-int-value-option")
+                         .type(Integer.class)
+                         .build()))
           .isEqualTo("123");
 
       assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("a-wei-value-option").type(Wei.class).build()))
+          providerUnderTest.defaultValue(
+              OptionSpec.builder("a-wei-value-option").type(Wei.class).build()))
           .isEqualTo("1");
 
-      assertThat(
-              providerUnderTest.defaultValue(
-                  OptionSpec.builder("a-string-value-option").type(String.class).build()))
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("a-string-value-option")
+                         .type(String.class)
+                         .build()))
           .isEqualTo("my value");
+
+      assertThat(providerUnderTest.defaultValue(
+                     OptionSpec.builder("a-nested-multi-value-option")
+                         .type(Collection.class)
+                         .build()))
+          .isEqualTo("[value1,value2],[value3,value4]");
     }
   }
 
@@ -162,12 +181,14 @@ public class TomlConfigFileDefaultProviderTest {
     exceptionRule.expect(ParameterException.class);
 
     final File nonExistingFile = new File("doesnt.exit");
-    exceptionRule.expectMessage("Unable to read TOML configuration, file not found.");
+    exceptionRule.expectMessage(
+        "Unable to read TOML configuration, file not found.");
 
     final TomlConfigFileDefaultProvider providerUnderTest =
         new TomlConfigFileDefaultProvider(mockCommandLine, nonExistingFile);
 
-    providerUnderTest.defaultValue(OptionSpec.builder("an-option").type(String.class).build());
+    providerUnderTest.defaultValue(
+        OptionSpec.builder("an-option").type(String.class).build());
   }
 
   @Test
@@ -181,7 +202,8 @@ public class TomlConfigFileDefaultProviderTest {
     final TomlConfigFileDefaultProvider providerUnderTest =
         new TomlConfigFileDefaultProvider(mockCommandLine, tempConfigFile);
 
-    providerUnderTest.defaultValue(OptionSpec.builder("an-option").type(String.class).build());
+    providerUnderTest.defaultValue(
+        OptionSpec.builder("an-option").type(String.class).build());
   }
 
   @Test
@@ -190,11 +212,12 @@ public class TomlConfigFileDefaultProviderTest {
     exceptionRule.expect(ParameterException.class);
     exceptionRule.expectMessage(
         "Invalid TOML configuration: Unexpected '=', expected ', \", ''', "
-            + "\"\"\", a number, a boolean, a date/time, an array, or a table (line 1, column 19)");
+        +
+        "\"\"\", a number, a boolean, a date/time, an array, or a table (line 1, column 19)");
 
     final File tempConfigFile = temp.newFile("config.toml");
     try (final BufferedWriter fileWriter =
-        Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
+             Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
 
       fileWriter.write("an-invalid-syntax=======....");
       fileWriter.flush();
@@ -202,7 +225,8 @@ public class TomlConfigFileDefaultProviderTest {
       final TomlConfigFileDefaultProvider providerUnderTest =
           new TomlConfigFileDefaultProvider(mockCommandLine, tempConfigFile);
 
-      providerUnderTest.defaultValue(OptionSpec.builder("an-option").type(String.class).build());
+      providerUnderTest.defaultValue(
+          OptionSpec.builder("an-option").type(String.class).build());
     }
   }
 
@@ -210,7 +234,8 @@ public class TomlConfigFileDefaultProviderTest {
   public void unknownOptionMustThrow() throws IOException {
 
     exceptionRule.expect(ParameterException.class);
-    exceptionRule.expectMessage("Unknown option in TOML configuration file: invalid_option");
+    exceptionRule.expectMessage(
+        "Unknown option in TOML configuration file: invalid_option");
 
     when(mockCommandLine.getCommandSpec()).thenReturn(mockCommandSpec);
     Map<String, OptionSpec> validOptionsMap = new HashMap<>();
@@ -218,7 +243,7 @@ public class TomlConfigFileDefaultProviderTest {
 
     final File tempConfigFile = temp.newFile("config.toml");
     try (final BufferedWriter fileWriter =
-        Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
+             Files.newBufferedWriter(tempConfigFile.toPath(), UTF_8)) {
 
       fileWriter.write("invalid_option=true");
       fileWriter.flush();
@@ -226,7 +251,8 @@ public class TomlConfigFileDefaultProviderTest {
       final TomlConfigFileDefaultProvider providerUnderTest =
           new TomlConfigFileDefaultProvider(mockCommandLine, tempConfigFile);
 
-      providerUnderTest.defaultValue(OptionSpec.builder("an-option").type(String.class).build());
+      providerUnderTest.defaultValue(
+          OptionSpec.builder("an-option").type(String.class).build());
     }
   }
 }

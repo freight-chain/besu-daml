@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,11 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
@@ -26,18 +34,11 @@ import org.hyperledger.besu.ethereum.eth.manager.task.GetHeadersFromPeerByHashTa
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public class CheckpointHeaderFetcher {
   private static final Logger LOG = LogManager.getLogger();
 
   private final SynchronizerConfiguration syncConfig;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final EthContext ethContext;
   // The checkpoint we're aiming to reach at the end of this sync.
   private final Optional<BlockHeader> finalCheckpointHeader;
@@ -45,8 +46,7 @@ public class CheckpointHeaderFetcher {
 
   public CheckpointHeaderFetcher(
       final SynchronizerConfiguration syncConfig,
-      final ProtocolSchedule<?> protocolSchedule,
-      final EthContext ethContext,
+      final ProtocolSchedule protocolSchedule, final EthContext ethContext,
       final Optional<BlockHeader> finalCheckpointHeader,
       final MetricsSystem metricsSystem) {
     this.syncConfig = syncConfig;
@@ -56,21 +56,25 @@ public class CheckpointHeaderFetcher {
     this.metricsSystem = metricsSystem;
   }
 
-  public CompletableFuture<List<BlockHeader>> getNextCheckpointHeaders(
-      final EthPeer peer, final BlockHeader previousCheckpointHeader) {
+  public CompletableFuture<List<BlockHeader>>
+  getNextCheckpointHeaders(final EthPeer peer,
+                           final BlockHeader previousCheckpointHeader) {
     final int skip = syncConfig.getDownloaderChainSegmentSize() - 1;
-    final int maximumHeaderRequestSize = syncConfig.getDownloaderHeaderRequestSize();
+    final int maximumHeaderRequestSize =
+        syncConfig.getDownloaderHeaderRequestSize();
     final long previousCheckpointNumber = previousCheckpointHeader.getNumber();
 
     final int additionalHeaderCount;
     if (finalCheckpointHeader.isPresent()) {
       final BlockHeader targetHeader = finalCheckpointHeader.get();
-      final long blocksUntilTarget = targetHeader.getNumber() - previousCheckpointNumber;
+      final long blocksUntilTarget =
+          targetHeader.getNumber() - previousCheckpointNumber;
       if (blocksUntilTarget <= 0) {
         return completedFuture(emptyList());
       }
       final long maxHeadersToRequest = blocksUntilTarget / (skip + 1);
-      additionalHeaderCount = (int) Math.min(maxHeadersToRequest, maximumHeaderRequestSize);
+      additionalHeaderCount =
+          (int)Math.min(maxHeadersToRequest, maximumHeaderRequestSize);
       if (additionalHeaderCount == 0) {
         return completedFuture(singletonList(targetHeader));
       }
@@ -78,44 +82,40 @@ public class CheckpointHeaderFetcher {
       additionalHeaderCount = maximumHeaderRequestSize;
     }
 
-    return requestHeaders(peer, previousCheckpointHeader, additionalHeaderCount, skip);
+    return requestHeaders(peer, previousCheckpointHeader, additionalHeaderCount,
+                          skip);
   }
 
-  private CompletableFuture<List<BlockHeader>> requestHeaders(
-      final EthPeer peer,
-      final BlockHeader referenceHeader,
-      final int headerCount,
-      final int skip) {
+  private CompletableFuture<List<BlockHeader>>
+  requestHeaders(final EthPeer peer, final BlockHeader referenceHeader,
+                 final int headerCount, final int skip) {
     LOG.debug(
         "Requesting {} checkpoint headers, starting from {}, {} blocks apart",
-        headerCount,
-        referenceHeader.getNumber(),
-        skip);
-    return GetHeadersFromPeerByHashTask.startingAtHash(
-            protocolSchedule,
-            ethContext,
-            referenceHeader.getHash(),
-            referenceHeader.getNumber(),
-            // + 1 because lastHeader will be returned as well.
-            headerCount + 1,
-            skip,
-            metricsSystem)
+        headerCount, referenceHeader.getNumber(), skip);
+    return GetHeadersFromPeerByHashTask
+        .startingAtHash(protocolSchedule, ethContext, referenceHeader.getHash(),
+                        referenceHeader.getNumber(),
+                        // + 1 because lastHeader will be returned as well.
+                        headerCount + 1, skip, metricsSystem)
         .assignPeer(peer)
         .run()
         .thenApply(PeerTaskResult::getResult)
-        .thenApply(headers -> stripExistingCheckpointHeader(referenceHeader, headers));
+        .thenApply(
+            headers -> stripExistingCheckpointHeader(referenceHeader, headers));
   }
 
-  private List<BlockHeader> stripExistingCheckpointHeader(
-      final BlockHeader lastHeader, final List<BlockHeader> headers) {
+  private List<BlockHeader>
+  stripExistingCheckpointHeader(final BlockHeader lastHeader,
+                                final List<BlockHeader> headers) {
     if (!headers.isEmpty() && headers.get(0).equals(lastHeader)) {
       return headers.subList(1, headers.size());
     }
     return headers;
   }
 
-  public boolean nextCheckpointEndsAtChainHead(
-      final EthPeer peer, final BlockHeader previousCheckpointHeader) {
+  public boolean
+  nextCheckpointEndsAtChainHead(final EthPeer peer,
+                                final BlockHeader previousCheckpointHeader) {
     if (finalCheckpointHeader.isPresent()) {
       return false;
     }
