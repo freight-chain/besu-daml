@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,13 @@ package org.hyperledger.besu.ethereum.privacy.storage.migration;
 
 import static org.hyperledger.besu.ethereum.privacy.storage.PrivateStateKeyValueStorage.SCHEMA_VERSION_1_4_0;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -31,38 +41,28 @@ import org.hyperledger.besu.ethereum.privacy.storage.PrivacyGroupHeadBlockMap;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateStateStorage;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes32;
-
 public class PrivateStorageMigration {
 
   private static final Logger LOG = LogManager.getLogger();
 
   private final Blockchain blockchain;
   private final Address privacyPrecompileAddress;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final WorldStateArchive publicWorldStateArchive;
   private final PrivateStateStorage privateStateStorage;
   private final PrivateStateRootResolver privateStateRootResolver;
   private final LegacyPrivateStateStorage legacyPrivateStateStorage;
-  private final Function<ProtocolSpec<?>, PrivateMigrationBlockProcessor>
+  private final Function<ProtocolSpec, PrivateMigrationBlockProcessor>
       privateMigrationBlockProcessorBuilder;
 
   public PrivateStorageMigration(
-      final Blockchain blockchain,
-      final Address privacyPrecompileAddress,
-      final ProtocolSchedule<?> protocolSchedule,
+      final Blockchain blockchain, final Address privacyPrecompileAddress,
+      final ProtocolSchedule protocolSchedule,
       final WorldStateArchive publicWorldStateArchive,
       final PrivateStateStorage privateStateStorage,
       final PrivateStateRootResolver privateStateRootResolver,
       final LegacyPrivateStateStorage legacyPrivateStateStorage,
-      final Function<ProtocolSpec<?>, PrivateMigrationBlockProcessor>
+      final Function<ProtocolSpec, PrivateMigrationBlockProcessor>
           privateMigrationBlockProcessorBuilder) {
     this.privateStateStorage = privateStateStorage;
     this.blockchain = blockchain;
@@ -71,7 +71,8 @@ public class PrivateStorageMigration {
     this.publicWorldStateArchive = publicWorldStateArchive;
     this.privateStateRootResolver = privateStateRootResolver;
     this.legacyPrivateStateStorage = legacyPrivateStateStorage;
-    this.privateMigrationBlockProcessorBuilder = privateMigrationBlockProcessorBuilder;
+    this.privateMigrationBlockProcessorBuilder =
+        privateMigrationBlockProcessorBuilder;
   }
 
   public void migratePrivateStorage() {
@@ -80,26 +81,27 @@ public class PrivateStorageMigration {
 
     LOG.info("Migrating private storage database...");
 
-    for (int blockNumber = 0; blockNumber <= chainHeadBlockNumber; blockNumber++) {
+    for (int blockNumber = 0; blockNumber <= chainHeadBlockNumber;
+         blockNumber++) {
       final Block block =
-          blockchain
-              .getBlockByNumber(blockNumber)
+          blockchain.getBlockByNumber(blockNumber)
               .orElseThrow(PrivateStorageMigrationException::new);
       final Hash blockHash = block.getHash();
       final BlockHeader blockHeader = block.getHeader();
-      LOG.info("Processing block {} ({}/{})", blockHash, blockNumber, chainHeadBlockNumber);
+      LOG.info("Processing block {} ({}/{})", blockHash, blockNumber,
+               chainHeadBlockNumber);
 
       createPrivacyGroupHeadBlockMap(blockHeader);
 
       final int lastPmtIndex = findLastPMTIndexInBlock(block);
       if (lastPmtIndex >= 0) {
-        final ProtocolSpec<?> protocolSpec = protocolSchedule.getByBlockNumber(blockNumber);
+        final ProtocolSpec protocolSpec =
+            protocolSchedule.getByBlockNumber(blockNumber);
         final PrivateMigrationBlockProcessor privateMigrationBlockProcessor =
             privateMigrationBlockProcessorBuilder.apply(protocolSpec);
 
         final MutableWorldState publicWorldState =
-            blockchain
-                .getBlockHeader(blockHeader.getParentHash())
+            blockchain.getBlockHeader(blockHeader.getParentHash())
                 .map(BlockHeader::getStateRoot)
                 .flatMap(publicWorldStateArchive::getMutable)
                 .orElseThrow(PrivateStorageMigrationException::new);
@@ -109,22 +111,28 @@ public class PrivateStorageMigration {
         final List<BlockHeader> ommers = block.getBody().getOmmers();
 
         privateMigrationBlockProcessor.processBlock(
-            blockchain, publicWorldState, blockHeader, transactionsToProcess, ommers);
+            blockchain, publicWorldState, blockHeader, transactionsToProcess,
+            ommers);
       }
     }
 
     if (isResultingPrivateStateRootAtHeadValid()) {
-      privateStateStorage.updater().putDatabaseVersion(SCHEMA_VERSION_1_4_0).commit();
+      privateStateStorage.updater()
+          .putDatabaseVersion(SCHEMA_VERSION_1_4_0)
+          .commit();
     } else {
-      throw new PrivateStorageMigrationException("Inconsistent state root. Please re-sync.");
+      throw new PrivateStorageMigrationException(
+          "Inconsistent state root. Please re-sync.");
     }
 
-    final long migrationDuration = System.currentTimeMillis() - migrationStartTimestamp;
+    final long migrationDuration =
+        System.currentTimeMillis() - migrationStartTimestamp;
     LOG.info("Migration took {} seconds", migrationDuration / 1000.0);
   }
 
   /*
-   Returns the index of the last PMT in the block, or -1 if there are no PMTs in the block.
+   Returns the index of the last PMT in the block, or -1 if there are no PMTs in
+   the block.
   */
   private int findLastPMTIndexInBlock(final Block block) {
     final List<Transaction> txs = block.getBody().getTransactions();
@@ -138,25 +146,29 @@ public class PrivateStorageMigration {
   }
 
   private boolean isPrivacyMarkerTransaction(final Transaction tx) {
-    return tx.getTo().isPresent() && tx.getTo().get().equals(privacyPrecompileAddress);
+    return tx.getTo().isPresent() &&
+        tx.getTo().get().equals(privacyPrecompileAddress);
   }
 
   private boolean isResultingPrivateStateRootAtHeadValid() {
     final Optional<PrivacyGroupHeadBlockMap> privacyGroupHeadBlockMap =
-        privateStateStorage.getPrivacyGroupHeadBlockMap(blockchain.getChainHeadHash());
+        privateStateStorage.getPrivacyGroupHeadBlockMap(
+            blockchain.getChainHeadHash());
     final Set<Bytes32> privacyGroupIds =
-        privacyGroupHeadBlockMap.orElseThrow(PrivateStorageMigrationException::new).keySet();
+        privacyGroupHeadBlockMap
+            .orElseThrow(PrivateStorageMigrationException::new)
+            .keySet();
 
-    privacyGroupIds.forEach(
-        pgId -> {
-          final Optional<Hash> legacyStateRoot = legacyPrivateStateStorage.getLatestStateRoot(pgId);
-          final Hash newStateRoot =
-              privateStateRootResolver.resolveLastStateRoot(pgId, blockchain.getChainHeadHash());
-          if (!newStateRoot.equals(legacyStateRoot.orElse(Hash.EMPTY))) {
-            throw new PrivateStorageMigrationException(
-                "Inconsistent state root. Please delete your database and re-sync your node to avoid inconsistencies in your database.");
-          }
-        });
+    privacyGroupIds.forEach(pgId -> {
+      final Optional<Hash> legacyStateRoot =
+          legacyPrivateStateStorage.getLatestStateRoot(pgId);
+      final Hash newStateRoot = privateStateRootResolver.resolveLastStateRoot(
+          pgId, blockchain.getChainHeadHash());
+      if (!newStateRoot.equals(legacyStateRoot.orElse(Hash.EMPTY))) {
+        throw new PrivateStorageMigrationException(
+            "Inconsistent state root. Please delete your database and re-sync your node to avoid inconsistencies in your database.");
+      }
+    });
 
     return true;
   }
@@ -168,9 +180,9 @@ public class PrivateStorageMigration {
                 .getPrivacyGroupHeadBlockMap(blockHeader.getParentHash())
                 .orElse(PrivacyGroupHeadBlockMap.EMPTY));
 
-    privateStateStorage
-        .updater()
-        .putPrivacyGroupHeadBlockMap(blockHeader.getHash(), privacyGroupHeadBlockHash)
+    privateStateStorage.updater()
+        .putPrivacyGroupHeadBlockMap(blockHeader.getHash(),
+                                     privacyGroupHeadBlockHash)
         .commit();
   }
 }

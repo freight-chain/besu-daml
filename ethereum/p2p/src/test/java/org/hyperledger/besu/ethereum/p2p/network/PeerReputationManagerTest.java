@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,25 +21,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.p2p.peers.DefaultPeer;
 import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissions;
-import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissionsBlacklist;
+import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissionsDenylist;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.PeerInfo;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Test;
 
 public class PeerReputationManagerTest {
   private final Peer localNode = generatePeer();
   private final PeerReputationManager peerReputationManager;
-  private final PeerPermissionsBlacklist blacklist;
+  private final PeerPermissionsDenylist blacklist;
 
   public PeerReputationManagerTest() {
-    blacklist = PeerPermissionsBlacklist.create();
+    blacklist = PeerPermissionsDenylist.create();
     peerReputationManager = new PeerReputationManager(blacklist);
   }
 
@@ -46,7 +48,8 @@ public class PeerReputationManagerTest {
 
     checkPermissions(blacklist, peer.getPeer(), true);
 
-    peerReputationManager.onDisconnect(peer, DisconnectReason.TOO_MANY_PEERS, false);
+    peerReputationManager.onDisconnect(peer, DisconnectReason.TOO_MANY_PEERS,
+                                       false);
 
     checkPermissions(blacklist, peer.getPeer(), true);
   }
@@ -56,7 +59,8 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    peerReputationManager.onDisconnect(peer, DisconnectReason.BREACH_OF_PROTOCOL, false);
+    peerReputationManager.onDisconnect(
+        peer, DisconnectReason.BREACH_OF_PROTOCOL, false);
     checkPermissions(blacklist, peer.getPeer(), false);
   }
 
@@ -65,7 +69,8 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    peerReputationManager.onDisconnect(peer, DisconnectReason.BREACH_OF_PROTOCOL, true);
+    peerReputationManager.onDisconnect(
+        peer, DisconnectReason.BREACH_OF_PROTOCOL, true);
     checkPermissions(blacklist, peer.getPeer(), true);
   }
 
@@ -89,12 +94,12 @@ public class PeerReputationManagerTest {
     checkPermissions(blacklist, peer.getPeer(), false);
   }
 
-  private void checkPermissions(
-      final PeerPermissionsBlacklist blacklist,
-      final Peer remotePeer,
-      final boolean expectedResult) {
+  private void checkPermissions(final PeerPermissionsDenylist blacklist,
+                                final Peer remotePeer,
+                                final boolean expectedResult) {
     for (PeerPermissions.Action action : PeerPermissions.Action.values()) {
-      assertThat(blacklist.isPermitted(localNode, remotePeer, action)).isEqualTo(expectedResult);
+      assertThat(blacklist.isPermitted(localNode, remotePeer, action))
+          .isEqualTo(expectedResult);
     }
   }
 
@@ -112,12 +117,11 @@ public class PeerReputationManagerTest {
   }
 
   private Peer generatePeer() {
-    return DefaultPeer.fromEnodeURL(
-        EnodeURL.builder()
-            .nodeId(Peer.randomId())
-            .ipAddress("10.9.8.7")
-            .discoveryPort(65535)
-            .listeningPort(65534)
-            .build());
+    return DefaultPeer.fromEnodeURL(EnodeURL.builder()
+                                        .nodeId(Peer.randomId())
+                                        .ipAddress("10.9.8.7")
+                                        .discoveryPort(65535)
+                                        .listeningPort(65534)
+                                        .build());
   }
 }

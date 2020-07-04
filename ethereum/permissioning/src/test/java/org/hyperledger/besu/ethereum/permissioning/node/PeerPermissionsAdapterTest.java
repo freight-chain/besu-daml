@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
@@ -27,12 +34,6 @@ import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissions.Action;
 import org.hyperledger.besu.ethereum.permissioning.node.provider.SyncStatusNodePermissioningProvider;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 
@@ -46,8 +47,8 @@ public class PeerPermissionsAdapterTest {
   private final MutableBlockchain blockchain =
       InMemoryStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
   private final List<EnodeURL> bootNodes = new ArrayList<>();
-  private final PeerPermissionsAdapter adapter =
-      new PeerPermissionsAdapter(nodePermissioningController, bootNodes, blockchain);
+  private final PeerPermissionsAdapter adapter = new PeerPermissionsAdapter(
+      nodePermissioningController, bootNodes, blockchain);
 
   @Test
   public void allowInPeerTable() {
@@ -106,6 +107,8 @@ public class PeerPermissionsAdapterTest {
   }
 
   @Test
+  // This test smart-contract backed permissioning where while we’re syncing,
+  // we can only trust bootnodes
   public void allowOutboundBonding_outOfSyncRemoteIsNotABootnode() {
     mockSyncStatusNodePermissioning(true, false);
 
@@ -324,7 +327,8 @@ public class PeerPermissionsAdapterTest {
 
   @Test
   public void allowOngoingLocallyInitiatedConnection() {
-    final Action action = Action.RLPX_ALLOW_ONGOING_LOCALLY_INITIATED_CONNECTION;
+    final Action action =
+        Action.RLPX_ALLOW_ONGOING_LOCALLY_INITIATED_CONNECTION;
 
     mockControllerPermissions(true, false);
     assertThat(adapter.isPermitted(localNode, remoteNode, action)).isTrue();
@@ -341,7 +345,8 @@ public class PeerPermissionsAdapterTest {
 
   @Test
   public void allowOngoingRemotelyInitiatedConnection() {
-    final Action action = Action.RLPX_ALLOW_ONGOING_REMOTELY_INITIATED_CONNECTION;
+    final Action action =
+        Action.RLPX_ALLOW_ONGOING_REMOTELY_INITIATED_CONNECTION;
 
     mockControllerPermissions(true, false);
     assertThat(adapter.isPermitted(localNode, remoteNode, action)).isFalse();
@@ -359,10 +364,7 @@ public class PeerPermissionsAdapterTest {
   @Test
   public void subscribeUpdate_firesWhenBlockAdded() {
     final AtomicBoolean updateDispatched = new AtomicBoolean(false);
-    adapter.subscribeUpdate(
-        (restricted, peers) -> {
-          updateDispatched.set(true);
-        });
+    adapter.subscribeUpdate((restricted, peers) -> updateDispatched.set(true));
 
     final Block newBlock = gen.nextBlock(blockchain.getGenesisBlock());
     blockchain.appendBlock(newBlock, gen.receipts(newBlock));
@@ -370,7 +372,8 @@ public class PeerPermissionsAdapterTest {
     assertThat(updateDispatched).isTrue();
   }
 
-  private void mockSyncStatusNodePermissioning(final boolean isPresent, final boolean isInSync) {
+  private void mockSyncStatusNodePermissioning(final boolean isPresent,
+                                               final boolean isInSync) {
     if (!isPresent) {
       when(nodePermissioningController.getSyncStatusNodePermissioningProvider())
           .thenReturn(Optional.empty());
@@ -384,24 +387,23 @@ public class PeerPermissionsAdapterTest {
         .thenReturn(Optional.of(syncStatus));
   }
 
-  private void mockControllerPermissions(
-      final boolean allowLocalToRemote, final boolean allowRemoteToLocal) {
+  private void mockControllerPermissions(final boolean allowLocalToRemote,
+                                         final boolean allowRemoteToLocal) {
     when(nodePermissioningController.isPermitted(
-            ArgumentMatchers.eq(localNode.getEnodeURL()),
-            ArgumentMatchers.eq(remoteNode.getEnodeURL())))
+             ArgumentMatchers.eq(localNode.getEnodeURL()),
+             ArgumentMatchers.eq(remoteNode.getEnodeURL())))
         .thenReturn(allowLocalToRemote);
     when(nodePermissioningController.isPermitted(
-            ArgumentMatchers.eq(remoteNode.getEnodeURL()),
-            ArgumentMatchers.eq(localNode.getEnodeURL())))
+             ArgumentMatchers.eq(remoteNode.getEnodeURL()),
+             ArgumentMatchers.eq(localNode.getEnodeURL())))
         .thenReturn(allowRemoteToLocal);
   }
 
   private Peer createPeer() {
-    return DefaultPeer.fromEnodeURL(
-        EnodeURL.builder()
-            .ipAddress("127.0.0.1")
-            .nodeId(Peer.randomId())
-            .useDefaultPorts()
-            .build());
+    return DefaultPeer.fromEnodeURL(EnodeURL.builder()
+                                        .ipAddress("127.0.0.1")
+                                        .nodeId(Peer.randomId())
+                                        .useDefaultPorts()
+                                        .build());
   }
 }

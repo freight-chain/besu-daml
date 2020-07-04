@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,11 +22,11 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster;
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfiguration;
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.ClusterConfigurationBuilder;
-
 import org.junit.Before;
 import org.junit.Test;
 
-public class NodeLocalConfigPermissioningAcceptanceTest extends AcceptanceTestBase {
+public class NodeLocalConfigPermissioningAcceptanceTest
+    extends AcceptanceTestBase {
 
   private Cluster permissionedCluster;
   private Node bootnode;
@@ -38,13 +41,15 @@ public class NodeLocalConfigPermissioningAcceptanceTest extends AcceptanceTestBa
 
     permissionedCluster = new Cluster(clusterConfiguration, net);
     bootnode = besu.createArchiveNode("bootnode");
-    forbiddenNode = besu.createArchiveNodeThatMustNotBeTheBootnode("forbidden-node");
+    forbiddenNode =
+        besu.createArchiveNodeThatMustNotBeTheBootnode("forbidden-node");
     allowedNode = besu.createArchiveNode("allowed-node");
 
     permissionedCluster.start(bootnode, allowedNode, forbiddenNode);
 
     permissionedNode =
-        permissionedNodeBuilder.nodesPermittedInConfig(bootnode, allowedNode).build();
+        permissionedNodeBuilder.nodesPermittedInConfig(bootnode, allowedNode)
+            .build();
 
     permissionedCluster.addNode(permissionedNode);
   }
@@ -58,23 +63,23 @@ public class NodeLocalConfigPermissioningAcceptanceTest extends AcceptanceTestBa
   }
 
   @Test
-  public void permissionedNodeShouldDisconnectFromNodeRemovedFromWhitelist() {
+  public void permissionedNodeShouldDisconnectFromNodeRemovedFromAllowlist() {
     permissionedNode.verify(net.awaitPeerCount(2));
 
-    // remove node from the whitelist
-    permissionedNode.verify(perm.removeNodesFromWhitelist(allowedNode));
-    permissionedNode.verify(perm.getNodesWhitelist(1));
+    // remove node from the allowlist
+    permissionedNode.verify(perm.removeNodesFromAllowlist(allowedNode));
+    permissionedNode.verify(perm.getNodesAllowlist(1));
 
     permissionedNode.verify(net.awaitPeerCount(1));
   }
 
   @Test
-  public void forbiddenNodeAddedToWhitelistCanConnectToPermissionedNode() {
+  public void forbiddenNodeAddedToAllowlistCanConnectToPermissionedNode() {
     permissionedNode.verify(net.awaitPeerCount(2));
 
-    // add node to the whitelist
-    permissionedNode.verify(perm.addNodesToWhitelist(forbiddenNode));
-    permissionedNode.verify(perm.getNodesWhitelist(3));
+    // add node to the allowlist
+    permissionedNode.verify(perm.addNodesToAllowlist(forbiddenNode));
+    permissionedNode.verify(perm.getNodesAllowlist(3));
 
     permissionedNode.verify(admin.addPeer(forbiddenNode));
     permissionedNode.verify(net.awaitPeerCount(3));

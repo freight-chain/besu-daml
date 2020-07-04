@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.math.BigInteger;
+import java.util.List;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
+import org.assertj.core.util.Lists;
 import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
@@ -56,13 +64,6 @@ import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfigurati
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
-
-import java.math.BigInteger;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -92,48 +93,37 @@ public class EthGetFilterChangesIntegrationTest {
 
   @Before
   public void setUp() {
-    final ExecutionContextTestFixture executionContext = ExecutionContextTestFixture.create();
+    final ExecutionContextTestFixture executionContext =
+        ExecutionContextTestFixture.create();
     blockchain = executionContext.getBlockchain();
-    transactions =
-        new PendingTransactions(
-            TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS,
-            MAX_TRANSACTIONS,
-            MAX_HASHES,
-            TestClock.fixed(),
-            metricsSystem,
-            blockchain::getChainHeadHeader,
-            Optional.empty(),
-            TransactionPoolConfiguration.DEFAULT_PRICE_BUMP);
-    final ProtocolContext<Void> protocolContext = executionContext.getProtocolContext();
+    transactions = new PendingTransactions(
+        TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS,
+        MAX_TRANSACTIONS, MAX_HASHES, TestClock.fixed(), metricsSystem,
+        blockchain::getChainHeadHeader, Optional.empty(),
+        TransactionPoolConfiguration.DEFAULT_PRICE_BUMP);
+    final ProtocolContext protocolContext =
+        executionContext.getProtocolContext();
 
-    PeerTransactionTracker peerTransactionTracker = mock(PeerTransactionTracker.class);
+    PeerTransactionTracker peerTransactionTracker =
+        mock(PeerTransactionTracker.class);
     PeerPendingTransactionTracker peerPendingTransactionTracker =
         mock(PeerPendingTransactionTracker.class);
     EthContext ethContext = mock(EthContext.class);
     EthPeers ethPeers = mock(EthPeers.class);
     when(ethContext.getEthPeers()).thenReturn(ethPeers);
 
-    transactionPool =
-        new TransactionPool(
-            transactions,
-            executionContext.getProtocolSchedule(),
-            protocolContext,
-            batchAddedListener,
-            Optional.of(pendingBatchAddedListener),
-            syncState,
-            ethContext,
-            peerTransactionTracker,
-            Optional.of(peerPendingTransactionTracker),
-            Wei.ZERO,
-            metricsSystem,
-            Optional.empty());
-    final BlockchainQueries blockchainQueries =
-        new BlockchainQueries(blockchain, protocolContext.getWorldStateArchive());
-    filterManager =
-        new FilterManagerBuilder()
-            .blockchainQueries(blockchainQueries)
-            .transactionPool(transactionPool)
-            .build();
+    transactionPool = new TransactionPool(
+        transactions, executionContext.getProtocolSchedule(), protocolContext,
+        batchAddedListener, Optional.of(pendingBatchAddedListener), syncState,
+        ethContext, peerTransactionTracker,
+        Optional.of(peerPendingTransactionTracker), Wei.ZERO, metricsSystem,
+        Optional.empty(), TransactionPoolConfiguration.DEFAULT);
+    final BlockchainQueries blockchainQueries = new BlockchainQueries(
+        blockchain, protocolContext.getWorldStateArchive());
+    filterManager = new FilterManagerBuilder()
+                        .blockchainQueries(blockchainQueries)
+                        .transactionPool(transactionPool)
+                        .build();
 
     method = new EthGetFilterChanges(filterManager);
   }
@@ -142,7 +132,8 @@ public class EthGetFilterChangesIntegrationTest {
   public void shouldReturnErrorResponseIfFilterNotFound() {
     final JsonRpcRequestContext request = requestWithParams("0");
 
-    final JsonRpcResponse expected = new JsonRpcErrorResponse(null, JsonRpcError.FILTER_NOT_FOUND);
+    final JsonRpcResponse expected =
+        new JsonRpcErrorResponse(null, JsonRpcError.FILTER_NOT_FOUND);
     final JsonRpcResponse actual = method.response(request);
 
     assertThat(actual).isEqualToComparingFieldByField(expected);
@@ -154,8 +145,10 @@ public class EthGetFilterChangesIntegrationTest {
 
     assertThatFilterExists(filterId);
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(filterId));
-    final JsonRpcSuccessResponse expected = new JsonRpcSuccessResponse(null, Lists.emptyList());
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(filterId));
+    final JsonRpcSuccessResponse expected =
+        new JsonRpcSuccessResponse(null, Lists.emptyList());
     final JsonRpcResponse actual = method.response(request);
 
     assertThat(actual).isEqualToComparingFieldByField(expected);
@@ -171,10 +164,13 @@ public class EthGetFilterChangesIntegrationTest {
 
     assertThatFilterExists(filterId);
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(filterId));
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(filterId));
 
-    // We haven't added any transactions, so the list of pending transactions should be empty.
-    final JsonRpcSuccessResponse expected = new JsonRpcSuccessResponse(null, Lists.emptyList());
+    // We haven't added any transactions, so the list of pending transactions
+    // should be empty.
+    final JsonRpcSuccessResponse expected =
+        new JsonRpcSuccessResponse(null, Lists.emptyList());
     final JsonRpcResponse actual = method.response(request);
     assertThat(actual).isEqualToComparingFieldByField(expected);
 
@@ -189,17 +185,20 @@ public class EthGetFilterChangesIntegrationTest {
 
     assertThatFilterExists(filterId);
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(filterId));
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(filterId));
 
     // We haven't added any blocks, so the list of new blocks should be empty.
-    JsonRpcSuccessResponse expected = new JsonRpcSuccessResponse(null, Lists.emptyList());
+    JsonRpcSuccessResponse expected =
+        new JsonRpcSuccessResponse(null, Lists.emptyList());
     JsonRpcResponse actual = method.response(request);
     assertThat(actual).isEqualToComparingFieldByField(expected);
 
     final Block block = appendBlock(transaction);
 
     // We've added one block, so there should be one new hash.
-    expected = new JsonRpcSuccessResponse(null, Lists.newArrayList(block.getHash().toString()));
+    expected = new JsonRpcSuccessResponse(
+        null, Lists.newArrayList(block.getHash().toString()));
     actual = method.response(request);
     assertThat(actual).isEqualToComparingFieldByField(expected);
 
@@ -219,18 +218,21 @@ public class EthGetFilterChangesIntegrationTest {
 
     assertThatFilterExists(filterId);
 
-    final JsonRpcRequestContext request = requestWithParams(String.valueOf(filterId));
+    final JsonRpcRequestContext request =
+        requestWithParams(String.valueOf(filterId));
 
-    // We haven't added any transactions, so the list of pending transactions should be empty.
-    JsonRpcSuccessResponse expected = new JsonRpcSuccessResponse(null, Lists.emptyList());
+    // We haven't added any transactions, so the list of pending transactions
+    // should be empty.
+    JsonRpcSuccessResponse expected =
+        new JsonRpcSuccessResponse(null, Lists.emptyList());
     JsonRpcResponse actual = method.response(request);
     assertThat(actual).isEqualToComparingFieldByField(expected);
 
     transactions.addRemoteTransaction(transaction);
 
     // We've added one transaction, so there should be one new hash.
-    expected =
-        new JsonRpcSuccessResponse(null, Lists.newArrayList(String.valueOf(transaction.getHash())));
+    expected = new JsonRpcSuccessResponse(
+        null, Lists.newArrayList(String.valueOf(transaction.getHash())));
     actual = method.response(request);
     assertThat(actual).isEqualToComparingFieldByField(expected);
 
@@ -259,41 +261,41 @@ public class EthGetFilterChangesIntegrationTest {
    * @return A boolean - true if the filter exists, false if not.
    */
   private boolean filterExists(final String filterId) {
-    final JsonRpcResponse response = method.response(requestWithParams(String.valueOf(filterId)));
+    final JsonRpcResponse response =
+        method.response(requestWithParams(String.valueOf(filterId)));
     if (response instanceof JsonRpcSuccessResponse) {
       return true;
     } else {
       assertThat(response).isInstanceOf(JsonRpcErrorResponse.class);
-      assertThat(((JsonRpcErrorResponse) response).getError())
+      assertThat(((JsonRpcErrorResponse)response).getError())
           .isEqualTo(JsonRpcError.FILTER_NOT_FOUND);
       return false;
     }
   }
 
   private Block appendBlock(final Transaction... transactionsToAdd) {
-    return appendBlock(Difficulty.ONE, getHeaderForCurrentChainHead(), transactionsToAdd);
+    return appendBlock(Difficulty.ONE, getHeaderForCurrentChainHead(),
+                       transactionsToAdd);
   }
 
   private BlockHeader getHeaderForCurrentChainHead() {
     return blockchain.getBlockHeader(blockchain.getChainHeadHash()).get();
   }
 
-  private Block appendBlock(
-      final Difficulty difficulty,
-      final BlockHeader parentBlock,
-      final Transaction... transactionsToAdd) {
+  private Block appendBlock(final Difficulty difficulty,
+                            final BlockHeader parentBlock,
+                            final Transaction... transactionsToAdd) {
     final List<Transaction> transactionList = asList(transactionsToAdd);
-    final Block block =
-        new Block(
-            new BlockHeaderTestFixture()
-                .difficulty(difficulty)
-                .parentHash(parentBlock.getHash())
-                .number(parentBlock.getNumber() + 1)
-                .buildHeader(),
-            new BlockBody(transactionList, emptyList()));
+    final Block block = new Block(new BlockHeaderTestFixture()
+                                      .difficulty(difficulty)
+                                      .parentHash(parentBlock.getHash())
+                                      .number(parentBlock.getNumber() + 1)
+                                      .buildHeader(),
+                                  new BlockBody(transactionList, emptyList()));
     final List<TransactionReceipt> transactionReceipts =
         transactionList.stream()
-            .map(transaction -> new TransactionReceipt(1, 1, emptyList(), Optional.empty()))
+            .map(transaction
+                 -> new TransactionReceipt(1, 1, emptyList(), Optional.empty()))
             .collect(toList());
     blockchain.appendBlock(block, transactionReceipts);
     return block;
@@ -313,6 +315,7 @@ public class EthGetFilterChangesIntegrationTest {
   }
 
   private JsonRpcRequestContext requestWithParams(final Object... params) {
-    return new JsonRpcRequestContext(new JsonRpcRequest(JSON_RPC_VERSION, ETH_METHOD, params));
+    return new JsonRpcRequestContext(
+        new JsonRpcRequest(JSON_RPC_VERSION, ETH_METHOD, params));
   }
 }

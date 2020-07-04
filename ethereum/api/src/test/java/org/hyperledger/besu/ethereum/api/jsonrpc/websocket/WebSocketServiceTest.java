@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,16 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verifyNoInteractions;
-
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods.WebSocketMethodsFactory;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -41,10 +34,21 @@ import io.vertx.core.http.WebSocketFrame;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods.WebSocketMethodsFactory;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 @RunWith(VertxUnitRunner.class)
 public class WebSocketServiceTest {
@@ -63,16 +67,18 @@ public class WebSocketServiceTest {
 
     websocketConfiguration = WebSocketConfiguration.createDefault();
     websocketConfiguration.setPort(0);
-    websocketConfiguration.setHostsWhitelist(Collections.singletonList("*"));
+    websocketConfiguration.setHostsAllowlist(Collections.singletonList("*"));
 
     final Map<String, JsonRpcMethod> websocketMethods =
         new WebSocketMethodsFactory(
-                new SubscriptionManager(new NoOpMetricsSystem()), new HashMap<>())
+            new SubscriptionManager(new NoOpMetricsSystem()), new HashMap<>())
             .methods();
-    webSocketRequestHandlerSpy = spy(new WebSocketRequestHandler(vertx, websocketMethods));
+    webSocketRequestHandlerSpy = spy(new WebSocketRequestHandler(
+        vertx, websocketMethods, Mockito.mock(EthScheduler.class),
+        TimeoutOptions.defaultOptions().getTimeoutSeconds()));
 
-    websocketService =
-        new WebSocketService(vertx, websocketConfiguration, webSocketRequestHandlerSpy);
+    websocketService = new WebSocketService(vertx, websocketConfiguration,
+                                            webSocketRequestHandlerSpy);
     websocketService.start().join();
 
     websocketConfiguration.setPort(websocketService.socketAddress().getPort());
@@ -92,80 +98,76 @@ public class WebSocketServiceTest {
   }
 
   @Test
-  public void websocketServiceExecutesHandlerOnMessage(final TestContext context) {
+  public void
+  websocketServiceExecutesHandlerOnMessage(final TestContext context) {
     final Async async = context.async();
 
-    final String request = "{\"id\": 1, \"method\": \"eth_subscribe\", \"params\": [\"syncing\"]}";
-    final String expectedResponse = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x1\"}";
+    final String request =
+        "{\"id\": 1, \"method\": \"eth_subscribe\", \"params\": [\"syncing\"]}";
+    final String expectedResponse =
+        "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x1\"}";
 
-    httpClient.websocket(
-        "/",
-        webSocket -> {
-          webSocket.handler(
-              buffer -> {
-                context.assertEquals(expectedResponse, buffer.toString());
-                async.complete();
-              });
+    httpClient.websocket("/", webSocket -> {
+      webSocket.handler(buffer -> {
+        context.assertEquals(expectedResponse, buffer.toString());
+        async.complete();
+      });
 
-          webSocket.writeTextMessage(request);
-        });
+      webSocket.writeTextMessage(request);
+    });
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
   }
 
   @Test
-  public void websocketServiceRemoveSubscriptionOnConnectionClose(final TestContext context) {
+  public void websocketServiceRemoveSubscriptionOnConnectionClose(
+      final TestContext context) {
     final Async async = context.async();
 
-    vertx
-        .eventBus()
+    vertx.eventBus()
         .consumer(SubscriptionManager.EVENTBUS_REMOVE_SUBSCRIPTIONS_ADDRESS)
-        .handler(
-            m -> {
-              context.assertNotNull(m.body());
-              async.complete();
-            })
-        .completionHandler(v -> httpClient.websocket("/", WebSocketBase::close));
+        .handler(m -> {
+          context.assertNotNull(m.body());
+          async.complete();
+        })
+        .completionHandler(
+            v -> httpClient.websocket("/", WebSocketBase::close));
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
   }
 
   @Test
-  public void websocketServiceCloseConnectionOnUnrecoverableError(final TestContext context) {
+  public void websocketServiceCloseConnectionOnUnrecoverableError(
+      final TestContext context) {
     final Async async = context.async();
 
-    final byte[] bigMessage = new byte[HttpServerOptions.DEFAULT_MAX_WEBSOCKET_MESSAGE_SIZE + 1];
-    Arrays.fill(bigMessage, (byte) 1);
+    final byte[] bigMessage =
+        new byte[HttpServerOptions.DEFAULT_MAX_WEBSOCKET_MESSAGE_SIZE + 1];
+    Arrays.fill(bigMessage, (byte)1);
 
-    httpClient.websocket(
-        "/",
-        webSocket -> {
-          webSocket.write(Buffer.buffer(bigMessage));
-          webSocket.closeHandler(v -> async.complete());
-        });
+    httpClient.websocket("/", webSocket -> {
+      webSocket.write(Buffer.buffer(bigMessage));
+      webSocket.closeHandler(v -> async.complete());
+    });
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
   }
 
   @SuppressWarnings("deprecation") // No alternative available in vertx 3.
   @Test
-  public void websocketServiceMustReturnErrorOnHttpRequest(final TestContext context) {
+  public void
+  websocketServiceMustReturnErrorOnHttpRequest(final TestContext context) {
     final Async async = context.async();
 
     httpClient
         .post(
-            websocketConfiguration.getPort(),
-            websocketConfiguration.getHost(),
-            "/",
-            response ->
-                response.bodyHandler(
-                    b -> {
-                      context
-                          .assertEquals(400, response.statusCode())
-                          .assertEquals(
-                              "Websocket endpoint can't handle HTTP requests", b.toString());
-                      async.complete();
-                    }))
+            websocketConfiguration.getPort(), websocketConfiguration.getHost(),
+            "/", response -> response.bodyHandler(b -> {
+              context.assertEquals(400, response.statusCode())
+                  .assertEquals("Websocket endpoint can't handle HTTP requests",
+                                b.toString());
+              async.complete();
+            }))
         .end();
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
@@ -173,45 +175,41 @@ public class WebSocketServiceTest {
 
   @Test
   public void handleLoginRequestWithAuthDisabled() {
-    final HttpClientRequest request =
-        httpClient.post(
-            websocketConfiguration.getPort(),
-            websocketConfiguration.getHost(),
-            "/login",
-            response -> {
-              assertThat(response.statusCode()).isEqualTo(400);
-              assertThat(response.statusMessage()).isEqualTo("Authentication not enabled");
-            });
+    final HttpClientRequest request = httpClient.post(
+        websocketConfiguration.getPort(), websocketConfiguration.getHost(),
+        "/login", response -> {
+          assertThat(response.statusCode()).isEqualTo(400);
+          assertThat(response.statusMessage())
+              .isEqualTo("Authentication not enabled");
+        });
     request.putHeader("Content-Type", "application/json; charset=utf-8");
     request.end("{\"username\":\"user\",\"password\":\"pass\"}");
   }
 
   @Test
-  public void webSocketDoesNotToHandlePingPayloadAsJsonRpcRequest(final TestContext context) {
+  public void webSocketDoesNotToHandlePingPayloadAsJsonRpcRequest(
+      final TestContext context) {
     final Async async = context.async();
 
-    httpClient.webSocket(
-        "/",
-        result -> {
-          WebSocket websocket = result.result();
+    httpClient.webSocket("/", result -> {
+      WebSocket websocket = result.result();
 
-          websocket.handler(
-              buffer -> {
-                final String payload = buffer.toString();
-                if (!payload.equals("foo")) {
-                  context.fail("Only expected PONG response with same payload as PING request");
-                }
-              });
+      websocket.handler(buffer -> {
+        final String payload = buffer.toString();
+        if (!payload.equals("foo")) {
+          context.fail(
+              "Only expected PONG response with same payload as PING request");
+        }
+      });
 
-          websocket.closeHandler(
-              h -> {
-                verifyNoInteractions(webSocketRequestHandlerSpy);
-                async.complete();
-              });
+      websocket.closeHandler(h -> {
+        verifyNoInteractions(webSocketRequestHandlerSpy);
+        async.complete();
+      });
 
-          websocket.writeFrame(WebSocketFrame.pingFrame(Buffer.buffer("foo")));
-          websocket.close();
-        });
+      websocket.writeFrame(WebSocketFrame.pingFrame(Buffer.buffer("foo")));
+      websocket.close();
+    });
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
   }

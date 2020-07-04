@@ -1,31 +1,33 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.vm;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.ehalt.ExceptionalHaltPredicate;
-
-import java.util.EnumSet;
 import java.util.Optional;
+import org.hyperledger.besu.ethereum.core.Gas;
 
-public interface Operation extends ExceptionalHaltPredicate {
+public interface Operation {
 
   /**
+   * Gas cost of this operation, in context of the provided frame.
+   *
    * @param frame The frame for execution of this operation.
-   * @return The gas cost associated with executing this operation given the current {@link
-   *     MessageFrame}.
+   * @return The gas cost associated with executing this operation given the
+   *     current {@link MessageFrame}.
    */
   Gas cost(MessageFrame frame);
 
@@ -40,16 +42,12 @@ public interface Operation extends ExceptionalHaltPredicate {
    * Check if an exceptional halt condition should apply
    *
    * @param frame the current frame
-   * @param previousReasons any existing exceptional halt conditions
    * @param evm the currently executing EVM
-   * @return an {@link Optional} containing the {@link ExceptionalHaltReason} that applies or empty
-   *     if no exceptional halt condition applies.
+   * @return an {@link Optional} containing the {@link ExceptionalHaltReason}
+   *     that applies or empty if no exceptional halt condition applies.
    */
-  @Override
-  default Optional<ExceptionalHaltReason> exceptionalHaltCondition(
-      final MessageFrame frame,
-      final EnumSet<ExceptionalHaltReason> previousReasons,
-      final EVM evm) {
+  default Optional<ExceptionalHaltReason>
+  exceptionalHaltCondition(final MessageFrame frame, final EVM evm) {
     return Optional.empty();
   }
 
@@ -70,13 +68,12 @@ public interface Operation extends ExceptionalHaltPredicate {
   int getOpSize();
 
   /**
-   * Determines whether or not this operation has been virtually added to the contract code. For
-   * instance if the contract is not ended by a STOP opcode the {@link EVM} adds an explicit end of
-   * script stop which can be considered as virtual.
+   * Determines whether or not this operation has been virtually added to the
+   * contract code. For instance if the contract is not ended by a STOP opcode
+   * the {@link EVM} adds an explicit end of script stop which can be considered
+   * as virtual.
    *
    * @return a boolean indicating if the operation is virtual.
    */
-  default boolean isVirtualOperation() {
-    return false;
-  }
+  default boolean isVirtualOperation() { return false; }
 }

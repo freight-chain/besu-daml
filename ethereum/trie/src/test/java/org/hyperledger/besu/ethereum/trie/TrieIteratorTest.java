@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,42 +27,43 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.crypto.Hash;
-import org.hyperledger.besu.ethereum.trie.TrieIterator.LeafHandler;
-import org.hyperledger.besu.ethereum.trie.TrieIterator.State;
-
 import java.nio.charset.StandardCharsets;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.TreeSet;
-import java.util.function.Function;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
+import org.hyperledger.besu.crypto.Hash;
+import org.hyperledger.besu.ethereum.trie.TrieIterator.LeafHandler;
+import org.hyperledger.besu.ethereum.trie.TrieIterator.State;
 import org.junit.Test;
 import org.mockito.InOrder;
 
 public class TrieIteratorTest {
 
-  private static final Bytes32 KEY_HASH1 =
-      Bytes32.fromHexString("0x5555555555555555555555555555555555555555555555555555555555555555");
-  private static final Bytes32 KEY_HASH2 =
-      Bytes32.fromHexString("0x5555555555555555555555555555555555555555555555555555555555555556");
+  private static final Bytes32 KEY_HASH1 = Bytes32.fromHexString(
+      "0x5555555555555555555555555555555555555555555555555555555555555555");
+  private static final Bytes32 KEY_HASH2 = Bytes32.fromHexString(
+      "0x5555555555555555555555555555555555555555555555555555555555555556");
   private static final Bytes PATH1 = bytesToPath(KEY_HASH1);
   private static final Bytes PATH2 = bytesToPath(KEY_HASH2);
 
   @SuppressWarnings("unchecked")
   private final LeafHandler<String> leafHandler = mock(LeafHandler.class);
 
-  private final Function<String, Bytes> valueSerializer =
-      value -> Bytes.wrap(value.getBytes(StandardCharsets.UTF_8));
-  private final DefaultNodeFactory<String> nodeFactory = new DefaultNodeFactory<>(valueSerializer);
+  private final DefaultNodeFactory<String> nodeFactory =
+      new DefaultNodeFactory<>(this::valueSerializer);
   private final TrieIterator<String> iterator = new TrieIterator<>(leafHandler);
+
+  private Bytes valueSerializer(final String value) {
+    return Bytes.wrap(value.getBytes(StandardCharsets.UTF_8));
+  }
 
   @Test
   public void shouldCallLeafHandlerWhenRootNodeIsALeaf() {
-    final Node<String> leaf = nodeFactory.createLeaf(bytesToPath(KEY_HASH1), "Leaf");
+    final Node<String> leaf =
+        nodeFactory.createLeaf(bytesToPath(KEY_HASH1), "Leaf");
     leaf.accept(iterator, PATH1);
 
     verify(leafHandler).onLeaf(KEY_HASH1, leaf);
@@ -75,7 +79,8 @@ public class TrieIteratorTest {
   @Test
   public void shouldConcatenatePathAndVisitChildOfExtensionNode() {
     final Node<String> leaf = nodeFactory.createLeaf(PATH1.slice(10), "Leaf");
-    final Node<String> extension = nodeFactory.createExtension(PATH1.slice(0, 10), leaf);
+    final Node<String> extension =
+        nodeFactory.createExtension(PATH1.slice(0, 10), leaf);
     extension.accept(iterator, PATH1);
     verify(leafHandler).onLeaf(KEY_HASH1, leaf);
   }
@@ -83,7 +88,8 @@ public class TrieIteratorTest {
   @Test
   @SuppressWarnings("unchecked")
   public void shouldVisitEachChildOfABranchNode() {
-    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class))).thenReturn(State.CONTINUE);
+    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class)))
+        .thenReturn(State.CONTINUE);
     final Node<String> root =
         NullNode.<String>instance()
             .accept(new PutVisitor<>(nodeFactory, "Leaf 1"), PATH1)
@@ -99,7 +105,8 @@ public class TrieIteratorTest {
   @Test
   @SuppressWarnings("unchecked")
   public void shouldStopIteratingChildrenOfBranchWhenLeafHandlerReturnsStop() {
-    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class))).thenReturn(State.STOP);
+    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class)))
+        .thenReturn(State.STOP);
     final Node<String> root =
         NullNode.<String>instance()
             .accept(new PutVisitor<>(nodeFactory, "Leaf 1"), PATH1)
@@ -122,9 +129,10 @@ public class TrieIteratorTest {
     final int startNodeNumber = random.nextInt(Math.max(1, totalNodes - 1));
     final int stopNodeNumber = random.nextInt(Math.max(1, totalNodes - 1));
     for (int i = 0; i < totalNodes; i++) {
-      final Bytes32 keyHash =
-          Hash.keccak256(UInt256.valueOf(Math.abs(random.nextLong())).toBytes());
-      root = root.accept(new PutVisitor<>(nodeFactory, "Value"), bytesToPath(keyHash));
+      final Bytes32 keyHash = Hash.keccak256(
+          UInt256.valueOf(Math.abs(random.nextLong())).toBytes());
+      root = root.accept(new PutVisitor<>(nodeFactory, "Value"),
+                         bytesToPath(keyHash));
       expectedKeyHashes.add(keyHash);
       if (i == startNodeNumber) {
         startAtHash = keyHash;
@@ -135,13 +143,16 @@ public class TrieIteratorTest {
 
     final Bytes32 actualStopAtHash =
         stopAtHash.compareTo(startAtHash) >= 0 ? stopAtHash : startAtHash;
-    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class))).thenReturn(State.CONTINUE);
-    when(leafHandler.onLeaf(eq(actualStopAtHash), any(Node.class))).thenReturn(State.STOP);
+    when(leafHandler.onLeaf(any(Bytes32.class), any(Node.class)))
+        .thenReturn(State.CONTINUE);
+    when(leafHandler.onLeaf(eq(actualStopAtHash), any(Node.class)))
+        .thenReturn(State.STOP);
     root.accept(iterator, bytesToPath(startAtHash));
     final InOrder inOrder = inOrder(leafHandler);
-    expectedKeyHashes
-        .subSet(startAtHash, true, actualStopAtHash, true)
-        .forEach(keyHash -> inOrder.verify(leafHandler).onLeaf(eq(keyHash), any(Node.class)));
+    expectedKeyHashes.subSet(startAtHash, true, actualStopAtHash, true)
+        .forEach(keyHash
+                 -> inOrder.verify(leafHandler)
+                        .onLeaf(eq(keyHash), any(Node.class)));
     verifyNoMoreInteractions(leafHandler);
   }
 }

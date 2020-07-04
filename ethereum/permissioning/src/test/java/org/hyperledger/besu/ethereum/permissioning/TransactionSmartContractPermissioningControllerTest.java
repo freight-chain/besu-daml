@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,6 +26,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.io.Resources;
+import java.io.IOException;
+import java.math.BigInteger;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.crypto.SECP256K1.Signature;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
@@ -37,12 +44,6 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
-
-import java.io.IOException;
-import java.math.BigInteger;
-
-import com.google.common.io.Resources;
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -55,43 +56,50 @@ public class TransactionSmartContractPermissioningControllerTest {
   @Mock private Counter checkPermittedCounter;
   @Mock private Counter checkUnpermittedCounter;
 
-  private TransactionSmartContractPermissioningController setupController(
-      final String resourceName, final String contractAddressString) throws IOException {
-    final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
+  private TransactionSmartContractPermissioningController
+  setupController(final String resourceName, final String contractAddressString)
+      throws IOException {
+    final ProtocolSchedule protocolSchedule = MainnetProtocolSchedule.create();
 
     final String emptyContractFile =
         Resources.toString(this.getClass().getResource(resourceName), UTF_8);
-    final GenesisState genesisState =
-        GenesisState.fromConfig(GenesisConfigFile.fromConfig(emptyContractFile), protocolSchedule);
+    final GenesisState genesisState = GenesisState.fromConfig(
+        GenesisConfigFile.fromConfig(emptyContractFile), protocolSchedule);
 
-    final MutableBlockchain blockchain = createInMemoryBlockchain(genesisState.getBlock());
+    final MutableBlockchain blockchain =
+        createInMemoryBlockchain(genesisState.getBlock());
     final WorldStateArchive worldArchive = createInMemoryWorldStateArchive();
 
     genesisState.writeStateTo(worldArchive.getMutable());
 
     final TransactionSimulator ts =
         new TransactionSimulator(blockchain, worldArchive, protocolSchedule);
-    final Address contractAddress = Address.fromHexString(contractAddressString);
+    final Address contractAddress =
+        Address.fromHexString(contractAddressString);
 
-    when(metricsSystem.createCounter(
+    when(
+        metricsSystem.createCounter(
             BesuMetricCategory.PERMISSIONING,
             "transaction_smart_contract_check_count",
             "Number of times the transaction smart contract permissioning provider has been checked"))
         .thenReturn(checkCounter);
 
-    when(metricsSystem.createCounter(
+    when(
+        metricsSystem.createCounter(
             BesuMetricCategory.PERMISSIONING,
             "transaction_smart_contract_check_count_permitted",
             "Number of times the transaction smart contract permissioning provider has been checked and returned permitted"))
         .thenReturn(checkPermittedCounter);
 
-    when(metricsSystem.createCounter(
+    when(
+        metricsSystem.createCounter(
             BesuMetricCategory.PERMISSIONING,
             "transaction_smart_contract_check_count_unpermitted",
             "Number of times the transaction smart contract permissioning provider has been checked and returned unpermitted"))
         .thenReturn(checkUnpermittedCounter);
 
-    return new TransactionSmartContractPermissioningController(contractAddress, ts, metricsSystem);
+    return new TransactionSmartContractPermissioningController(
+        contractAddress, ts, metricsSystem);
   }
 
   private Transaction transactionForAccount(final Address address) {
@@ -102,7 +110,7 @@ public class TransactionSmartContractPermissioningControllerTest {
         .gasLimit(0)
         .payload(Bytes.fromHexString("0x1234"))
         .nonce(1)
-        .signature(Signature.create(BigInteger.ONE, BigInteger.TEN, (byte) 1))
+        .signature(Signature.create(BigInteger.ONE, BigInteger.TEN, (byte)1))
         .build();
   }
 
@@ -139,7 +147,8 @@ public class TransactionSmartContractPermissioningControllerTest {
 
     verifyCountersUntouched();
 
-    assertThat(controller.isPermitted(transactionForAccount(Address.fromHexString("0x1"))))
+    assertThat(controller.isPermitted(
+                   transactionForAccount(Address.fromHexString("0x1"))))
         .isTrue();
 
     verifyCountersPermitted();
@@ -154,7 +163,8 @@ public class TransactionSmartContractPermissioningControllerTest {
 
     verifyCountersUntouched();
 
-    assertThat(controller.isPermitted(transactionForAccount(Address.fromHexString("0x2"))))
+    assertThat(controller.isPermitted(
+                   transactionForAccount(Address.fromHexString("0x2"))))
         .isFalse();
 
     verifyCountersUnpermitted();
@@ -169,7 +179,8 @@ public class TransactionSmartContractPermissioningControllerTest {
 
     verifyCountersUntouched();
 
-    assertThat(controller.isPermitted(transactionForAccount(Address.fromHexString("0x1"))))
+    assertThat(controller.isPermitted(
+                   transactionForAccount(Address.fromHexString("0x1"))))
         .isTrue();
 
     verifyCountersPermitted();
@@ -184,10 +195,12 @@ public class TransactionSmartContractPermissioningControllerTest {
 
     verifyCountersUntouched();
 
-    assertThatThrownBy(
-            () -> controller.isPermitted(transactionForAccount(Address.fromHexString("0x1"))))
+    assertThatThrownBy(()
+                           -> controller.isPermitted(transactionForAccount(
+                               Address.fromHexString("0x1"))))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessage("Transaction permissioning transaction failed when processing");
+        .hasMessage(
+            "Transaction permissioning transaction failed when processing");
 
     verifyCountersFailedCheck();
   }

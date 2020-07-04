@@ -1,26 +1,21 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.permissioning;
-
-import org.hyperledger.besu.ethereum.core.Address;
-import org.hyperledger.besu.ethereum.core.Hash;
-import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.ethereum.permissioning.account.TransactionPermissioningProvider;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Counter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,147 +24,157 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.core.Hash;
+import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor.ALLOWLIST_TYPE;
+import org.hyperledger.besu.ethereum.permissioning.account.TransactionPermissioningProvider;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Counter;
 
-public class AccountLocalConfigPermissioningController implements TransactionPermissioningProvider {
+public class AccountLocalConfigPermissioningController
+    implements TransactionPermissioningProvider {
 
   private static final Logger LOG = LogManager.getLogger();
 
   private static final int ACCOUNT_BYTES_SIZE = 20;
   private LocalPermissioningConfiguration configuration;
-  private List<String> accountWhitelist = new ArrayList<>();
-  private final WhitelistPersistor whitelistPersistor;
+  private List<String> accountAllowlist = new ArrayList<>();
+  private final AllowlistPersistor allowlistPersistor;
 
   private final Counter checkCounter;
   private final Counter checkCounterPermitted;
   private final Counter checkCounterUnpermitted;
 
   public AccountLocalConfigPermissioningController(
-      final LocalPermissioningConfiguration configuration, final MetricsSystem metricsSystem) {
-    this(
-        configuration,
-        new WhitelistPersistor(configuration.getAccountPermissioningConfigFilePath()),
-        metricsSystem);
+      final LocalPermissioningConfiguration configuration,
+      final MetricsSystem metricsSystem) {
+    this(configuration,
+         new AllowlistPersistor(
+             configuration.getAccountPermissioningConfigFilePath()),
+         metricsSystem);
   }
 
   public AccountLocalConfigPermissioningController(
       final LocalPermissioningConfiguration configuration,
-      final WhitelistPersistor whitelistPersistor,
+      final AllowlistPersistor allowlistPersistor,
       final MetricsSystem metricsSystem) {
     this.configuration = configuration;
-    this.whitelistPersistor = whitelistPersistor;
+    this.allowlistPersistor = allowlistPersistor;
     readAccountsFromConfig(configuration);
-    this.checkCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "account_local_check_count",
-            "Number of times the account local permissioning provider has been checked");
-    this.checkCounterPermitted =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "account_local_check_count_permitted",
-            "Number of times the account local permissioning provider has been checked and returned permitted");
-    this.checkCounterUnpermitted =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "account_local_check_count_unpermitted",
-            "Number of times the account local permissioning provider has been checked and returned unpermitted");
+    this.checkCounter = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING, "account_local_check_count",
+        "Number of times the account local permissioning provider has been checked");
+    this.checkCounterPermitted = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING, "account_local_check_count_permitted",
+        "Number of times the account local permissioning provider has been checked and returned permitted");
+    this.checkCounterUnpermitted = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING,
+        "account_local_check_count_unpermitted",
+        "Number of times the account local permissioning provider has been checked and returned unpermitted");
   }
 
-  private void readAccountsFromConfig(final LocalPermissioningConfiguration configuration) {
-    if (configuration != null && configuration.isAccountWhitelistEnabled()) {
-      if (!configuration.getAccountWhitelist().isEmpty()) {
-        addAccounts(configuration.getAccountWhitelist());
+  private void
+  readAccountsFromConfig(final LocalPermissioningConfiguration configuration) {
+    if (configuration != null && configuration.isAccountAllowlistEnabled()) {
+      if (!configuration.getAccountAllowlist().isEmpty()) {
+        addAccounts(configuration.getAccountAllowlist());
       }
     }
   }
 
-  public WhitelistOperationResult addAccounts(final List<String> accounts) {
+  public AllowlistOperationResult addAccounts(final List<String> accounts) {
     final List<String> normalizedAccounts = normalizeAccounts(accounts);
-    final WhitelistOperationResult inputValidationResult = inputValidation(normalizedAccounts);
-    if (inputValidationResult != WhitelistOperationResult.SUCCESS) {
+    final AllowlistOperationResult inputValidationResult =
+        inputValidation(normalizedAccounts);
+    if (inputValidationResult != AllowlistOperationResult.SUCCESS) {
       return inputValidationResult;
     }
 
     boolean inputHasExistingAccount =
-        normalizedAccounts.stream().anyMatch(accountWhitelist::contains);
+        normalizedAccounts.stream().anyMatch(accountAllowlist::contains);
     if (inputHasExistingAccount) {
-      return WhitelistOperationResult.ERROR_EXISTING_ENTRY;
+      return AllowlistOperationResult.ERROR_EXISTING_ENTRY;
     }
 
-    final List<String> oldWhitelist = new ArrayList<>(this.accountWhitelist);
-    this.accountWhitelist.addAll(normalizedAccounts);
+    final List<String> oldAllowlist = new ArrayList<>(this.accountAllowlist);
+    this.accountAllowlist.addAll(normalizedAccounts);
     try {
-      verifyConfigurationFileState(oldWhitelist);
-      updateConfigurationFile(accountWhitelist);
-      verifyConfigurationFileState(accountWhitelist);
+      verifyConfigurationFileState(oldAllowlist);
+      updateConfigurationFile(accountAllowlist);
+      verifyConfigurationFileState(accountAllowlist);
     } catch (IOException e) {
-      revertState(oldWhitelist);
-      return WhitelistOperationResult.ERROR_WHITELIST_PERSIST_FAIL;
-    } catch (WhitelistFileSyncException e) {
-      return WhitelistOperationResult.ERROR_WHITELIST_FILE_SYNC;
+      revertState(oldAllowlist);
+      return AllowlistOperationResult.ERROR_ALLOWLIST_PERSIST_FAIL;
+    } catch (AllowlistFileSyncException e) {
+      return AllowlistOperationResult.ERROR_ALLOWLIST_FILE_SYNC;
     }
-    return WhitelistOperationResult.SUCCESS;
+    return AllowlistOperationResult.SUCCESS;
   }
 
-  public WhitelistOperationResult removeAccounts(final List<String> accounts) {
+  public AllowlistOperationResult removeAccounts(final List<String> accounts) {
     final List<String> normalizedAccounts = normalizeAccounts(accounts);
-    final WhitelistOperationResult inputValidationResult = inputValidation(normalizedAccounts);
-    if (inputValidationResult != WhitelistOperationResult.SUCCESS) {
+    final AllowlistOperationResult inputValidationResult =
+        inputValidation(normalizedAccounts);
+    if (inputValidationResult != AllowlistOperationResult.SUCCESS) {
       return inputValidationResult;
     }
 
-    if (!accountWhitelist.containsAll(normalizedAccounts)) {
-      return WhitelistOperationResult.ERROR_ABSENT_ENTRY;
+    if (!accountAllowlist.containsAll(normalizedAccounts)) {
+      return AllowlistOperationResult.ERROR_ABSENT_ENTRY;
     }
 
-    final List<String> oldWhitelist = new ArrayList<>(this.accountWhitelist);
+    final List<String> oldAllowlist = new ArrayList<>(this.accountAllowlist);
 
-    this.accountWhitelist.removeAll(normalizedAccounts);
+    this.accountAllowlist.removeAll(normalizedAccounts);
     try {
-      verifyConfigurationFileState(oldWhitelist);
-      updateConfigurationFile(accountWhitelist);
-      verifyConfigurationFileState(accountWhitelist);
+      verifyConfigurationFileState(oldAllowlist);
+      updateConfigurationFile(accountAllowlist);
+      verifyConfigurationFileState(accountAllowlist);
     } catch (IOException e) {
-      revertState(oldWhitelist);
-      return WhitelistOperationResult.ERROR_WHITELIST_PERSIST_FAIL;
-    } catch (WhitelistFileSyncException e) {
-      return WhitelistOperationResult.ERROR_WHITELIST_FILE_SYNC;
+      revertState(oldAllowlist);
+      return AllowlistOperationResult.ERROR_ALLOWLIST_PERSIST_FAIL;
+    } catch (AllowlistFileSyncException e) {
+      return AllowlistOperationResult.ERROR_ALLOWLIST_FILE_SYNC;
     }
-    return WhitelistOperationResult.SUCCESS;
+    return AllowlistOperationResult.SUCCESS;
   }
 
-  private WhitelistOperationResult inputValidation(final List<String> accounts) {
+  private AllowlistOperationResult
+  inputValidation(final List<String> accounts) {
     if (accounts == null || accounts.isEmpty()) {
-      return WhitelistOperationResult.ERROR_EMPTY_ENTRY;
+      return AllowlistOperationResult.ERROR_EMPTY_ENTRY;
     }
 
     if (containsInvalidAccount(accounts)) {
-      return WhitelistOperationResult.ERROR_INVALID_ENTRY;
+      return AllowlistOperationResult.ERROR_INVALID_ENTRY;
     }
 
     if (inputHasDuplicates(accounts)) {
-      return WhitelistOperationResult.ERROR_DUPLICATED_ENTRY;
+      return AllowlistOperationResult.ERROR_DUPLICATED_ENTRY;
     }
 
-    return WhitelistOperationResult.SUCCESS;
+    return AllowlistOperationResult.SUCCESS;
   }
 
-  private void verifyConfigurationFileState(final Collection<String> oldAccounts)
-      throws IOException, WhitelistFileSyncException {
-    whitelistPersistor.verifyConfigFileMatchesState(
-        WhitelistPersistor.WHITELIST_TYPE.ACCOUNTS, oldAccounts);
+  private void
+  verifyConfigurationFileState(final Collection<String> oldAccounts)
+      throws IOException, AllowlistFileSyncException {
+    allowlistPersistor.verifyConfigFileMatchesState(ALLOWLIST_TYPE.ACCOUNTS,
+                                                    oldAccounts);
   }
 
-  private void updateConfigurationFile(final Collection<String> accounts) throws IOException {
-    whitelistPersistor.updateConfig(WhitelistPersistor.WHITELIST_TYPE.ACCOUNTS, accounts);
+  private void updateConfigurationFile(final Collection<String> accounts)
+      throws IOException {
+    allowlistPersistor.updateConfig(ALLOWLIST_TYPE.ACCOUNTS, accounts);
   }
 
-  private void revertState(final List<String> accountWhitelist) {
-    this.accountWhitelist = accountWhitelist;
+  private void revertState(final List<String> accountAllowlist) {
+    this.accountAllowlist = accountAllowlist;
   }
 
   private boolean inputHasDuplicates(final List<String> accounts) {
@@ -177,16 +182,16 @@ public class AccountLocalConfigPermissioningController implements TransactionPer
   }
 
   public boolean contains(final String account) {
-    return accountWhitelist.stream().anyMatch(a -> a.equalsIgnoreCase(account));
+    return accountAllowlist.stream().anyMatch(a -> a.equalsIgnoreCase(account));
   }
 
-  public List<String> getAccountWhitelist() {
-    return new ArrayList<>(accountWhitelist);
+  public List<String> getAccountAllowlist() {
+    return new ArrayList<>(accountAllowlist);
   }
 
   private boolean containsInvalidAccount(final List<String> accounts) {
-    return !accounts.stream()
-        .allMatch(AccountLocalConfigPermissioningController::isValidAccountString);
+    return !accounts.stream().allMatch(
+        AccountLocalConfigPermissioningController::isValidAccountString);
   }
 
   static boolean isValidAccountString(final String account) {
@@ -196,38 +201,42 @@ public class AccountLocalConfigPermissioningController implements TransactionPer
       }
       Bytes bytes = Bytes.fromHexString(account);
       return bytes.size() == ACCOUNT_BYTES_SIZE;
-    } catch (NullPointerException | IndexOutOfBoundsException | IllegalArgumentException e) {
+    } catch (NullPointerException | IndexOutOfBoundsException |
+             IllegalArgumentException e) {
       return false;
     }
   }
 
   public synchronized void reload() throws RuntimeException {
-    final ArrayList<String> currentAccountsList = new ArrayList<>(accountWhitelist);
-    accountWhitelist.clear();
+    final ArrayList<String> currentAccountsList =
+        new ArrayList<>(accountAllowlist);
+    accountAllowlist.clear();
 
     try {
       final LocalPermissioningConfiguration updatedConfig =
           PermissioningConfigurationBuilder.permissioningConfiguration(
-              configuration.isNodeWhitelistEnabled(),
+              configuration.isNodeAllowlistEnabled(),
               configuration.getNodePermissioningConfigFilePath(),
-              configuration.isAccountWhitelistEnabled(),
+              configuration.isAccountAllowlistEnabled(),
               configuration.getAccountPermissioningConfigFilePath());
       readAccountsFromConfig(updatedConfig);
       configuration = updatedConfig;
     } catch (Exception e) {
       LOG.warn(
-          "Error reloading permissions file. In-memory whitelisted accounts will be reverted to previous valid configuration. "
+          "Error reloading permissions file. In-memory accounts allowlist will be reverted to previous valid configuration. "
               + "Details: {}",
           e.getMessage());
-      accountWhitelist.clear();
-      accountWhitelist.addAll(currentAccountsList);
+      accountAllowlist.clear();
+      accountAllowlist.addAll(currentAccountsList);
       throw new RuntimeException(e);
     }
   }
 
   private List<String> normalizeAccounts(final List<String> accounts) {
     if (accounts != null) {
-      return accounts.parallelStream().map(String::toLowerCase).collect(Collectors.toList());
+      return accounts.parallelStream()
+          .map(String::toLowerCase)
+          .collect(Collectors.toList());
     } else {
       return Collections.emptyList();
     }
@@ -238,7 +247,8 @@ public class AccountLocalConfigPermissioningController implements TransactionPer
     final Hash transactionHash = transaction.getHash();
     final Address sender = transaction.getSender();
 
-    LOG.trace("Account permissioning - Local Config: Checking transaction {}", transactionHash);
+    LOG.trace("Account permissioning - Local Config: Checking transaction {}",
+              transactionHash);
 
     this.checkCounter.inc();
     if (sender == null) {
@@ -252,15 +262,13 @@ public class AccountLocalConfigPermissioningController implements TransactionPer
         this.checkCounterPermitted.inc();
         LOG.trace(
             "Account permissioning - Local Config: Permitted transaction {} from {}",
-            transactionHash,
-            sender);
+            transactionHash, sender);
         return true;
       } else {
         this.checkCounterUnpermitted.inc();
         LOG.trace(
             "Account permissioning - Local Config: Rejected transaction {} from {}",
-            transactionHash,
-            sender);
+            transactionHash, sender);
         return false;
       }
     }

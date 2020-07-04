@@ -1,19 +1,32 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.rlpx.connections;
 
+import com.google.common.base.MoreObjects;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.CapabilityMultiplexer;
@@ -25,18 +38,6 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.Di
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.WireMessageCodes;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
-
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-
-import com.google.common.base.MoreObjects;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public abstract class AbstractPeerConnection implements PeerConnection {
   private static final Logger LOG = LogManager.getLogger();
@@ -54,12 +55,10 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   protected final PeerConnectionEventDispatcher connectionEventDispatcher;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
-  public AbstractPeerConnection(
-      final Peer peer,
-      final PeerInfo peerInfo,
+  protected AbstractPeerConnection(
+      final Peer peer, final PeerInfo peerInfo,
       final InetSocketAddress localAddress,
-      final InetSocketAddress remoteAddress,
-      final String connectionId,
+      final InetSocketAddress remoteAddress, final String connectionId,
       final CapabilityMultiplexer multiplexer,
       final PeerConnectionEventDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
@@ -79,9 +78,11 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void send(final Capability capability, final MessageData message) throws PeerNotConnected {
+  public void send(final Capability capability, final MessageData message)
+      throws PeerNotConnected {
     if (isDisconnected()) {
-      throw new PeerNotConnected("Attempt to send message to a closed peer connection");
+      throw new PeerNotConnected(
+          "Attempt to send message to a closed peer connection");
     }
     doSend(capability, message);
   }
@@ -90,34 +91,33 @@ public abstract class AbstractPeerConnection implements PeerConnection {
     if (capability != null) {
       // Validate message is valid for this capability
       final SubProtocol subProtocol = multiplexer.subProtocol(capability);
-      if (subProtocol == null
-          || !subProtocol.isValidMessageCode(capability.getVersion(), message.getCode())) {
+      if (subProtocol == null ||
+          !subProtocol.isValidMessageCode(capability.getVersion(),
+                                          message.getCode())) {
         throw new UnsupportedOperationException(
-            "Attempt to send unsupported message ("
-                + message.getCode()
-                + ") via cap "
-                + capability);
+            "Attempt to send unsupported message (" + message.getCode() +
+            ") via cap " + capability);
       }
       outboundMessagesCounter
-          .labels(
-              capability.toString(),
-              subProtocol.messageName(capability.getVersion(), message.getCode()),
-              Integer.toString(message.getCode()))
+          .labels(capability.toString(),
+                  subProtocol.messageName(capability.getVersion(),
+                                          message.getCode()),
+                  Integer.toString(message.getCode()))
           .inc();
     } else {
       outboundMessagesCounter
-          .labels(
-              "Wire",
-              WireMessageCodes.messageName(message.getCode()),
-              Integer.toString(message.getCode()))
+          .labels("Wire", WireMessageCodes.messageName(message.getCode()),
+                  Integer.toString(message.getCode()))
           .inc();
     }
 
-    LOG.trace("Writing {} to {} via protocol {}", message, peerInfo, capability);
+    LOG.trace("Writing {} to {} via protocol {}", message, peerInfo,
+              capability);
     doSendMessage(capability, message);
   }
 
-  protected abstract void doSendMessage(final Capability capability, final MessageData message);
+  protected abstract void doSendMessage(final Capability capability,
+                                        final MessageData message);
 
   @Override
   public PeerInfo getPeerInfo() {
@@ -140,13 +140,14 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
+  public void terminateConnection(final DisconnectReason reason,
+                                  final boolean peerInitiated) {
     if (disconnected.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
       connectionEventDispatcher.dispatchDisconnect(this, reason, peerInitiated);
     }
-    // Always ensure the context gets closed immediately even if we previously sent a disconnect
-    // message and are waiting to close.
+    // Always ensure the context gets closed immediately even if we previously
+    // sent a disconnect message and are waiting to close.
     closeConnectionImmediately();
   }
 
@@ -187,9 +188,9 @@ public abstract class AbstractPeerConnection implements PeerConnection {
     if (!(o instanceof AbstractPeerConnection)) {
       return false;
     }
-    final AbstractPeerConnection that = (AbstractPeerConnection) o;
-    return Objects.equals(this.connectionId, that.connectionId)
-        && Objects.equals(this.peer, that.peer);
+    final AbstractPeerConnection that = (AbstractPeerConnection)o;
+    return Objects.equals(this.connectionId, that.connectionId) &&
+        Objects.equals(this.peer, that.peer);
   }
 
   @Override
@@ -202,9 +203,9 @@ public abstract class AbstractPeerConnection implements PeerConnection {
     return MoreObjects.toStringHelper(this)
         .add("nodeId", peerInfo.getNodeId())
         .add("clientId", peerInfo.getClientId())
-        .add(
-            "caps",
-            agreedCapabilities.stream().map(Capability::toString).collect(Collectors.joining(", ")))
+        .add("caps", agreedCapabilities.stream()
+                         .map(Capability::toString)
+                         .collect(Collectors.joining(", ")))
         .toString();
   }
 }

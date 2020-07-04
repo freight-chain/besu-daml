@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,13 +19,9 @@ package org.hyperledger.besu.ethereum.stratum;
 
 import static org.apache.logging.log4j.LogManager.getLogger;
 
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
-import org.hyperledger.besu.ethereum.core.Hash;
-import org.hyperledger.besu.ethereum.mainnet.DirectAcyclicGraphSeed;
-import org.hyperledger.besu.ethereum.mainnet.EthHashSolution;
-import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,17 +30,22 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
+import org.hyperledger.besu.ethereum.blockcreation.MiningCoordinator;
+import org.hyperledger.besu.ethereum.core.Hash;
+import org.hyperledger.besu.ethereum.mainnet.DirectAcyclicGraphSeed;
+import org.hyperledger.besu.ethereum.mainnet.EthHashSolution;
+import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
 
 /**
  * Implementation of the stratum+tcp protocol.
  *
- * <p>This protocol allows miners to submit EthHash solutions over a persistent TCP connection.
+ * <p>This protocol allows miners to submit EthHash solutions over a persistent
+ * TCP connection.
  */
 public class Stratum1Protocol implements StratumProtocol {
   private static final Logger LOG = getLogger();
@@ -54,6 +58,7 @@ public class Stratum1Protocol implements StratumProtocol {
     return Bytes.wrap(subscriptionBytes).toShortHexString();
   }
 
+  private final MiningCoordinator miningCoordinator;
   private final String extranonce;
   private EthHashSolverInputs currentInput;
   private Function<EthHashSolution, Boolean> submitCallback;
@@ -61,27 +66,27 @@ public class Stratum1Protocol implements StratumProtocol {
   private final Supplier<String> subscriptionIdCreator;
   private final List<StratumConnection> activeConnections = new ArrayList<>();
 
-  public Stratum1Protocol(final String extranonce) {
-    this(
-        extranonce,
-        () -> {
-          Bytes timeValue = Bytes.minimalBytes(Instant.now().toEpochMilli());
-          return timeValue.slice(timeValue.size() - 4, 4).toShortHexString();
-        },
-        Stratum1Protocol::createSubscriptionID);
+  public Stratum1Protocol(final String extranonce,
+                          final MiningCoordinator miningCoordinator) {
+    this(extranonce, miningCoordinator, () -> {
+      Bytes timeValue = Bytes.minimalBytes(Instant.now().toEpochMilli());
+      return timeValue.slice(timeValue.size() - 4, 4).toShortHexString();
+    }, Stratum1Protocol::createSubscriptionID);
   }
 
-  Stratum1Protocol(
-      final String extranonce,
-      final Supplier<String> jobIdSupplier,
-      final Supplier<String> subscriptionIdCreator) {
+  Stratum1Protocol(final String extranonce,
+                   final MiningCoordinator miningCoordinator,
+                   final Supplier<String> jobIdSupplier,
+                   final Supplier<String> subscriptionIdCreator) {
     this.extranonce = extranonce;
+    this.miningCoordinator = miningCoordinator;
     this.jobIdSupplier = jobIdSupplier;
     this.subscriptionIdCreator = subscriptionIdCreator;
   }
 
   @Override
-  public boolean canHandle(final String initialMessage, final StratumConnection conn) {
+  public boolean canHandle(final String initialMessage,
+                           final StratumConnection conn) {
     final JsonRpcRequest requestBody;
     try {
       requestBody = new JsonObject(initialMessage).mapTo(JsonRpcRequest.class);
@@ -94,18 +99,14 @@ public class Stratum1Protocol implements StratumProtocol {
       return false;
     }
     try {
-      String notify =
-          mapper.writeValueAsString(
-              new JsonRpcSuccessResponse(
-                  requestBody.getId(),
-                  new Object[] {
-                    new String[] {
-                      "mining.notify",
-                      subscriptionIdCreator.get(), // subscription ID, never reused.
-                      STRATUM_1
-                    },
-                    extranonce
-                  }));
+      String notify = mapper.writeValueAsString(new JsonRpcSuccessResponse(
+          requestBody.getId(),
+          new Object[] {
+              new String[] {
+                  "mining.notify",
+                  subscriptionIdCreator.get(), // subscription ID, never reused.
+                  STRATUM_1},
+              extranonce}));
       conn.send(notify + "\n");
     } catch (JsonProcessingException e) {
       LOG.debug(e.getMessage(), e);
@@ -122,15 +123,13 @@ public class Stratum1Protocol implements StratumProtocol {
   }
 
   private void sendNewWork(final StratumConnection conn) {
-    byte[] dagSeed = DirectAcyclicGraphSeed.dagSeed(currentInput.getBlockNumber());
+    byte[] dagSeed =
+        DirectAcyclicGraphSeed.dagSeed(currentInput.getBlockNumber());
     Object[] params =
-        new Object[] {
-          jobIdSupplier.get(),
-          Bytes.wrap(currentInput.getPrePowHash()).toHexString(),
-          Bytes.wrap(dagSeed).toHexString(),
-          currentInput.getTarget().toBytes().toHexString(),
-          true
-        };
+        new Object[] {jobIdSupplier.get(),
+                      Bytes.wrap(currentInput.getPrePowHash()).toHexString(),
+                      Bytes.wrap(dagSeed).toHexString(),
+                      currentInput.getTarget().toBytes().toHexString(), true};
     JsonRpcRequest req = new JsonRpcRequest("2.0", "mining.notify", params);
     try {
       conn.send(mapper.writeValueAsString(req) + "\n");
@@ -152,6 +151,9 @@ public class Stratum1Protocol implements StratumProtocol {
         handleMiningAuthorize(conn, req);
       } else if ("mining.submit".equals(req.getMethod())) {
         handleMiningSubmit(conn, req);
+      } else if (RpcMethod.ETH_SUBMIT_HASHRATE.getMethodName().equals(
+                     req.getMethod())) {
+        handleHashrateSubmit(mapper, miningCoordinator, conn, req);
       }
     } catch (IllegalArgumentException | IOException e) {
       LOG.debug(e.getMessage(), e);
@@ -159,29 +161,33 @@ public class Stratum1Protocol implements StratumProtocol {
     }
   }
 
-  private void handleMiningSubmit(final StratumConnection conn, final JsonRpcRequest message)
+  private void handleMiningSubmit(final StratumConnection conn,
+                                  final JsonRpcRequest message)
       throws IOException {
     LOG.debug("Miner submitted solution {}", message);
     boolean result = false;
-    final EthHashSolution solution =
-        new EthHashSolution(
-            Bytes.fromHexString(message.getRequiredParameter(2, String.class)).getLong(0),
-            Hash.fromHexString(message.getRequiredParameter(4, String.class)),
-            Bytes.fromHexString(message.getRequiredParameter(3, String.class)).toArrayUnsafe());
+    final EthHashSolution solution = new EthHashSolution(
+        Bytes.fromHexString(message.getRequiredParameter(2, String.class))
+            .getLong(0),
+        Hash.fromHexString(message.getRequiredParameter(4, String.class)),
+        Bytes.fromHexString(message.getRequiredParameter(3, String.class))
+            .toArrayUnsafe());
     if (Arrays.equals(currentInput.getPrePowHash(), solution.getPowHash())) {
       result = submitCallback.apply(solution);
     }
 
-    String response =
-        mapper.writeValueAsString(new JsonRpcSuccessResponse(message.getId(), result));
+    String response = mapper.writeValueAsString(
+        new JsonRpcSuccessResponse(message.getId(), result));
     conn.send(response + "\n");
   }
 
-  private void handleMiningAuthorize(final StratumConnection conn, final JsonRpcRequest message)
+  private void handleMiningAuthorize(final StratumConnection conn,
+                                     final JsonRpcRequest message)
       throws IOException {
     // discard message contents as we don't care for username/password.
     // send confirmation
-    String confirm = mapper.writeValueAsString(new JsonRpcSuccessResponse(message.getId(), true));
+    String confirm = mapper.writeValueAsString(
+        new JsonRpcSuccessResponse(message.getId(), true));
     conn.send(confirm + "\n");
     // ready for work.
     registerConnection(conn);
@@ -197,7 +203,8 @@ public class Stratum1Protocol implements StratumProtocol {
   }
 
   @Override
-  public void setSubmitCallback(final Function<EthHashSolution, Boolean> submitSolutionCallback) {
+  public void setSubmitCallback(
+      final Function<EthHashSolution, Boolean> submitSolutionCallback) {
     this.submitCallback = submitSolutionCallback;
   }
 }

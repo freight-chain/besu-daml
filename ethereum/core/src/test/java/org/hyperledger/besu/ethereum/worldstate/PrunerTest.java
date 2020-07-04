@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
 import org.hyperledger.besu.ethereum.chain.DefaultBlockchain;
@@ -34,11 +40,6 @@ import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStoragePrefixedKey
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.services.kvstore.InMemoryKeyValueStorage;
 import org.hyperledger.besu.testutil.MockExecutorService;
-
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.function.Supplier;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -53,24 +54,21 @@ public class PrunerTest {
 
   @Mock private MarkSweepPruner markSweepPruner;
   private final ExecutorService mockExecutorService = new MockExecutorService();
-  private final Supplier<ExecutorService> mockExecutorServiceSupplier = () -> mockExecutorService;
 
   private final Block genesisBlock = gen.genesisBlock();
 
   @Test
-  public void shouldMarkCorrectBlockAndSweep() {
+  public void shouldMarkCorrectBlockAndSweep()
+      throws ExecutionException, InterruptedException {
     final BlockchainStorage blockchainStorage =
         new KeyValueStoragePrefixedKeyBlockchainStorage(
             new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions());
-    final MutableBlockchain blockchain =
-        DefaultBlockchain.createMutable(genesisBlock, blockchainStorage, metricsSystem);
+    final MutableBlockchain blockchain = DefaultBlockchain.createMutable(
+        genesisBlock, blockchainStorage, metricsSystem);
 
     final Pruner pruner =
-        new Pruner(
-            markSweepPruner,
-            blockchain,
-            new PrunerConfiguration(0, 1),
-            mockExecutorServiceSupplier);
+        new Pruner(markSweepPruner, blockchain, new PrunerConfiguration(0, 1),
+                   mockExecutorService);
     pruner.start();
 
     final Block block1 = appendBlockWithParent(blockchain, genesisBlock);
@@ -83,23 +81,23 @@ public class PrunerTest {
   }
 
   @Test
-  public void shouldOnlySweepAfterBlockConfirmationPeriodAndRetentionPeriodEnds() {
+  public void
+  shouldOnlySweepAfterBlockConfirmationPeriodAndRetentionPeriodEnds() {
     final BlockchainStorage blockchainStorage =
         new KeyValueStoragePrefixedKeyBlockchainStorage(
             new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions());
-    final MutableBlockchain blockchain =
-        DefaultBlockchain.createMutable(genesisBlock, blockchainStorage, metricsSystem);
+    final MutableBlockchain blockchain = DefaultBlockchain.createMutable(
+        genesisBlock, blockchainStorage, metricsSystem);
 
     final Pruner pruner =
-        new Pruner(
-            markSweepPruner,
-            blockchain,
-            new PrunerConfiguration(1, 2),
-            mockExecutorServiceSupplier);
+        new Pruner(markSweepPruner, blockchain, new PrunerConfiguration(1, 2),
+                   mockExecutorService);
     pruner.start();
 
     final Hash markBlockStateRootHash =
-        appendBlockWithParent(blockchain, genesisBlock).getHeader().getStateRoot();
+        appendBlockWithParent(blockchain, genesisBlock)
+            .getHeader()
+            .getStateRoot();
     verify(markSweepPruner, never()).mark(markBlockStateRootHash);
     verify(markSweepPruner, never()).sweepBefore(anyLong());
 
@@ -117,16 +115,13 @@ public class PrunerTest {
     final BlockchainStorage blockchainStorage =
         new KeyValueStoragePrefixedKeyBlockchainStorage(
             new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions());
-    final MutableBlockchain blockchain =
-        DefaultBlockchain.createMutable(genesisBlock, blockchainStorage, metricsSystem);
+    final MutableBlockchain blockchain = DefaultBlockchain.createMutable(
+        genesisBlock, blockchainStorage, metricsSystem);
 
     // start pruner so it can start handling block added events
     final Pruner pruner =
-        new Pruner(
-            markSweepPruner,
-            blockchain,
-            new PrunerConfiguration(0, 1),
-            mockExecutorServiceSupplier);
+        new Pruner(markSweepPruner, blockchain, new PrunerConfiguration(0, 1),
+                   mockExecutorService);
     pruner.start();
 
     /*
@@ -138,7 +133,8 @@ public class PrunerTest {
        \/
        O <--- the common ancestor when the reorg happens
     */
-    final Block initiallyCanonicalBlock = appendBlockWithParent(blockchain, genesisBlock);
+    final Block initiallyCanonicalBlock =
+        appendBlockWithParent(blockchain, genesisBlock);
     appendBlockWithParent(blockchain, initiallyCanonicalBlock);
     final Block forkBlock = appendBlockWithParent(blockchain, genesisBlock);
     /*
@@ -146,13 +142,15 @@ public class PrunerTest {
      Set up pre-marking state:
       O
       |  O <---- this block causes a reorg; this branch becomes canonical
-      |  O <---- which means that state here is referring to nodes from the common ancestor block,
-      O  | <- because this was block at which marking began
+      |  O <---- which means that state here is referring to nodes from the
+     common ancestor block, O  | <- because this was block at which marking
+     began
        \/
        O
     */
     appendBlockWithParent(blockchain, forkBlock);
-    verify(markSweepPruner).mark(initiallyCanonicalBlock.getHeader().getStateRoot());
+    verify(markSweepPruner)
+        .mark(initiallyCanonicalBlock.getHeader().getStateRoot());
     verify(markSweepPruner, never()).sweepBefore(anyLong());
     pruner.stop();
   }
@@ -160,52 +158,42 @@ public class PrunerTest {
   @Test
   public void shouldRejectInvalidArguments() {
     final Blockchain mockchain = mock(Blockchain.class);
-    assertThatThrownBy(
-            () ->
-                new Pruner(
-                    markSweepPruner,
-                    mockchain,
-                    new PrunerConfiguration(-1, -2),
-                    mockExecutorServiceSupplier))
+    assertThatThrownBy(()
+                           -> new Pruner(markSweepPruner, mockchain,
+                                         new PrunerConfiguration(-1, -2),
+                                         mockExecutorService))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () ->
-                new Pruner(
-                    markSweepPruner,
-                    mockchain,
-                    new PrunerConfiguration(10, 8),
-                    mockExecutorServiceSupplier))
+    assertThatThrownBy(()
+                           -> new Pruner(markSweepPruner, mockchain,
+                                         new PrunerConfiguration(10, 8),
+                                         mockExecutorService))
         .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () ->
-                new Pruner(
-                    markSweepPruner,
-                    mockchain,
-                    new PrunerConfiguration(10, 10),
-                    mockExecutorServiceSupplier))
+    assertThatThrownBy(()
+                           -> new Pruner(markSweepPruner, mockchain,
+                                         new PrunerConfiguration(10, 10),
+                                         mockExecutorService))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
-  public void shouldCleanUpPruningStrategyOnShutdown() throws InterruptedException {
+  public void shouldCleanUpPruningStrategyOnShutdown()
+      throws InterruptedException {
     final BlockchainStorage blockchainStorage =
         new KeyValueStoragePrefixedKeyBlockchainStorage(
             new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions());
-    final MutableBlockchain blockchain =
-        DefaultBlockchain.createMutable(genesisBlock, blockchainStorage, metricsSystem);
+    final MutableBlockchain blockchain = DefaultBlockchain.createMutable(
+        genesisBlock, blockchainStorage, metricsSystem);
 
     final Pruner pruner =
-        new Pruner(
-            markSweepPruner,
-            blockchain,
-            new PrunerConfiguration(0, 1),
-            mockExecutorServiceSupplier);
+        new Pruner(markSweepPruner, blockchain, new PrunerConfiguration(0, 1),
+                   mockExecutorService);
     pruner.start();
     pruner.stop();
     verify(markSweepPruner).cleanup();
   }
 
-  private Block appendBlockWithParent(final MutableBlockchain blockchain, final Block parent) {
+  private Block appendBlockWithParent(final MutableBlockchain blockchain,
+                                      final Block parent) {
     BlockOptions options =
         new BlockOptions()
             .setBlockNumber(parent.getHeader().getNumber() + 1)

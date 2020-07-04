@@ -2,9 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_block",
-    "params": [
-      "0x6"
-    ],
+    "params": ["0x6"],
     "id": 415
   },
   "response": {
@@ -19,7 +17,7 @@
           "to": "0x0020000000000000000000000000000000000000",
           "value": "0x0"
         },
-        "blockHash": "0x6a78a9bd1760e8e22e9ba59f3e10f495caa31f007b42227d3a88b3c89c67bd1d",
+        "blockHash": "0xe010474527f237cfb1a00704fa279de2cce1870a4eac8c4b83fbce988b823ed0",
         "blockNumber": 6,
         "result": {
           "gasUsed": "0x7536",
@@ -37,13 +35,11 @@
           "balance": "0x300",
           "refundAddress": "0x0000000000000999000000000000000000000000"
         },
-        "blockHash": "0x6a78a9bd1760e8e22e9ba59f3e10f495caa31f007b42227d3a88b3c89c67bd1d",
+        "blockHash": "0xe010474527f237cfb1a00704fa279de2cce1870a4eac8c4b83fbce988b823ed0",
         "blockNumber": 6,
         "result": null,
         "subtraces": 0,
-        "traceAddress": [
-          0
-        ],
+        "traceAddress": [0],
         "transactionHash": "0x91eeabc671e2dd2b1c8ddebb46ba59e8cb3e7d189f80bcc868a9787728c6e59e",
         "transactionPosition": 0,
         "type": "suicide"
@@ -54,7 +50,7 @@
           "rewardType": "block",
           "value": "0x1bc16d674ec80000"
         },
-        "blockHash": "0x6a78a9bd1760e8e22e9ba59f3e10f495caa31f007b42227d3a88b3c89c67bd1d",
+        "blockHash": "0xe010474527f237cfb1a00704fa279de2cce1870a4eac8c4b83fbce988b823ed0",
         "blockNumber": 6,
         "result": null,
         "subtraces": 0,

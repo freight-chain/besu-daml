@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +27,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+import java.util.Optional;
+import org.assertj.core.util.Lists;
 import org.hyperledger.besu.consensus.clique.CliqueBlockInterface;
 import org.hyperledger.besu.consensus.clique.CliqueContext;
 import org.hyperledger.besu.consensus.clique.CliqueMiningTracker;
@@ -41,11 +47,6 @@ import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Util;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
-
-import java.util.List;
-import java.util.Optional;
-
-import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,18 +59,23 @@ public class CliqueMiningCoordinatorTest {
 
   private final KeyPair proposerKeys = KeyPair.generate();
   private final KeyPair validatorKeys = KeyPair.generate();
-  private final Address proposerAddress = Util.publicKeyToAddress(proposerKeys.getPublicKey());
-  private final Address validatorAddress = Util.publicKeyToAddress(validatorKeys.getPublicKey());
+  private final Address proposerAddress =
+      Util.publicKeyToAddress(proposerKeys.getPublicKey());
+  private final Address validatorAddress =
+      Util.publicKeyToAddress(validatorKeys.getPublicKey());
 
-  private final List<Address> validators = Lists.newArrayList(validatorAddress, proposerAddress);
+  private final List<Address> validators =
+      Lists.newArrayList(validatorAddress, proposerAddress);
 
-  private final BlockHeaderTestFixture headerTestFixture = new BlockHeaderTestFixture();
+  private final BlockHeaderTestFixture headerTestFixture =
+      new BlockHeaderTestFixture();
 
   private CliqueMiningTracker miningTracker;
-  private final CliqueBlockInterface blockInterface = new CliqueBlockInterface();
+  private final CliqueBlockInterface blockInterface =
+      new CliqueBlockInterface();
 
   @Mock private MutableBlockchain blockChain;
-  @Mock private ProtocolContext<CliqueContext> protocolContext;
+  @Mock private ProtocolContext protocolContext;
   @Mock private CliqueMinerExecutor minerExecutor;
   @Mock private CliqueBlockMiner blockMiner;
   @Mock private SyncState syncState;
@@ -79,7 +85,8 @@ public class CliqueMiningCoordinatorTest {
   public void setup() {
 
     headerTestFixture.number(1);
-    Block genesisBlock = createEmptyBlock(0, Hash.ZERO, proposerKeys); // not normally signed but ok
+    Block genesisBlock = createEmptyBlock(
+        0, Hash.ZERO, proposerKeys); // not normally signed but ok
     blockChain = createInMemoryBlockchain(genesisBlock);
 
     final VoteTally voteTally = mock(VoteTally.class);
@@ -88,9 +95,11 @@ public class CliqueMiningCoordinatorTest {
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, null, null, blockInterface);
 
-    when(protocolContext.getConsensusState()).thenReturn(cliqueContext);
+    when(protocolContext.getConsensusState(CliqueContext.class))
+        .thenReturn(cliqueContext);
     when(protocolContext.getBlockchain()).thenReturn(blockChain);
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
     when(syncState.isInSync()).thenReturn(true);
 
     miningTracker = new CliqueMiningTracker(proposerAddress, protocolContext);
@@ -98,15 +107,16 @@ public class CliqueMiningCoordinatorTest {
 
   @Test
   public void outOfTurnBlockImportedDoesNotInterruptInTurnMiningOperation() {
-    // As the head of the blockChain is 0 (which effectively doesn't have a signer, all validators
-    // are able to propose.
+    // As the head of the blockChain is 0 (which effectively doesn't have a
+    // signer, all validators are able to propose.
 
-    when(blockMiner.getParentHeader()).thenReturn(blockChain.getChainHeadHeader());
+    when(blockMiner.getParentHeader())
+        .thenReturn(blockChain.getChainHeadHeader());
 
-    // Note also - validators is an hard-ordered LIST, thus in-turn will follow said list - block_1
-    // should be created by proposer.
-    final CliqueMiningCoordinator coordinator =
-        new CliqueMiningCoordinator(blockChain, minerExecutor, syncState, miningTracker);
+    // Note also - validators is an hard-ordered LIST, thus in-turn will follow
+    // said list - block_1 should be created by proposer.
+    final CliqueMiningCoordinator coordinator = new CliqueMiningCoordinator(
+        blockChain, minerExecutor, syncState, miningTracker);
 
     coordinator.enable();
     coordinator.start();
@@ -115,25 +125,28 @@ public class CliqueMiningCoordinatorTest {
 
     reset(minerExecutor);
 
-    final Block importedBlock = createEmptyBlock(1, blockChain.getChainHeadHash(), validatorKeys);
+    final Block importedBlock =
+        createEmptyBlock(1, blockChain.getChainHeadHash(), validatorKeys);
 
     blockChain.appendBlock(importedBlock, Lists.emptyList());
 
-    // The minerExecutor should not be invoked as the mining operation was conducted by an in-turn
-    // validator, and the created block came from an out-turn validator.
+    // The minerExecutor should not be invoked as the mining operation was
+    // conducted by an in-turn validator, and the created block came from an
+    // out-turn validator.
     verify(minerExecutor, never()).startAsyncMining(any(), any(), any());
   }
 
   @Test
   public void outOfTurnBlockImportedAtHigherLevelInterruptsMiningOperation() {
-    // As the head of the blockChain is 1 (which effectively doesn't have a signer, all validators
-    // are able to propose.
-    when(blockMiner.getParentHeader()).thenReturn(blockChain.getChainHeadHeader());
+    // As the head of the blockChain is 1 (which effectively doesn't have a
+    // signer, all validators are able to propose.
+    when(blockMiner.getParentHeader())
+        .thenReturn(blockChain.getChainHeadHeader());
 
-    // Note also - validators is an hard-ordered LIST, thus in-turn will follow said list - block_1
-    // should be created by proposer.
-    final CliqueMiningCoordinator coordinator =
-        new CliqueMiningCoordinator(blockChain, minerExecutor, syncState, miningTracker);
+    // Note also - validators is an hard-ordered LIST, thus in-turn will follow
+    // said list - block_1 should be created by proposer.
+    final CliqueMiningCoordinator coordinator = new CliqueMiningCoordinator(
+        blockChain, minerExecutor, syncState, miningTracker);
 
     coordinator.enable();
     coordinator.start();
@@ -141,30 +154,38 @@ public class CliqueMiningCoordinatorTest {
     verify(minerExecutor, times(1)).startAsyncMining(any(), any(), any());
 
     reset(minerExecutor);
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
 
-    final Block importedBlock = createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
+    final Block importedBlock =
+        createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
 
     blockChain.appendBlock(importedBlock, Lists.emptyList());
 
-    // The minerExecutor should not be invoked as the mining operation was conducted by an in-turn
-    // validator, and the created block came from an out-turn validator.
-    ArgumentCaptor<BlockHeader> varArgs = ArgumentCaptor.forClass(BlockHeader.class);
-    verify(minerExecutor, times(1)).startAsyncMining(any(), any(), varArgs.capture());
+    // The minerExecutor should not be invoked as the mining operation was
+    // conducted by an in-turn validator, and the created block came from an
+    // out-turn validator.
+    ArgumentCaptor<BlockHeader> varArgs =
+        ArgumentCaptor.forClass(BlockHeader.class);
+    verify(minerExecutor, times(1))
+        .startAsyncMining(any(), any(), varArgs.capture());
     assertThat(varArgs.getValue()).isEqualTo(blockChain.getChainHeadHeader());
   }
 
   @Test
   public void outOfTurnBlockImportedInterruptsOutOfTurnMiningOperation() {
     blockChain.appendBlock(
-        createEmptyBlock(1, blockChain.getChainHeadHash(), validatorKeys), Lists.emptyList());
+        createEmptyBlock(1, blockChain.getChainHeadHash(), validatorKeys),
+        Lists.emptyList());
 
-    when(blockMiner.getParentHeader()).thenReturn(blockChain.getChainHeadHeader());
+    when(blockMiner.getParentHeader())
+        .thenReturn(blockChain.getChainHeadHeader());
 
-    // Note also - validators is an hard-ordered LIST, thus in-turn will follow said list - block_2
-    // should be created by 'validator', thus Proposer is out-of-turn.
-    final CliqueMiningCoordinator coordinator =
-        new CliqueMiningCoordinator(blockChain, minerExecutor, syncState, miningTracker);
+    // Note also - validators is an hard-ordered LIST, thus in-turn will follow
+    // said list - block_2 should be created by 'validator', thus Proposer is
+    // out-of-turn.
+    final CliqueMiningCoordinator coordinator = new CliqueMiningCoordinator(
+        blockChain, minerExecutor, syncState, miningTracker);
 
     coordinator.enable();
     coordinator.start();
@@ -172,30 +193,38 @@ public class CliqueMiningCoordinatorTest {
     verify(minerExecutor, times(1)).startAsyncMining(any(), any(), any());
 
     reset(minerExecutor);
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
 
-    final Block importedBlock = createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
+    final Block importedBlock =
+        createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
 
     blockChain.appendBlock(importedBlock, Lists.emptyList());
 
-    // The minerExecutor should not be invoked as the mining operation was conducted by an in-turn
-    // validator, and the created block came from an out-turn validator.
-    ArgumentCaptor<BlockHeader> varArgs = ArgumentCaptor.forClass(BlockHeader.class);
-    verify(minerExecutor, times(1)).startAsyncMining(any(), any(), varArgs.capture());
+    // The minerExecutor should not be invoked as the mining operation was
+    // conducted by an in-turn validator, and the created block came from an
+    // out-turn validator.
+    ArgumentCaptor<BlockHeader> varArgs =
+        ArgumentCaptor.forClass(BlockHeader.class);
+    verify(minerExecutor, times(1))
+        .startAsyncMining(any(), any(), varArgs.capture());
     assertThat(varArgs.getValue()).isEqualTo(blockChain.getChainHeadHeader());
   }
 
   @Test
   public void outOfTurnBlockImportedInterruptsNonRunningMiner() {
     blockChain.appendBlock(
-        createEmptyBlock(1, blockChain.getChainHeadHash(), proposerKeys), Lists.emptyList());
+        createEmptyBlock(1, blockChain.getChainHeadHash(), proposerKeys),
+        Lists.emptyList());
 
-    when(blockMiner.getParentHeader()).thenReturn(blockChain.getChainHeadHeader());
+    when(blockMiner.getParentHeader())
+        .thenReturn(blockChain.getChainHeadHeader());
 
-    // Note also - validators is an hard-ordered LIST, thus in-turn will follow said list - block_2
-    // should be created by 'validator', thus Proposer is out-of-turn.
-    final CliqueMiningCoordinator coordinator =
-        new CliqueMiningCoordinator(blockChain, minerExecutor, syncState, miningTracker);
+    // Note also - validators is an hard-ordered LIST, thus in-turn will follow
+    // said list - block_2 should be created by 'validator', thus Proposer is
+    // out-of-turn.
+    final CliqueMiningCoordinator coordinator = new CliqueMiningCoordinator(
+        blockChain, minerExecutor, syncState, miningTracker);
 
     coordinator.enable();
     coordinator.start();
@@ -203,25 +232,31 @@ public class CliqueMiningCoordinatorTest {
     verify(minerExecutor, times(1)).startAsyncMining(any(), any(), any());
 
     reset(minerExecutor);
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
 
-    final Block importedBlock = createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
+    final Block importedBlock =
+        createEmptyBlock(2, blockChain.getChainHeadHash(), validatorKeys);
 
     blockChain.appendBlock(importedBlock, Lists.emptyList());
 
-    // The minerExecutor should not be invoked as the mining operation was conducted by an in-turn
-    // validator, and the created block came from an out-turn validator.
-    ArgumentCaptor<BlockHeader> varArgs = ArgumentCaptor.forClass(BlockHeader.class);
-    verify(minerExecutor, times(1)).startAsyncMining(any(), any(), varArgs.capture());
+    // The minerExecutor should not be invoked as the mining operation was
+    // conducted by an in-turn validator, and the created block came from an
+    // out-turn validator.
+    ArgumentCaptor<BlockHeader> varArgs =
+        ArgumentCaptor.forClass(BlockHeader.class);
+    verify(minerExecutor, times(1))
+        .startAsyncMining(any(), any(), varArgs.capture());
     assertThat(varArgs.getValue()).isEqualTo(blockChain.getChainHeadHeader());
   }
 
   @Test
   public void locallyGeneratedBlockInvalidatesMiningEvenIfInTurn() {
-    // Note also - validators is an hard-ordered LIST, thus in-turn will follow said list - block_1
-    // should be created by Proposer, and thus will be in-turn.
-    final CliqueMiningCoordinator coordinator =
-        new CliqueMiningCoordinator(blockChain, minerExecutor, syncState, miningTracker);
+    // Note also - validators is an hard-ordered LIST, thus in-turn will follow
+    // said list - block_1 should be created by Proposer, and thus will be
+    // in-turn.
+    final CliqueMiningCoordinator coordinator = new CliqueMiningCoordinator(
+        blockChain, minerExecutor, syncState, miningTracker);
 
     coordinator.enable();
     coordinator.start();
@@ -229,23 +264,29 @@ public class CliqueMiningCoordinatorTest {
     verify(minerExecutor, times(1)).startAsyncMining(any(), any(), any());
 
     reset(minerExecutor);
-    when(minerExecutor.startAsyncMining(any(), any(), any())).thenReturn(Optional.of(blockMiner));
+    when(minerExecutor.startAsyncMining(any(), any(), any()))
+        .thenReturn(Optional.of(blockMiner));
 
-    final Block importedBlock = createEmptyBlock(1, blockChain.getChainHeadHash(), proposerKeys);
+    final Block importedBlock =
+        createEmptyBlock(1, blockChain.getChainHeadHash(), proposerKeys);
     blockChain.appendBlock(importedBlock, Lists.emptyList());
 
-    // The minerExecutor should not be invoked as the mining operation was conducted by an in-turn
-    // validator, and the created block came from an out-turn validator.
-    ArgumentCaptor<BlockHeader> varArgs = ArgumentCaptor.forClass(BlockHeader.class);
-    verify(minerExecutor, times(1)).startAsyncMining(any(), any(), varArgs.capture());
+    // The minerExecutor should not be invoked as the mining operation was
+    // conducted by an in-turn validator, and the created block came from an
+    // out-turn validator.
+    ArgumentCaptor<BlockHeader> varArgs =
+        ArgumentCaptor.forClass(BlockHeader.class);
+    verify(minerExecutor, times(1))
+        .startAsyncMining(any(), any(), varArgs.capture());
     assertThat(varArgs.getValue()).isEqualTo(blockChain.getChainHeadHeader());
   }
 
-  private Block createEmptyBlock(
-      final long blockNumber, final Hash parentHash, final KeyPair signer) {
+  private Block createEmptyBlock(final long blockNumber, final Hash parentHash,
+                                 final KeyPair signer) {
     headerTestFixture.number(blockNumber).parentHash(parentHash);
-    final BlockHeader header =
-        TestHelpers.createCliqueSignedBlockHeader(headerTestFixture, signer, validators);
-    return new Block(header, new BlockBody(Lists.emptyList(), Lists.emptyList()));
+    final BlockHeader header = TestHelpers.createCliqueSignedBlockHeader(
+        headerTestFixture, signer, validators);
+    return new Block(header,
+                     new BlockBody(Lists.emptyList(), Lists.emptyList()));
   }
 }

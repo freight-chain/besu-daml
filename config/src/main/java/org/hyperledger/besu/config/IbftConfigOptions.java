@@ -1,23 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.config;
 
-import java.util.Map;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
+import java.math.BigInteger;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 
 public class IbftConfigOptions {
 
@@ -27,8 +32,9 @@ public class IbftConfigOptions {
   private static final long DEFAULT_EPOCH_LENGTH = 30_000;
   private static final int DEFAULT_BLOCK_PERIOD_SECONDS = 1;
   private static final int DEFAULT_ROUND_EXPIRY_SECONDS = 1;
-  // In a healthy network this can be very small. This default limit will allow for suitable
-  // protection for on a typical 20 node validator network with multiple rounds
+  // In a healthy network this can be very small. This default limit will allow
+  // for suitable protection for on a typical 20 node validator network with
+  // multiple rounds
   private static final int DEFAULT_GOSSIPED_HISTORY_LIMIT = 1000;
   private static final int DEFAULT_MESSAGE_QUEUE_LIMIT = 1000;
   private static final int DEFAULT_DUPLICATE_MESSAGE_LIMIT = 100;
@@ -42,37 +48,62 @@ public class IbftConfigOptions {
   }
 
   public long getEpochLength() {
-    return JsonUtil.getLong(ibftConfigRoot, "epochlength", DEFAULT_EPOCH_LENGTH);
+    return JsonUtil.getLong(ibftConfigRoot, "epochlength",
+                            DEFAULT_EPOCH_LENGTH);
   }
 
   public int getBlockPeriodSeconds() {
-    return JsonUtil.getInt(ibftConfigRoot, "blockperiodseconds", DEFAULT_BLOCK_PERIOD_SECONDS);
+    return JsonUtil.getInt(ibftConfigRoot, "blockperiodseconds",
+                           DEFAULT_BLOCK_PERIOD_SECONDS);
   }
 
   public int getRequestTimeoutSeconds() {
-    return JsonUtil.getInt(ibftConfigRoot, "requesttimeoutseconds", DEFAULT_ROUND_EXPIRY_SECONDS);
+    return JsonUtil.getInt(ibftConfigRoot, "requesttimeoutseconds",
+                           DEFAULT_ROUND_EXPIRY_SECONDS);
   }
 
   public int getGossipedHistoryLimit() {
-    return JsonUtil.getInt(ibftConfigRoot, "gossipedhistorylimit", DEFAULT_GOSSIPED_HISTORY_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "gossipedhistorylimit",
+                           DEFAULT_GOSSIPED_HISTORY_LIMIT);
   }
 
   public int getMessageQueueLimit() {
-    return JsonUtil.getInt(ibftConfigRoot, "messagequeuelimit", DEFAULT_MESSAGE_QUEUE_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "messagequeuelimit",
+                           DEFAULT_MESSAGE_QUEUE_LIMIT);
   }
 
   public int getDuplicateMessageLimit() {
-    return JsonUtil.getInt(
-        ibftConfigRoot, "duplicatemessagelimit", DEFAULT_DUPLICATE_MESSAGE_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "duplicatemessagelimit",
+                           DEFAULT_DUPLICATE_MESSAGE_LIMIT);
   }
 
   public int getFutureMessagesLimit() {
-    return JsonUtil.getInt(ibftConfigRoot, "futuremessageslimit", DEFAULT_FUTURE_MESSAGES_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "futuremessageslimit",
+                           DEFAULT_FUTURE_MESSAGES_LIMIT);
   }
 
   public int getFutureMessagesMaxDistance() {
-    return JsonUtil.getInt(
-        ibftConfigRoot, "futuremessagesmaxdistance", DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE);
+    return JsonUtil.getInt(ibftConfigRoot, "futuremessagesmaxdistance",
+                           DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE);
+  }
+
+  public Optional<String> getMiningBeneficiary() {
+    return JsonUtil.getString(ibftConfigRoot, "miningbeneficiary");
+  }
+
+  public BigInteger getBlockRewardWei() {
+    final Optional<String> configFileContent =
+        JsonUtil.getString(ibftConfigRoot, "blockreward");
+
+    if (configFileContent.isEmpty()) {
+      return BigInteger.ZERO;
+    }
+    final String weiStr = configFileContent.get();
+    if (weiStr.startsWith("0x")) {
+      return new BigInteger(1,
+                            Bytes.fromHexStringLenient(weiStr).toArrayUnsafe());
+    }
+    return new BigInteger(weiStr);
   }
 
   Map<String, Object> asMap() {

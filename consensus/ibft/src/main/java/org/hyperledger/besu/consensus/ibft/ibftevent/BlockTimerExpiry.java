@@ -1,25 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.consensus.ibft.ibftevent;
 
-import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
-import org.hyperledger.besu.consensus.ibft.ibftevent.IbftEvents.Type;
-
-import java.util.Objects;
-
 import com.google.common.base.MoreObjects;
+import java.util.Objects;
+import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
 
 /** Event indicating a block timer has expired */
 public final class BlockTimerExpiry implements IbftEvent {
@@ -28,15 +28,16 @@ public final class BlockTimerExpiry implements IbftEvent {
   /**
    * Constructor for a BlockTimerExpiry event
    *
-   * @param roundIdentifier The roundIdentifier that the expired timer belonged to
+   * @param roundIdentifier The roundIdentifier that the expired timer belonged
+   *     to
    */
   public BlockTimerExpiry(final ConsensusRoundIdentifier roundIdentifier) {
     this.roundIdentifier = roundIdentifier;
   }
 
   @Override
-  public Type getType() {
-    return Type.BLOCK_TIMER_EXPIRY;
+  public IbftEvents.Type getType() {
+    return IbftEvents.Type.BLOCK_TIMER_EXPIRY;
   }
 
   public ConsensusRoundIdentifier getRoundIndentifier() {
@@ -45,7 +46,9 @@ public final class BlockTimerExpiry implements IbftEvent {
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add("Round Identifier", roundIdentifier).toString();
+    return MoreObjects.toStringHelper(this)
+        .add("Round Identifier", roundIdentifier)
+        .toString();
   }
 
   @Override
@@ -56,7 +59,7 @@ public final class BlockTimerExpiry implements IbftEvent {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final BlockTimerExpiry that = (BlockTimerExpiry) o;
+    final BlockTimerExpiry that = (BlockTimerExpiry)o;
     return Objects.equals(roundIdentifier, that.roundIdentifier);
   }
 

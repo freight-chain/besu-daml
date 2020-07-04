@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -27,7 +30,6 @@ import org.hyperledger.besu.ethereum.core.BlockImporter;
 import org.hyperledger.besu.ethereum.eth.sync.tasks.exceptions.InvalidBlockException;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,27 +39,29 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class FullImportBlockStepTest {
 
-  @Mock private ProtocolSchedule<Void> protocolSchedule;
-  @Mock private ProtocolSpec<Void> protocolSpec;
-  @Mock private ProtocolContext<Void> protocolContext;
-  @Mock private BlockImporter<Void> blockImporter;
+  @Mock private ProtocolSchedule protocolSchedule;
+  @Mock private ProtocolSpec protocolSpec;
+  @Mock private ProtocolContext protocolContext;
+  @Mock private BlockImporter blockImporter;
   private final BlockDataGenerator gen = new BlockDataGenerator();
 
-  private FullImportBlockStep<Void> importBlocksStep;
+  private FullImportBlockStep importBlocksStep;
 
   @Before
   public void setUp() {
     when(protocolSchedule.getByBlockNumber(anyLong())).thenReturn(protocolSpec);
     when(protocolSpec.getBlockImporter()).thenReturn(blockImporter);
 
-    importBlocksStep = new FullImportBlockStep<>(protocolSchedule, protocolContext, null);
+    importBlocksStep =
+        new FullImportBlockStep(protocolSchedule, protocolContext, null);
   }
 
   @Test
   public void shouldImportBlock() {
     final Block block = gen.block();
 
-    when(blockImporter.importBlock(protocolContext, block, SKIP_DETACHED)).thenReturn(true);
+    when(blockImporter.importBlock(protocolContext, block, SKIP_DETACHED))
+        .thenReturn(true);
     importBlocksStep.accept(block);
 
     verify(protocolSchedule).getByBlockNumber(block.getHeader().getNumber());
@@ -68,7 +72,8 @@ public class FullImportBlockStepTest {
   public void shouldThrowExceptionWhenValidationFails() {
     final Block block = gen.block();
 
-    when(blockImporter.importBlock(protocolContext, block, SKIP_DETACHED)).thenReturn(false);
+    when(blockImporter.importBlock(protocolContext, block, SKIP_DETACHED))
+        .thenReturn(false);
     assertThatThrownBy(() -> importBlocksStep.accept(block))
         .isInstanceOf(InvalidBlockException.class);
   }

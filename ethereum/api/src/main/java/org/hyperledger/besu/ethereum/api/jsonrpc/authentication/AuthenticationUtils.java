@@ -1,63 +1,63 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.authentication;
 
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
-
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 
 public class AuthenticationUtils {
   private static final Logger LOG = LogManager.getLogger();
 
   @VisibleForTesting
-  public static boolean isPermitted(
-      final Optional<AuthenticationService> authenticationService,
-      final Optional<User> optionalUser,
-      final JsonRpcMethod jsonRpcMethod) {
+  public static boolean
+  isPermitted(final Optional<AuthenticationService> authenticationService,
+              final Optional<User> optionalUser,
+              final JsonRpcMethod jsonRpcMethod) {
 
     AtomicBoolean foundMatchingPermission = new AtomicBoolean();
 
-    if (authenticationService.isPresent()) {
-      if (optionalUser.isPresent()) {
-        User user = optionalUser.get();
-        for (String perm : jsonRpcMethod.getPermissions()) {
-          user.isAuthorized(
-              perm,
-              (authed) -> {
-                if (authed.result()) {
-                  LOG.trace(
-                      "user {} authorized : {} via permission {}",
-                      user,
-                      jsonRpcMethod.getName(),
-                      perm);
-                  foundMatchingPermission.set(true);
-                }
-              });
+    if (authenticationService.isEmpty()) {
+      // no auth provider configured thus anything is permitted
+      return true;
+    }
+
+    if (optionalUser.isPresent()) {
+      User user = optionalUser.get();
+      for (String perm : jsonRpcMethod.getPermissions()) {
+        user.isAuthorized(perm, (authed) -> {
+          if (authed.result()) {
+            LOG.trace("user {} authorized : {} via permission {}", user,
+                      jsonRpcMethod.getName(), perm);
+            foundMatchingPermission.set(true);
+          }
+        });
+        // exit if a matching permission was found, no need to keep checking
+        if (foundMatchingPermission.get()) {
+          return foundMatchingPermission.get();
         }
       }
-    } else {
-      // no auth provider configured thus anything is permitted
-      foundMatchingPermission.set(true);
     }
 
     if (!foundMatchingPermission.get()) {
@@ -66,29 +66,24 @@ public class AuthenticationUtils {
     return foundMatchingPermission.get();
   }
 
-  public static void getUser(
-      final Optional<AuthenticationService> authenticationService,
-      final String token,
-      final Handler<Optional<User>> handler) {
+  public static void
+  getUser(final Optional<AuthenticationService> authenticationService,
+          final String token, final Handler<Optional<User>> handler) {
     try {
       if (authenticationService.isEmpty()) {
         handler.handle(Optional.empty());
       } else {
-        authenticationService
-            .get()
-            .getJwtAuthProvider()
-            .authenticate(
-                new JsonObject().put("jwt", token),
-                (r) -> {
-                  if (r.succeeded()) {
-                    final Optional<User> user = Optional.ofNullable(r.result());
-                    validateExpiryExists(user);
-                    handler.handle(user);
-                  } else {
-                    LOG.debug("Invalid JWT token", r.cause());
-                    handler.handle(Optional.empty());
-                  }
-                });
+        authenticationService.get().getJwtAuthProvider().authenticate(
+            new JsonObject().put("jwt", token), (r) -> {
+              if (r.succeeded()) {
+                final Optional<User> user = Optional.ofNullable(r.result());
+                validateExpiryExists(user);
+                handler.handle(user);
+              } else {
+                LOG.debug("Invalid JWT token", r.cause());
+                handler.handle(Optional.empty());
+              }
+            });
       }
     } catch (Exception e) {
       handler.handle(Optional.empty());
@@ -96,12 +91,15 @@ public class AuthenticationUtils {
   }
 
   private static void validateExpiryExists(final Optional<User> user) {
-    if (!user.map(User::principal).map(p -> p.containsKey("exp")).orElse(false)) {
+    if (!user.map(User::principal)
+             .map(p -> p.containsKey("exp"))
+             .orElse(false)) {
       throw new IllegalStateException("Invalid JWT doesn't have expiry");
     }
   }
 
-  public static String getJwtTokenFromAuthorizationHeaderValue(final String value) {
+  public static String
+  getJwtTokenFromAuthorizationHeaderValue(final String value) {
     if (value != null) {
       final String bearerSchemaName = "Bearer ";
       if (value.startsWith(bearerSchemaName)) {

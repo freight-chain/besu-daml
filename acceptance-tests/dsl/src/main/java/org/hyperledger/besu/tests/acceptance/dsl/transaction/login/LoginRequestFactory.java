@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,9 +19,8 @@ package org.hyperledger.besu.tests.acceptance.dsl.transaction.login;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-
 import io.vertx.core.json.JsonObject;
+import java.io.IOException;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -28,8 +30,8 @@ import okhttp3.ResponseBody;
 
 public class LoginRequestFactory {
 
-  private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-  private static final String AUTHENTICATION_REQUEST = "{\"username\":\"%s\",\"password\":\"%s\"}";
+  private static final MediaType JSON =
+      MediaType.parse("application/json; charset=utf-8");
   private static final String LOGIN_PATH = "/login";
 
   private final String contextRootUrl;
@@ -40,7 +42,8 @@ public class LoginRequestFactory {
     this.client = new OkHttpClient();
   }
 
-  JsonObject successful(final String username, final String password) throws IOException {
+  JsonObject successful(final String username, final String password)
+      throws IOException {
     final Request request = loginRequest(username, password);
 
     try (final Response response = client.newCall(request).execute()) {
@@ -52,7 +55,8 @@ public class LoginRequestFactory {
       assertThat(responseBody).isNotNull();
       assertThat(responseBody.contentType()).isNotNull();
       assertThat(responseBody.contentType().type()).isEqualTo(JSON.type());
-      assertThat(responseBody.contentType().subtype()).isEqualTo(JSON.subtype());
+      assertThat(responseBody.contentType().subtype())
+          .isEqualTo(JSON.subtype());
 
       final String bodyString = responseBody.string();
       assertThat(bodyString).isNotNull();
@@ -73,12 +77,11 @@ public class LoginRequestFactory {
   }
 
   private Request loginRequest(final String username, final String password) {
-    final RequestBody requestBody =
-        RequestBody.create(JSON, String.format(AUTHENTICATION_REQUEST, username, password));
+    final RequestBody requestBody = RequestBody.create(
+        JSON, String.format("{\"username\":\"%s\",\"password\":\"%s\"}",
+                            username, password));
     return new Request.Builder().post(requestBody).url(loginUri()).build();
   }
 
-  private String loginUri() {
-    return contextRootUrl + LOGIN_PATH;
-  }
+  private String loginUri() { return contextRootUrl + LOGIN_PATH; }
 }

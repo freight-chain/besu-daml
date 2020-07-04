@@ -30,7 +30,7 @@
             "to": "0x0130000000000000000000000000000000000000",
             "value": "0x0"
           },
-          "blockHash": "0xc901df04bc776b11f76d9c7198db57a9d0e5e5901c0da7679c614446eb3b49d2",
+          "blockHash": "0x489e6762341d42c33923d284f30b491f83fe46e5fb34db572e07aab864d418df",
           "blockNumber": 20,
           "result": {
             "gasUsed": "0x16c46",
@@ -50,7 +50,7 @@
             "init": "0x600160015560015460025561ffff6000526002601ef3",
             "value": "0x0"
           },
-          "blockHash": "0xc901df04bc776b11f76d9c7198db57a9d0e5e5901c0da7679c614446eb3b49d2",
+          "blockHash": "0x489e6762341d42c33923d284f30b491f83fe46e5fb34db572e07aab864d418df",
           "blockNumber": 20,
           "result": {
             "address": "0xaac0627078c038eb3d06e04b57d020fe212be97d",
@@ -58,9 +58,7 @@
             "gasUsed": "0xa10e"
           },
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xd32c538fd1b3ef854c04ae39925dc9e849b568b92ea388f778b794851ab37f7c",
           "transactionPosition": 0,
           "type": "create"
@@ -80,7 +78,7 @@
             "to": "0x0140000000000000000000000000000000000000",
             "value": "0x0"
           },
-          "blockHash": "0xc901df04bc776b11f76d9c7198db57a9d0e5e5901c0da7679c614446eb3b49d2",
+          "blockHash": "0x489e6762341d42c33923d284f30b491f83fe46e5fb34db572e07aab864d418df",
           "blockNumber": 20,
           "result": {
             "gasUsed": "0x16b87",
@@ -100,7 +98,7 @@
             "init": "0x600160015560015460025560ff60005360016000f3",
             "value": "0x0"
           },
-          "blockHash": "0xc901df04bc776b11f76d9c7198db57a9d0e5e5901c0da7679c614446eb3b49d2",
+          "blockHash": "0x489e6762341d42c33923d284f30b491f83fe46e5fb34db572e07aab864d418df",
           "blockNumber": 20,
           "result": {
             "address": "0x0deea5bd06fb86553643c1e94a2f5aac632b9ec9",
@@ -108,9 +106,7 @@
             "gasUsed": "0xa046"
           },
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xaf151fc10eb21e76efb0bc74da179a674083e420280fb2985f76b0326682864a",
           "transactionPosition": 1,
           "type": "create"

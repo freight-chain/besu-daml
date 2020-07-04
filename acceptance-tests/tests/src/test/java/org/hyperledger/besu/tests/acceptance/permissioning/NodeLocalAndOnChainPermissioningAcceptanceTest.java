@@ -1,21 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.tests.acceptance.permissioning;
 
 import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,10 +39,12 @@ public class NodeLocalAndOnChainPermissioningAcceptanceTest
   }
 
   @Test
-  public void testNodeCannotConnectWhenWhiteListedOnChainButNotLocal() {
+  public void testNodeCannotConnectWhenAllowedOnChainButNotLocally() {
 
-    // add permissioned node after cluster start because we need enode URI for local config
-    permissionedNode = permissionedNode("permissioned-node", bootnode, allowedNode);
+    // add permissioned node after cluster start because we need enode URI for
+    // local config
+    permissionedNode =
+        permissionedNode("permissioned-node", bootnode, allowedNode);
     permissionedCluster.addNode(permissionedNode);
 
     // update OnChain smart contract with allowed nodes
@@ -60,12 +64,14 @@ public class NodeLocalAndOnChainPermissioningAcceptanceTest
   }
 
   @Test
-  public void testNodeCannotConnectWhenWhitelistedLocalButNotOnChain() {
-    // onchain whitelist: A, B
-    // local whitelist: A, B, C
+  public void testNodeCannotConnectWhenAllowedLocallyButNotOnChain() {
+    // onchain allowlist: A, B
+    // local allowlist: A, B, C
 
-    // add permissioned node after cluster start because we need enode URI for local config
-    permissionedNode = permissionedNode("permissioned-node", bootnode, allowedNode, forbiddenNode);
+    // add permissioned node after cluster start because we need enode URI for
+    // local config
+    permissionedNode = permissionedNode("permissioned-node", bootnode,
+                                        allowedNode, forbiddenNode);
     permissionedCluster.addNode(permissionedNode);
 
     // update OnChain smart contract with allowed nodes
@@ -82,9 +88,11 @@ public class NodeLocalAndOnChainPermissioningAcceptanceTest
   }
 
   @Test
-  public void testNodesCanConnectWhenWhitelistedBothOnChainAndLocal() {
-    // add permissioned node after cluster start because we need enode URI for local config
-    permissionedNode = permissionedNode("permissioned-node", bootnode, allowedNode, forbiddenNode);
+  public void testNodesCanConnectWhenAllowedBothOnChainAndLocally() {
+    // add permissioned node after cluster start because we need enode URI for
+    // local config
+    permissionedNode = permissionedNode("permissioned-node", bootnode,
+                                        allowedNode, forbiddenNode);
     permissionedCluster.addNode(permissionedNode);
 
     // update OnChain smart contract with allowed nodes

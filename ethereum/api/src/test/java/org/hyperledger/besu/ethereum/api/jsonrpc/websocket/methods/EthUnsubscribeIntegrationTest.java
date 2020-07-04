@@ -1,35 +1,39 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketRequestHandler;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.request.SubscribeRequest;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.request.SubscriptionType;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-
-import java.util.HashMap;
+import static org.mockito.Mockito.mock;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.util.HashMap;
+import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketRequestHandler;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.request.SubscribeRequest;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.request.SubscriptionType;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,78 +52,87 @@ public class EthUnsubscribeIntegrationTest {
   public void before() {
     vertx = Vertx.vertx();
     subscriptionManager = new SubscriptionManager(new NoOpMetricsSystem());
-    webSocketMethodsFactory = new WebSocketMethodsFactory(subscriptionManager, new HashMap<>());
-    webSocketRequestHandler = new WebSocketRequestHandler(vertx, webSocketMethodsFactory.methods());
+    webSocketMethodsFactory =
+        new WebSocketMethodsFactory(subscriptionManager, new HashMap<>());
+    webSocketRequestHandler = new WebSocketRequestHandler(
+        vertx, webSocketMethodsFactory.methods(), mock(EthScheduler.class),
+        TimeoutOptions.defaultOptions().getTimeoutSeconds());
   }
 
   @Test
-  public void shouldRemoveConnectionWithSingleSubscriptionFromMap(final TestContext context) {
+  public void shouldRemoveConnectionWithSingleSubscriptionFromMap(
+      final TestContext context) {
     final Async async = context.async();
 
     // Add the subscription we'd like to remove
-    final SubscribeRequest subscribeRequest =
-        new SubscribeRequest(SubscriptionType.SYNCING, null, null, CONNECTION_ID);
+    final SubscribeRequest subscribeRequest = new SubscribeRequest(
+        SubscriptionType.SYNCING, null, null, CONNECTION_ID);
     final Long subscriptionId = subscriptionManager.subscribe(subscribeRequest);
-    assertThat(subscriptionManager.getSubscriptionById(subscriptionId)).isNotNull();
+    assertThat(subscriptionManager.getSubscriptionById(subscriptionId))
+        .isNotNull();
 
     final JsonRpcRequest unsubscribeRequestBody =
         createEthUnsubscribeRequestBody(subscriptionId, CONNECTION_ID);
 
-    vertx
-        .eventBus()
+    vertx.eventBus()
         .consumer(CONNECTION_ID)
-        .handler(
-            msg -> {
-              assertThat(subscriptionManager.getSubscriptionById(subscriptionId)).isNull();
-              async.complete();
-            })
+        .handler(msg -> {
+          assertThat(subscriptionManager.getSubscriptionById(subscriptionId))
+              .isNull();
+          async.complete();
+        })
         .completionHandler(
-            v ->
-                webSocketRequestHandler.handle(CONNECTION_ID, Json.encode(unsubscribeRequestBody)));
+            v
+            -> webSocketRequestHandler.handle(
+                CONNECTION_ID, Json.encode(unsubscribeRequestBody)));
 
     async.awaitSuccess(ASYNC_TIMEOUT);
   }
 
   @Test
-  public void shouldRemoveSubscriptionAndKeepConnection(final TestContext context) {
+  public void
+  shouldRemoveSubscriptionAndKeepConnection(final TestContext context) {
     final Async async = context.async();
 
     // Add the subscriptions we'd like to remove
-    final SubscribeRequest subscribeRequest =
-        new SubscribeRequest(SubscriptionType.SYNCING, null, null, CONNECTION_ID);
-    final Long subscriptionId1 = subscriptionManager.subscribe(subscribeRequest);
-    final Long subscriptionId2 = subscriptionManager.subscribe(subscribeRequest);
+    final SubscribeRequest subscribeRequest = new SubscribeRequest(
+        SubscriptionType.SYNCING, null, null, CONNECTION_ID);
+    final Long subscriptionId1 =
+        subscriptionManager.subscribe(subscribeRequest);
+    final Long subscriptionId2 =
+        subscriptionManager.subscribe(subscribeRequest);
 
-    assertThat(subscriptionManager.getSubscriptionById(subscriptionId1)).isNotNull();
-    assertThat(subscriptionManager.getSubscriptionById(subscriptionId2)).isNotNull();
+    assertThat(subscriptionManager.getSubscriptionById(subscriptionId1))
+        .isNotNull();
+    assertThat(subscriptionManager.getSubscriptionById(subscriptionId2))
+        .isNotNull();
 
     final JsonRpcRequest unsubscribeRequestBody =
         createEthUnsubscribeRequestBody(subscriptionId2, CONNECTION_ID);
 
-    vertx
-        .eventBus()
+    vertx.eventBus()
         .consumer(CONNECTION_ID)
-        .handler(
-            msg -> {
-              assertThat(subscriptionManager.getSubscriptionById(subscriptionId1)).isNotNull();
-              assertThat(subscriptionManager.getSubscriptionById(subscriptionId2)).isNull();
-              async.complete();
-            })
+        .handler(msg -> {
+          assertThat(subscriptionManager.getSubscriptionById(subscriptionId1))
+              .isNotNull();
+          assertThat(subscriptionManager.getSubscriptionById(subscriptionId2))
+              .isNull();
+          async.complete();
+        })
         .completionHandler(
-            v ->
-                webSocketRequestHandler.handle(CONNECTION_ID, Json.encode(unsubscribeRequestBody)));
+            v
+            -> webSocketRequestHandler.handle(
+                CONNECTION_ID, Json.encode(unsubscribeRequestBody)));
 
     async.awaitSuccess(ASYNC_TIMEOUT);
   }
 
-  private JsonRpcRequest createEthUnsubscribeRequestBody(
-      final Long subscriptionId, final String connectionId) {
+  private JsonRpcRequest
+  createEthUnsubscribeRequestBody(final Long subscriptionId,
+                                  final String connectionId) {
     return Json.decodeValue(
-        "{\"id\": 1, \"method\": \"eth_unsubscribe\", \"params\": [\""
-            + subscriptionId
-            + "\"], \"connectionId\": \""
-            + connectionId
-            + "\"}",
+        "{\"id\": 1, \"method\": \"eth_unsubscribe\", \"params\": [\"" +
+            subscriptionId + "\"], \"connectionId\": \"" + connectionId + "\"}",
         WebSocketRpcRequest.class);
   }
 }

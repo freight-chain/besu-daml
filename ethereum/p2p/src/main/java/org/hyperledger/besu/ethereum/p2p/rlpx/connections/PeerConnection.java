@@ -1,29 +1,31 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.p2p.rlpx.connections;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Set;
 import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.PeerInfo;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Set;
 
 /** A P2P connection to another node. */
 public interface PeerConnection {
@@ -37,15 +39,20 @@ public interface PeerConnection {
    */
   void send(Capability capability, MessageData message) throws PeerNotConnected;
 
-  /** @return a list of shared capabilities between this node and the connected peer */
+  /**
+   * Agreed capabilities between us and the peer.
+   *
+   * @return a list of shared capabilities between this node and the connected
+   *     peer
+   */
   Set<Capability> getAgreedCapabilities();
 
   /**
    * Returns the agreed capability corresponding to given protocol.
    *
    * @param protocol the name of the protocol
-   * @return the agreed capability corresponding to this protocol, returns null if no matching
-   *     capability is supported
+   * @return the agreed capability corresponding to this protocol, returns null
+   *     if no matching capability is supported
    */
   default Capability capability(final String protocol) {
     for (final Capability cap : getAgreedCapabilities()) {
@@ -68,7 +75,11 @@ public interface PeerConnection {
     send(capability(protocol), message);
   }
 
-  /** @return A representation of the remote peer this node is connected to. */
+  /**
+   * Data about the peer on the other side of this connection.
+   *
+   * @return A representation of the remote peer this node is connected to.
+   */
   Peer getPeer();
 
   /**
@@ -82,7 +93,8 @@ public interface PeerConnection {
    * Immediately terminate the connection without sending a disconnect message.
    *
    * @param reason the reason for disconnection
-   * @param peerInitiated <code>true</code> if and only if the remote peer requested disconnection
+   * @param peerInitiated <code>true</code> if and only if the remote peer
+   *     requested disconnection
    */
   void terminateConnection(DisconnectReason reason, boolean peerInitiated);
 
@@ -93,7 +105,11 @@ public interface PeerConnection {
    */
   void disconnect(DisconnectReason reason);
 
-  /** @return True if the peer is disconnected */
+  /**
+   * Has this connection been disconnected.
+   *
+   * @return True if the peer is disconnected
+   */
   boolean isDisconnected();
 
   InetSocketAddress getLocalAddress();
@@ -102,12 +118,8 @@ public interface PeerConnection {
 
   class PeerNotConnected extends IOException {
 
-    public PeerNotConnected(final String message) {
-      super(message);
-    }
+    public PeerNotConnected(final String message) { super(message); }
   }
 
-  default EnodeURL getRemoteEnode() {
-    return getPeer().getEnodeURL();
-  }
+  default EnodeURL getRemoteEnode() { return getPeer().getEnodeURL(); }
 }

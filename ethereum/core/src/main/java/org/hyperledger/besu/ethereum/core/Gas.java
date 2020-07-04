@@ -1,23 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.core;
 
+import com.google.common.primitives.Longs;
 import java.math.BigInteger;
 import javax.annotation.concurrent.Immutable;
-
-import com.google.common.primitives.Longs;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
@@ -31,15 +33,12 @@ public final class Gas {
 
   public static final Gas MAX_VALUE = Gas.of(Long.MAX_VALUE);
 
-  private static final BigInteger MAX_VALUE_BIGINT = BigInteger.valueOf(Long.MAX_VALUE);
+  private static final BigInteger MAX_VALUE_BIGINT =
+      BigInteger.valueOf(Long.MAX_VALUE);
 
-  protected Gas(final long value) {
-    this.value = value;
-  }
+  Gas(final long value) { this.value = value; }
 
-  public static Gas of(final long value) {
-    return new Gas(value);
-  }
+  public static Gas of(final long value) { return new Gas(value); }
 
   public static Gas of(final BigInteger value) {
     if (value.compareTo(MAX_VALUE_BIGINT) > 0) {
@@ -74,23 +73,16 @@ public final class Gas {
    * The price of this amount of gas given the provided price per unit of gas.
    *
    * @param gasPrice The price per unit of gas.
-   * @return The price of this amount of gas for a per unit of gas price of {@code gasPrice}.
+   * @return The price of this amount of gas for a per unit of gas price of
+   *     {@code gasPrice}.
    */
-  public Wei priceFor(final Wei gasPrice) {
-    return gasPrice.multiply(value);
-  }
+  public Wei priceFor(final Wei gasPrice) { return gasPrice.multiply(value); }
 
-  public Gas max(final Gas other) {
-    return of(Long.max(value, other.value));
-  }
+  public Gas max(final Gas other) { return of(Long.max(value, other.value)); }
 
-  public Gas min(final Gas other) {
-    return of(Long.min(value, other.value));
-  }
+  public Gas min(final Gas other) { return of(Long.min(value, other.value)); }
 
-  public Gas dividedBy(final long other) {
-    return Gas.of(value / other);
-  }
+  public Gas dividedBy(final long other) { return Gas.of(value / other); }
 
   public Gas plus(final Gas amount) {
     try {
@@ -100,9 +92,7 @@ public final class Gas {
     }
   }
 
-  public Gas minus(final Gas amount) {
-    return of(value - amount.value);
-  }
+  public Gas minus(final Gas amount) { return of(value - amount.value); }
 
   public Gas times(final Gas amount) {
     try {
@@ -112,25 +102,17 @@ public final class Gas {
     }
   }
 
-  public Gas times(final long amount) {
-    return times(Gas.of(amount));
-  }
+  public Gas times(final long amount) { return times(Gas.of(amount)); }
 
-  public UInt256 asUInt256() {
-    return UInt256.valueOf(value);
-  }
+  public UInt256 asUInt256() { return UInt256.valueOf(value); }
 
   public int compareTo(final Gas other) {
     return Long.compare(value, other.value);
   }
 
-  public byte[] getBytes() {
-    return Longs.toByteArray(value);
-  }
+  public byte[] getBytes() { return Longs.toByteArray(value); }
 
-  public long toLong() {
-    return value;
-  }
+  public long toLong() { return value; }
 
   @Override
   public int hashCode() {
@@ -142,7 +124,7 @@ public final class Gas {
     if (!(obj instanceof Gas)) {
       return false;
     }
-    final Gas other = (Gas) obj;
+    final Gas other = (Gas)obj;
     return value == other.value;
   }
 

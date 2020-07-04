@@ -1,19 +1,27 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.consensus.common.jsonrpc;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.LongStream;
 import org.hyperledger.besu.consensus.common.BlockInterface;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
@@ -27,12 +35,6 @@ import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.LongStream;
-
 public abstract class AbstractGetSignerMetricsMethod {
 
   private static final long DEFAULT_RANGE_BLOCK = 100;
@@ -41,9 +43,8 @@ public abstract class AbstractGetSignerMetricsMethod {
   private final BlockInterface blockInterface;
   private final BlockchainQueries blockchainQueries;
 
-  public AbstractGetSignerMetricsMethod(
-      final VoteTallyCache voteTallyCache,
-      final BlockInterface blockInterface,
+  protected AbstractGetSignerMetricsMethod(
+      final VoteTallyCache voteTallyCache, final BlockInterface blockInterface,
       final BlockchainQueries blockchainQueries) {
     this.voteTallyCache = voteTallyCache;
     this.blockInterface = blockInterface;
@@ -61,62 +62,61 @@ public abstract class AbstractGetSignerMetricsMethod {
     final long toBlockNumber = getEndBlockNumber(endBlockParameter);
 
     if (!isValidParameters(fromBlockNumber, toBlockNumber)) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.INVALID_PARAMS);
     }
 
     final Map<Address, SignerMetricResult> proposersMap = new HashMap<>();
     final long lastBlockIndex = toBlockNumber - 1;
 
     // go through each block (startBlock is inclusive and endBlock is exclusive)
-    LongStream.range(fromBlockNumber, toBlockNumber)
-        .forEach(
-            currentIndex -> {
-              final Optional<BlockHeader> blockHeaderByNumber =
-                  blockchainQueries.getBlockHeaderByNumber(currentIndex);
+    LongStream.range(fromBlockNumber, toBlockNumber).forEach(currentIndex -> {
+      final Optional<BlockHeader> blockHeaderByNumber =
+          blockchainQueries.getBlockHeaderByNumber(currentIndex);
 
-              // Get the number of blocks from each proposer in a given block range.
-              blockHeaderByNumber.ifPresent(
-                  header -> {
-                    final Address proposerAddress = blockInterface.getProposerOfBlock(header);
-                    final SignerMetricResult signerMetric =
-                        proposersMap.computeIfAbsent(proposerAddress, SignerMetricResult::new);
-                    signerMetric.incrementeNbBlock();
-                    // Add the block number of the last block proposed by each validator
-                    signerMetric.setLastProposedBlockNumber(currentIndex);
+      // Get the number of blocks from each proposer in a given block range.
+      blockHeaderByNumber.ifPresent(header -> {
+        final Address proposerAddress =
+            blockInterface.getProposerOfBlock(header);
+        final SignerMetricResult signerMetric = proposersMap.computeIfAbsent(
+            proposerAddress, SignerMetricResult::new);
+        signerMetric.incrementeNbBlock();
+        // Add the block number of the last block proposed by each validator
+        signerMetric.setLastProposedBlockNumber(currentIndex);
 
-                    // Get All validators present in the last block of the range even
-                    // if they didn't propose a block
-                    if (currentIndex == lastBlockIndex) {
-                      voteTallyCache
-                          .getVoteTallyAfterBlock(header)
-                          .getValidators()
-                          .forEach(
-                              address ->
-                                  proposersMap.computeIfAbsent(address, SignerMetricResult::new));
-                    }
-                  });
-            });
+        // Get All validators present in the last block of the range even
+        // if they didn't propose a block
+        if (currentIndex == lastBlockIndex) {
+          voteTallyCache.getVoteTallyAfterBlock(header).getValidators().forEach(
+              address
+              -> proposersMap.computeIfAbsent(address,
+                                              SignerMetricResult::new));
+        }
+      });
+    });
 
-    return new JsonRpcSuccessResponse(
-        requestContext.getRequest().getId(), new ArrayList<>(proposersMap.values()));
+    return new JsonRpcSuccessResponse(requestContext.getRequest().getId(),
+                                      new ArrayList<>(proposersMap.values()));
   }
 
-  private long getFromBlockNumber(final Optional<BlockParameter> startBlockParameter) {
-    return startBlockParameter
-        .map(this::resolveBlockNumber)
-        .orElseGet(() -> Math.max(0, blockchainQueries.headBlockNumber() - DEFAULT_RANGE_BLOCK));
+  private long
+  getFromBlockNumber(final Optional<BlockParameter> startBlockParameter) {
+    return startBlockParameter.map(this::resolveBlockNumber)
+        .orElseGet(()
+                       -> Math.max(0, blockchainQueries.headBlockNumber() -
+                                          DEFAULT_RANGE_BLOCK));
   }
 
-  private long getEndBlockNumber(final Optional<BlockParameter> endBlockParameter) {
+  private long
+  getEndBlockNumber(final Optional<BlockParameter> endBlockParameter) {
     final long headBlockNumber = blockchainQueries.headBlockNumber();
-    return endBlockParameter
-        .map(this::resolveBlockNumber)
+    return endBlockParameter.map(this::resolveBlockNumber)
         .filter(blockNumber -> blockNumber <= headBlockNumber)
         .orElse(headBlockNumber);
   }
 
-  private boolean isValidParameters(final long startBlock, final long endBlock) {
+  private boolean isValidParameters(final long startBlock,
+                                    final long endBlock) {
     return startBlock < endBlock;
   }
 

@@ -1,21 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController.NodesWhitelistResult;
+import static org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController.NodesAllowlistResult;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -23,27 +26,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.util.Lists;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
+import org.hyperledger.besu.ethereum.permissioning.AllowlistOperationResult;
 import org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController;
-import org.hyperledger.besu.ethereum.permissioning.WhitelistOperationResult;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import org.assertj.core.api.Assertions;
-import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+@Deprecated
 @RunWith(MockitoJUnitRunner.class)
 public class PermAddNodesToWhitelistTest {
 
@@ -58,11 +60,14 @@ public class PermAddNodesToWhitelistTest {
       "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.168.0.10:4567";
   private final String badEnode = "enod://dog@cat:fish";
 
-  @Mock private NodeLocalConfigPermissioningController nodeLocalConfigPermissioningController;
+  @Mock
+  private NodeLocalConfigPermissioningController
+      nodeLocalConfigPermissioningController;
 
   @Before
   public void setUp() {
-    method = new PermAddNodesToWhitelist(Optional.of(nodeLocalConfigPermissioningController));
+    method = new PermAddNodesToWhitelist(
+        Optional.of(nodeLocalConfigPermissioningController));
   }
 
   @Test
@@ -75,8 +80,8 @@ public class PermAddNodesToWhitelistTest {
     final ArrayList<String> enodeList = Lists.newArrayList(badEnode);
     final JsonRpcRequestContext request = buildRequest(enodeList);
     final JsonRpcResponse expected =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_INVALID_ENTRY);
+        new JsonRpcErrorResponse(request.getRequest().getId(),
+                                 JsonRpcError.NODE_ALLOWLIST_INVALID_ENTRY);
 
     when(nodeLocalConfigPermissioningController.addNodes(eq(enodeList)))
         .thenThrow(IllegalArgumentException.class);
@@ -88,11 +93,12 @@ public class PermAddNodesToWhitelistTest {
 
   @Test
   public void shouldThrowInvalidJsonRpcParametersExceptionWhenBadEnodeInList() {
-    final ArrayList<String> enodeList = Lists.newArrayList(enode2, badEnode, enode1);
+    final ArrayList<String> enodeList =
+        Lists.newArrayList(enode2, badEnode, enode1);
     final JsonRpcRequestContext request = buildRequest(enodeList);
     final JsonRpcResponse expected =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_INVALID_ENTRY);
+        new JsonRpcErrorResponse(request.getRequest().getId(),
+                                 JsonRpcError.NODE_ALLOWLIST_INVALID_ENTRY);
 
     when(nodeLocalConfigPermissioningController.addNodes(eq(enodeList)))
         .thenThrow(IllegalArgumentException.class);
@@ -105,12 +111,12 @@ public class PermAddNodesToWhitelistTest {
   @Test
   public void shouldThrowInvalidJsonRpcParametersExceptionWhenEmptyEnode() {
     final JsonRpcRequestContext request = buildRequest(Lists.emptyList());
-    final JsonRpcResponse expected =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_EMPTY_ENTRY);
+    final JsonRpcResponse expected = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.NODE_ALLOWLIST_EMPTY_ENTRY);
 
     when(nodeLocalConfigPermissioningController.addNodes(eq(Lists.emptyList())))
-        .thenReturn(new NodesWhitelistResult(WhitelistOperationResult.ERROR_EMPTY_ENTRY));
+        .thenReturn(new NodesAllowlistResult(
+            AllowlistOperationResult.ERROR_EMPTY_ENTRY));
 
     final JsonRpcResponse actual = method.response(request);
 
@@ -118,14 +124,17 @@ public class PermAddNodesToWhitelistTest {
   }
 
   @Test
-  public void whenRequestContainsDuplicatedNodesShouldReturnDuplicatedEntryError() {
-    final JsonRpcRequestContext request = buildRequest(Lists.newArrayList(enode1, enode1));
+  public void
+  whenRequestContainsDuplicatedNodesShouldReturnDuplicatedEntryError() {
+    final JsonRpcRequestContext request =
+        buildRequest(Lists.newArrayList(enode1, enode1));
     final JsonRpcResponse expected =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_DUPLICATED_ENTRY);
+        new JsonRpcErrorResponse(request.getRequest().getId(),
+                                 JsonRpcError.NODE_ALLOWLIST_DUPLICATED_ENTRY);
 
     when(nodeLocalConfigPermissioningController.addNodes(any()))
-        .thenReturn(new NodesWhitelistResult(WhitelistOperationResult.ERROR_DUPLICATED_ENTRY));
+        .thenReturn(new NodesAllowlistResult(
+            AllowlistOperationResult.ERROR_DUPLICATED_ENTRY));
 
     final JsonRpcResponse actual = method.response(request);
 
@@ -135,12 +144,12 @@ public class PermAddNodesToWhitelistTest {
   @Test
   public void whenRequestContainsEmptyListOfNodesShouldReturnEmptyEntryError() {
     final JsonRpcRequestContext request = buildRequest(new ArrayList<>());
-    final JsonRpcResponse expected =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_EMPTY_ENTRY);
+    final JsonRpcResponse expected = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.NODE_ALLOWLIST_EMPTY_ENTRY);
 
     when(nodeLocalConfigPermissioningController.addNodes(eq(new ArrayList<>())))
-        .thenReturn(new NodesWhitelistResult(WhitelistOperationResult.ERROR_EMPTY_ENTRY));
+        .thenReturn(new NodesAllowlistResult(
+            AllowlistOperationResult.ERROR_EMPTY_ENTRY));
 
     final JsonRpcResponse actual = method.response(request);
 
@@ -149,11 +158,13 @@ public class PermAddNodesToWhitelistTest {
 
   @Test
   public void shouldAddSingleValidNode() {
-    final JsonRpcRequestContext request = buildRequest(Lists.newArrayList(enode1));
-    final JsonRpcResponse expected = new JsonRpcSuccessResponse(request.getRequest().getId());
+    final JsonRpcRequestContext request =
+        buildRequest(Lists.newArrayList(enode1));
+    final JsonRpcResponse expected =
+        new JsonRpcSuccessResponse(request.getRequest().getId());
 
     when(nodeLocalConfigPermissioningController.addNodes(any()))
-        .thenReturn(new NodesWhitelistResult(WhitelistOperationResult.SUCCESS));
+        .thenReturn(new NodesAllowlistResult(AllowlistOperationResult.SUCCESS));
 
     final JsonRpcResponse actual = method.response(request);
 
@@ -165,11 +176,13 @@ public class PermAddNodesToWhitelistTest {
 
   @Test
   public void shouldAddMultipleValidNodes() {
-    final JsonRpcRequestContext request = buildRequest(Lists.newArrayList(enode1, enode2, enode3));
-    final JsonRpcResponse expected = new JsonRpcSuccessResponse(request.getRequest().getId());
+    final JsonRpcRequestContext request =
+        buildRequest(Lists.newArrayList(enode1, enode2, enode3));
+    final JsonRpcResponse expected =
+        new JsonRpcSuccessResponse(request.getRequest().getId());
 
     when(nodeLocalConfigPermissioningController.addNodes(any()))
-        .thenReturn(new NodesWhitelistResult(WhitelistOperationResult.SUCCESS));
+        .thenReturn(new NodesAllowlistResult(AllowlistOperationResult.SUCCESS));
 
     final JsonRpcResponse actual = method.response(request);
 
@@ -183,11 +196,11 @@ public class PermAddNodesToWhitelistTest {
   public void shouldFailWhenP2pDisabled() {
     method = new PermAddNodesToWhitelist(Optional.empty());
 
-    final JsonRpcRequestContext request = buildRequest(Lists.newArrayList(enode1, enode2, enode3));
+    final JsonRpcRequestContext request =
+        buildRequest(Lists.newArrayList(enode1, enode2, enode3));
     ;
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(
-            request.getRequest().getId(), JsonRpcError.NODE_WHITELIST_NOT_ENABLED);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.NODE_ALLOWLIST_NOT_ENABLED);
 
     Assertions.assertThat(method.response(request))
         .isEqualToComparingFieldByField(expectedResponse);

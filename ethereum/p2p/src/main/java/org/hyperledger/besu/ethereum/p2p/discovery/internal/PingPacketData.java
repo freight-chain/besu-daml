@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +25,8 @@ import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 
 public class PingPacketData implements PacketData {
 
-  /* Fixed value that represents we're using v5 of the P2P discovery protocol. */
+  /* Fixed value that represents we're using v5 of the P2P discovery protocol.
+   */
   private static final int VERSION = 5;
 
   /* Source. */
@@ -34,7 +38,8 @@ public class PingPacketData implements PacketData {
   /* In millis after epoch. */
   private final long expiration;
 
-  private PingPacketData(final Endpoint from, final Endpoint to, final long expiration) {
+  private PingPacketData(final Endpoint from, final Endpoint to,
+                         final long expiration) {
     checkArgument(from != null, "source endpoint cannot be null");
     checkArgument(to != null, "destination endpoint cannot be null");
     checkArgument(expiration >= 0, "expiration cannot be negative");
@@ -45,13 +50,18 @@ public class PingPacketData implements PacketData {
   }
 
   public static PingPacketData create(final Endpoint from, final Endpoint to) {
-    return new PingPacketData(
-        from, to, System.currentTimeMillis() + PacketData.DEFAULT_EXPIRATION_PERIOD_MS);
+    return create(from, to, PacketData.defaultExpiration());
+  }
+
+  static PingPacketData create(final Endpoint from, final Endpoint to,
+                               final long expirationSec) {
+    return new PingPacketData(from, to, expirationSec);
   }
 
   public static PingPacketData readFrom(final RLPInput in) {
     in.enterList();
-    // The first element signifies the "version", but this value is ignored as of EIP-8
+    // The first element signifies the "version", but this value is ignored as
+    // of EIP-8
     in.readBigIntegerScalar();
     final Endpoint from = Endpoint.decodeStandalone(in);
     final Endpoint to = Endpoint.decodeStandalone(in);
@@ -70,20 +80,15 @@ public class PingPacketData implements PacketData {
     out.endList();
   }
 
-  public Endpoint getFrom() {
-    return from;
-  }
+  public Endpoint getFrom() { return from; }
 
-  public Endpoint getTo() {
-    return to;
-  }
+  public Endpoint getTo() { return to; }
 
-  public long getExpiration() {
-    return expiration;
-  }
+  public long getExpiration() { return expiration; }
 
   @Override
   public String toString() {
-    return "PingPacketData{" + "from=" + from + ", to=" + to + ", expiration=" + expiration + '}';
+    return "PingPacketData{"
+        + "from=" + from + ", to=" + to + ", expiration=" + expiration + '}';
   }
 }

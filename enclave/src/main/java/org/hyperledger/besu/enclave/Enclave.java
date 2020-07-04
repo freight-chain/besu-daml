@@ -1,19 +1,27 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.enclave;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.hyperledger.besu.enclave.RequestTransmitter.ResponseBodyHandler;
 import org.hyperledger.besu.enclave.types.CreatePrivacyGroupRequest;
 import org.hyperledger.besu.enclave.types.DeletePrivacyGroupRequest;
@@ -26,13 +34,6 @@ import org.hyperledger.besu.enclave.types.RetrievePrivacyGroupRequest;
 import org.hyperledger.besu.enclave.types.SendRequestBesu;
 import org.hyperledger.besu.enclave.types.SendRequestLegacy;
 import org.hyperledger.besu.enclave.types.SendResponse;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Enclave {
 
@@ -48,97 +49,91 @@ public class Enclave {
 
   public boolean upCheck() {
     try {
-      final String upcheckResponse = requestTransmitter.get("/upcheck", this::handleRawResponse);
+      final String upcheckResponse =
+          requestTransmitter.get("/upcheck", this::handleRawResponse);
       return upcheckResponse.equals("I'm up!");
     } catch (final Exception e) {
       return false;
     }
   }
 
-  public SendResponse send(
-      final String payload, final String privateFrom, final List<String> privateFor) {
-    final SendRequestLegacy request = new SendRequestLegacy(payload, privateFrom, privateFor);
+  public SendResponse send(final String payload, final String privateFrom,
+                           final List<String> privateFor) {
+    final SendRequestLegacy request =
+        new SendRequestLegacy(payload, privateFrom, privateFor);
     return post(
-        JSON,
-        request,
-        "/send",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, SendResponse.class));
+        JSON, request, "/send",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, SendResponse.class));
   }
 
-  public SendResponse send(
-      final String payload, final String privateFrom, final String privacyGroupId) {
-    final SendRequestBesu request = new SendRequestBesu(payload, privateFrom, privacyGroupId);
+  public SendResponse send(final String payload, final String privateFrom,
+                           final String privacyGroupId) {
+    final SendRequestBesu request =
+        new SendRequestBesu(payload, privateFrom, privacyGroupId);
     return post(
-        JSON,
-        request,
-        "/send",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, SendResponse.class));
+        JSON, request, "/send",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, SendResponse.class));
   }
 
-  public ReceiveResponse receive(final String enclaveKey) {
-    final ReceiveRequest request = new ReceiveRequest(enclaveKey);
+  public ReceiveResponse receive(final String payloadKey) {
+    final ReceiveRequest request = new ReceiveRequest(payloadKey);
     return post(
-        ORION,
-        request,
-        "/receive",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, ReceiveResponse.class));
+        ORION, request, "/receive",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, ReceiveResponse.class));
   }
 
-  public ReceiveResponse receive(final String enclaveKey, final String to) {
-    final ReceiveRequest request = new ReceiveRequest(enclaveKey, to);
+  public ReceiveResponse receive(final String payloadKey, final String to) {
+    final ReceiveRequest request = new ReceiveRequest(payloadKey, to);
     return post(
-        ORION,
-        request,
-        "/receive",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, ReceiveResponse.class));
+        ORION, request, "/receive",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, ReceiveResponse.class));
   }
 
-  public PrivacyGroup createPrivacyGroup(
-      final List<String> addresses,
-      final String from,
-      final String name,
-      final String description) {
+  public PrivacyGroup createPrivacyGroup(final List<String> addresses,
+                                         final String from, final String name,
+                                         final String description) {
     final CreatePrivacyGroupRequest request =
         new CreatePrivacyGroupRequest(addresses, from, name, description);
     return post(
-        JSON,
-        request,
-        "/createPrivacyGroup",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, PrivacyGroup.class));
+        JSON, request, "/createPrivacyGroup",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, PrivacyGroup.class));
   }
 
-  public String deletePrivacyGroup(final String privacyGroupId, final String from) {
-    final DeletePrivacyGroupRequest request = new DeletePrivacyGroupRequest(privacyGroupId, from);
-    return post(
-        JSON,
-        request,
-        "/deletePrivacyGroup",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, String.class));
+  public String deletePrivacyGroup(final String privacyGroupId,
+                                   final String from) {
+    final DeletePrivacyGroupRequest request =
+        new DeletePrivacyGroupRequest(privacyGroupId, from);
+    return post(JSON, request, "/deletePrivacyGroup",
+                (statusCode,
+                 body) -> handleJsonResponse(statusCode, body, String.class));
   }
 
   public PrivacyGroup[] findPrivacyGroup(final List<String> addresses) {
-    final FindPrivacyGroupRequest request = new FindPrivacyGroupRequest(addresses);
+    final FindPrivacyGroupRequest request =
+        new FindPrivacyGroupRequest(addresses);
     return post(
-        JSON,
-        request,
-        "/findPrivacyGroup",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, PrivacyGroup[].class));
+        JSON, request, "/findPrivacyGroup",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, PrivacyGroup[].class));
   }
 
   public PrivacyGroup retrievePrivacyGroup(final String privacyGroupId) {
-    final RetrievePrivacyGroupRequest request = new RetrievePrivacyGroupRequest(privacyGroupId);
+    final RetrievePrivacyGroupRequest request =
+        new RetrievePrivacyGroupRequest(privacyGroupId);
     return post(
-        JSON,
-        request,
-        "/retrievePrivacyGroup",
-        (statusCode, body) -> handleJsonResponse(statusCode, body, PrivacyGroup.class));
+        JSON, request, "/retrievePrivacyGroup",
+        (statusCode,
+         body) -> handleJsonResponse(statusCode, body, PrivacyGroup.class));
   }
 
-  private <T> T post(
-      final String mediaType,
-      final Object content,
-      final String endpoint,
-      final ResponseBodyHandler<T> responseBodyHandler) {
+  private <T> T post(final String mediaType, final Object content,
+                     final String endpoint,
+                     final ResponseBodyHandler<T> responseBodyHandler) {
     final String bodyText;
     try {
       bodyText = objectMapper.writeValueAsString(content);
@@ -146,25 +141,28 @@ public class Enclave {
       throw new EnclaveClientException(400, "Unable to serialize request.");
     }
 
-    return requestTransmitter.post(mediaType, bodyText, endpoint, responseBodyHandler);
+    return requestTransmitter.post(mediaType, bodyText, endpoint,
+                                   responseBodyHandler);
   }
 
-  private <T> T handleJsonResponse(
-      final int statusCode, final byte[] body, final Class<T> responseType) {
+  private <T> T handleJsonResponse(final int statusCode, final byte[] body,
+                                   final Class<T> responseType) {
 
     if (isSuccess(statusCode)) {
       return parseResponse(statusCode, body, responseType);
     } else if (clientError(statusCode)) {
-      final ErrorResponse errorResponse = parseResponse(statusCode, body, ErrorResponse.class);
+      final ErrorResponse errorResponse =
+          parseResponse(statusCode, body, ErrorResponse.class);
       throw new EnclaveClientException(statusCode, errorResponse.getError());
     } else {
-      final ErrorResponse errorResponse = parseResponse(statusCode, body, ErrorResponse.class);
+      final ErrorResponse errorResponse =
+          parseResponse(statusCode, body, ErrorResponse.class);
       throw new EnclaveServerException(statusCode, errorResponse.getError());
     }
   }
 
-  private <T> T parseResponse(
-      final int statusCode, final byte[] body, final Class<T> responseType) {
+  private <T> T parseResponse(final int statusCode, final byte[] body,
+                              final Class<T> responseType) {
     try {
       return objectMapper.readValue(body, responseType);
     } catch (IOException e) {
@@ -177,9 +175,7 @@ public class Enclave {
     return statusCode >= 400 && statusCode < 500;
   }
 
-  private boolean isSuccess(final int statusCode) {
-    return statusCode == 200;
-  }
+  private boolean isSuccess(final int statusCode) { return statusCode == 200; }
 
   private String handleRawResponse(final int statusCode, final byte[] body) {
     final String bodyText = new String(body, StandardCharsets.UTF_8);
@@ -187,6 +183,7 @@ public class Enclave {
       return bodyText;
     }
     throw new EnclaveClientException(
-        statusCode, String.format("Request failed with %d; body={%s}", statusCode, bodyText));
+        statusCode, String.format("Request failed with %d; body={%s}",
+                                  statusCode, bodyText));
   }
 }

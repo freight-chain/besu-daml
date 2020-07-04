@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,9 +25,10 @@ import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.MA
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.MORDOR_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.RINKEBY_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.ROPSTEN_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.YOLO_V1_BOOTSTRAP_NODES;
 
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
-
+import com.google.common.base.Preconditions;
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
@@ -32,9 +36,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import com.google.common.base.Preconditions;
-import com.google.common.io.Resources;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
 
 public class EthNetworkConfig {
   public static final BigInteger MAINNET_NETWORK_ID = BigInteger.valueOf(1);
@@ -45,6 +47,8 @@ public class EthNetworkConfig {
   public static final BigInteger CLASSIC_NETWORK_ID = BigInteger.valueOf(1);
   public static final BigInteger KOTTI_NETWORK_ID = BigInteger.valueOf(6);
   public static final BigInteger MORDOR_NETWORK_ID = BigInteger.valueOf(7);
+  private static final BigInteger YOLO_V1_NETWORK_ID =
+      BigInteger.valueOf(133519467574833L);
   private static final String MAINNET_GENESIS = "/mainnet.json";
   private static final String ROPSTEN_GENESIS = "/ropsten.json";
   private static final String RINKEBY_GENESIS = "/rinkeby.json";
@@ -53,12 +57,14 @@ public class EthNetworkConfig {
   private static final String CLASSIC_GENESIS = "/classic.json";
   private static final String KOTTI_GENESIS = "/kotti.json";
   private static final String MORDOR_GENESIS = "/mordor.json";
+  private static final String YOLO_GENESIS = "/yolo.json";
   private final String genesisConfig;
   private final BigInteger networkId;
   private final List<EnodeURL> bootNodes;
 
-  public EthNetworkConfig(
-      final String genesisConfig, final BigInteger networkId, final List<EnodeURL> bootNodes) {
+  public EthNetworkConfig(final String genesisConfig,
+                          final BigInteger networkId,
+                          final List<EnodeURL> bootNodes) {
     Preconditions.checkNotNull(genesisConfig);
     Preconditions.checkNotNull(bootNodes);
     this.genesisConfig = genesisConfig;
@@ -66,17 +72,11 @@ public class EthNetworkConfig {
     this.bootNodes = bootNodes;
   }
 
-  public String getGenesisConfig() {
-    return genesisConfig;
-  }
+  public String getGenesisConfig() { return genesisConfig; }
 
-  public BigInteger getNetworkId() {
-    return networkId;
-  }
+  public BigInteger getNetworkId() { return networkId; }
 
-  public List<EnodeURL> getBootNodes() {
-    return bootNodes;
-  }
+  public List<EnodeURL> getBootNodes() { return bootNodes; }
 
   @Override
   public boolean equals(final Object o) {
@@ -86,10 +86,10 @@ public class EthNetworkConfig {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final EthNetworkConfig that = (EthNetworkConfig) o;
-    return networkId.equals(that.networkId)
-        && Objects.equals(genesisConfig, that.genesisConfig)
-        && Objects.equals(bootNodes, that.bootNodes);
+    final EthNetworkConfig that = (EthNetworkConfig)o;
+    return networkId.equals(that.networkId) &&
+        Objects.equals(genesisConfig, that.genesisConfig) &&
+        Objects.equals(bootNodes, that.bootNodes);
   }
 
   @Override
@@ -100,41 +100,41 @@ public class EthNetworkConfig {
   @Override
   public String toString() {
     return "EthNetworkConfig{"
-        + "genesisConfig="
-        + genesisConfig
-        + ", networkId="
-        + networkId
-        + ", bootNodes="
-        + bootNodes
-        + '}';
+        + "genesisConfig=" + genesisConfig + ", networkId=" + networkId +
+        ", bootNodes=" + bootNodes + '}';
   }
 
-  public static EthNetworkConfig getNetworkConfig(final NetworkName networkName) {
+  public static EthNetworkConfig
+  getNetworkConfig(final NetworkName networkName) {
     switch (networkName) {
-      case ROPSTEN:
-        return new EthNetworkConfig(
-            jsonConfig(ROPSTEN_GENESIS), ROPSTEN_NETWORK_ID, ROPSTEN_BOOTSTRAP_NODES);
-      case RINKEBY:
-        return new EthNetworkConfig(
-            jsonConfig(RINKEBY_GENESIS), RINKEBY_NETWORK_ID, RINKEBY_BOOTSTRAP_NODES);
-      case GOERLI:
-        return new EthNetworkConfig(
-            jsonConfig(GOERLI_GENESIS), GOERLI_NETWORK_ID, GOERLI_BOOTSTRAP_NODES);
-      case DEV:
-        return new EthNetworkConfig(jsonConfig(DEV_GENESIS), DEV_NETWORK_ID, new ArrayList<>());
-      case CLASSIC:
-        return new EthNetworkConfig(
-            jsonConfig(CLASSIC_GENESIS), CLASSIC_NETWORK_ID, CLASSIC_BOOTSTRAP_NODES);
-      case KOTTI:
-        return new EthNetworkConfig(
-            jsonConfig(KOTTI_GENESIS), KOTTI_NETWORK_ID, KOTTI_BOOTSTRAP_NODES);
-      case MORDOR:
-        return new EthNetworkConfig(
-            jsonConfig(MORDOR_GENESIS), MORDOR_NETWORK_ID, MORDOR_BOOTSTRAP_NODES);
-      case MAINNET:
-      default:
-        return new EthNetworkConfig(
-            jsonConfig(MAINNET_GENESIS), MAINNET_NETWORK_ID, MAINNET_BOOTSTRAP_NODES);
+    case ROPSTEN:
+      return new EthNetworkConfig(jsonConfig(ROPSTEN_GENESIS),
+                                  ROPSTEN_NETWORK_ID, ROPSTEN_BOOTSTRAP_NODES);
+    case RINKEBY:
+      return new EthNetworkConfig(jsonConfig(RINKEBY_GENESIS),
+                                  RINKEBY_NETWORK_ID, RINKEBY_BOOTSTRAP_NODES);
+    case GOERLI:
+      return new EthNetworkConfig(jsonConfig(GOERLI_GENESIS), GOERLI_NETWORK_ID,
+                                  GOERLI_BOOTSTRAP_NODES);
+    case DEV:
+      return new EthNetworkConfig(jsonConfig(DEV_GENESIS), DEV_NETWORK_ID,
+                                  new ArrayList<>());
+    case CLASSIC:
+      return new EthNetworkConfig(jsonConfig(CLASSIC_GENESIS),
+                                  CLASSIC_NETWORK_ID, CLASSIC_BOOTSTRAP_NODES);
+    case KOTTI:
+      return new EthNetworkConfig(jsonConfig(KOTTI_GENESIS), KOTTI_NETWORK_ID,
+                                  KOTTI_BOOTSTRAP_NODES);
+    case MORDOR:
+      return new EthNetworkConfig(jsonConfig(MORDOR_GENESIS), MORDOR_NETWORK_ID,
+                                  MORDOR_BOOTSTRAP_NODES);
+    case YOLO_V1:
+      return new EthNetworkConfig(jsonConfig(YOLO_GENESIS), YOLO_V1_NETWORK_ID,
+                                  YOLO_V1_BOOTSTRAP_NODES);
+    case MAINNET:
+    default:
+      return new EthNetworkConfig(jsonConfig(MAINNET_GENESIS),
+                                  MAINNET_NETWORK_ID, MAINNET_BOOTSTRAP_NODES);
     }
   }
 
@@ -149,24 +149,26 @@ public class EthNetworkConfig {
 
   public static String jsonConfig(final NetworkName network) {
     switch (network) {
-      case MAINNET:
-        return jsonConfig(MAINNET_GENESIS);
-      case ROPSTEN:
-        return jsonConfig(ROPSTEN_GENESIS);
-      case RINKEBY:
-        return jsonConfig(RINKEBY_GENESIS);
-      case GOERLI:
-        return jsonConfig(GOERLI_GENESIS);
-      case DEV:
-        return jsonConfig(DEV_GENESIS);
-      case CLASSIC:
-        return jsonConfig(CLASSIC_GENESIS);
-      case KOTTI:
-        return jsonConfig(KOTTI_GENESIS);
-      case MORDOR:
-        return jsonConfig(MORDOR_GENESIS);
-      default:
-        throw new IllegalArgumentException("Unknown network:" + network);
+    case MAINNET:
+      return jsonConfig(MAINNET_GENESIS);
+    case ROPSTEN:
+      return jsonConfig(ROPSTEN_GENESIS);
+    case RINKEBY:
+      return jsonConfig(RINKEBY_GENESIS);
+    case GOERLI:
+      return jsonConfig(GOERLI_GENESIS);
+    case DEV:
+      return jsonConfig(DEV_GENESIS);
+    case CLASSIC:
+      return jsonConfig(CLASSIC_GENESIS);
+    case KOTTI:
+      return jsonConfig(KOTTI_GENESIS);
+    case MORDOR:
+      return jsonConfig(MORDOR_GENESIS);
+    case YOLO_V1:
+      return jsonConfig(YOLO_GENESIS);
+    default:
+      throw new IllegalArgumentException("Unknown network:" + network);
     }
   }
 
