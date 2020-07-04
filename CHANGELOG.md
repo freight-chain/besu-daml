@@ -524,7 +524,7 @@ If you have existing private transactions, see
   private state.
 
 - Besu has moved from an internal Bytes library to the
-  [Apache Tuweni](https://tuweni.apache.org/) Bytes library.  
+  [Apache Tuweni](https://tuweni.apache.org/) Bytes library.
   This includes using the library in the Plugins API interfaces.
   [#295](https://github.com/hyperledger/besu/pull/295) and
   [#215](https://github.com/hyperledger/besu/pull/215)
