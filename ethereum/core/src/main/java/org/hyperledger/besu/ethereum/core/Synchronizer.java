@@ -1,23 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.core;
 
+import java.util.Optional;
 import org.hyperledger.besu.plugin.data.SyncStatus;
 import org.hyperledger.besu.plugin.services.BesuEvents;
-
-import java.util.Optional;
 
 /** Provides an interface to block synchronization processes. */
 public interface Synchronizer {
@@ -34,8 +36,8 @@ public interface Synchronizer {
   /**
    * Current status of a sync, if syncing.
    *
-   * @return the status, based on SyncingResult When actively synchronizing blocks, alternatively
-   *     empty
+   * @return the status, based on SyncingResult When actively synchronizing
+   *     blocks, alternatively empty
    */
   Optional<SyncStatus> getSyncStatus();
 
@@ -44,9 +46,10 @@ public interface Synchronizer {
   boolean unsubscribeSyncStatus(long observerId);
 
   /**
-   * Add a listener that will be notified when this node's sync status changes. A node is considered
-   * in-sync if the local chain height is no more than {@code DEFAULT_IN_SYNC_TOLERANCE} behind the
-   * highest estimated remote chain height.
+   * Add a listener that will be notified when this node's sync status changes.
+   * A node is considered in-sync if the local chain height is no more than
+   * {@code DEFAULT_IN_SYNC_TOLERANCE} behind the highest estimated remote chain
+   * height.
    *
    * @param listener The callback to invoke when the sync status changes
    * @return A subscription id that can be used to unsubscribe from these events
@@ -54,14 +57,15 @@ public interface Synchronizer {
   long subscribeInSync(final InSyncListener listener);
 
   /**
-   * Add a listener that will be notified when this node's sync status changes. A node is considered
-   * in-sync if the local chain height is no more than {@code syncTolerance} behind the highest
-   * estimated remote chain height.
+   * Add a listener that will be notified when this node's sync status changes.
+   * A node is considered in-sync if the local chain height is no more than
+   * {@code syncTolerance} behind the highest estimated remote chain height.
    *
    * @param listener The callback to invoke when the sync status changes
-   * @param syncTolerance The tolerance used to determine whether this node is in-sync. A value of
-   *     zero means that the node is considered in-sync only when the local chain height is greater
-   *     than or equal to the best estimated remote chain height.
+   * @param syncTolerance The tolerance used to determine whether this node is
+   *     in-sync. A value of zero means that the node is considered in-sync only
+   *     when the local chain height is greater than or equal to the best
+   *     estimated remote chain height.
    * @return A subscription id that can be used to unsubscribe from these events
    */
   long subscribeInSync(final InSyncListener listener, final long syncTolerance);

@@ -1,26 +1,27 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.tests.acceptance.permissioning;
 
+import java.math.BigInteger;
+import java.util.Arrays;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction;
-
-import java.math.BigInteger;
-import java.util.Arrays;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,12 +40,9 @@ public class AccountLocalAndOnChainPermissioningAcceptanceTest
     // OnChain allowlist: Primary, Secondary, C
     // Local allowlist: Primary, Secondary
 
-    final Node node =
-        permissionedNode(
-            "node1",
-            Arrays.asList(
-                accounts.getPrimaryBenefactor().getAddress(),
-                accounts.getSecondaryBenefactor().getAddress()));
+    final Node node = permissionedNode(
+        "node1", Arrays.asList(accounts.getPrimaryBenefactor().getAddress(),
+                               accounts.getSecondaryBenefactor().getAddress()));
     permissionedCluster.start(node);
 
     // ensure SenderC has got some ether available
@@ -72,14 +70,11 @@ public class AccountLocalAndOnChainPermissioningAcceptanceTest
 
     final Account receiverAccount = accounts.createAccount("Rec-A");
 
-    final Node node =
-        permissionedNode(
-            "node1",
-            Arrays.asList(
-                accounts.getPrimaryBenefactor().getAddress(),
-                accounts.getSecondaryBenefactor().getAddress(),
-                senderC.getAddress(),
-                receiverAccount.getAddress()));
+    final Node node = permissionedNode(
+        "node1",
+        Arrays.asList(accounts.getPrimaryBenefactor().getAddress(),
+                      accounts.getSecondaryBenefactor().getAddress(),
+                      senderC.getAddress(), receiverAccount.getAddress()));
     permissionedCluster.start(node);
 
     // ensure SenderC has got some ether available
@@ -100,23 +95,24 @@ public class AccountLocalAndOnChainPermissioningAcceptanceTest
     node.verify(accountIsForbidden(senderC));
 
     // sender C should not be able to send Tx as well
-    node.execute(accountTransactions.createTransfer(senderC, receiverAccount, 1));
+    node.execute(
+        accountTransactions.createTransfer(senderC, receiverAccount, 1));
     node.verify(receiverAccount.balanceDoesNotChange(0));
 
     // final check, other account should be able to send tx
-    node.execute(
-        accountTransactions.createTransfer(accounts.getPrimaryBenefactor(), receiverAccount, 5));
+    node.execute(accountTransactions.createTransfer(
+        accounts.getPrimaryBenefactor(), receiverAccount, 5));
     node.verify(receiverAccount.balanceEquals(5));
   }
 
-  private void verifyTransferForbidden(
-      final Node node, final Account sender, final Account beneficiary) {
-    BigInteger nonce = node.execute(ethTransactions.getTransactionCount(sender.getAddress()));
+  private void verifyTransferForbidden(final Node node, final Account sender,
+                                       final Account beneficiary) {
+    BigInteger nonce =
+        node.execute(ethTransactions.getTransactionCount(sender.getAddress()));
     TransferTransaction transfer =
         accountTransactions.createTransfer(sender, beneficiary, 1, nonce);
-    node.verify(
-        eth.sendRawTransactionExceptional(
-            transfer.signedTransactionData(),
-            "Sender account not authorized to send transactions"));
+    node.verify(eth.sendRawTransactionExceptional(
+        transfer.signedTransactionData(),
+        "Sender account not authorized to send transactions"));
   }
 }

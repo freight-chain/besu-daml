@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.core.DefaultEvmAccount;
@@ -31,14 +40,6 @@ import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.debug.TraceFrame;
 import org.hyperledger.besu.ethereum.debug.TraceOptions;
 import org.hyperledger.besu.ethereum.vm.ehalt.ExceptionalHaltException;
-
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
-
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -105,15 +106,17 @@ public class DebugOperationTracerTest {
     frame.pushStackItem(stackItem1);
     frame.pushStackItem(stackItem2);
     frame.pushStackItem(stackItem3);
-    final TraceFrame traceFrame = traceFrame(frame, Gas.ZERO, new TraceOptions(false, false, true));
+    final TraceFrame traceFrame =
+        traceFrame(frame, Gas.ZERO, new TraceOptions(false, false, true));
     assertThat(traceFrame.getStack()).isPresent();
-    assertThat(traceFrame.getStack().get()).containsExactly(stackItem1, stackItem2, stackItem3);
+    assertThat(traceFrame.getStack().get())
+        .containsExactly(stackItem1, stackItem2, stackItem3);
   }
 
   @Test
   public void shouldNotRecordStackWhenDisabled() throws Exception {
-    final TraceFrame traceFrame =
-        traceFrame(validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
+    final TraceFrame traceFrame = traceFrame(
+        validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
     assertThat(traceFrame.getStack()).isEmpty();
   }
 
@@ -126,15 +129,17 @@ public class DebugOperationTracerTest {
     frame.writeMemory(UInt256.ZERO, UInt256.valueOf(32), word1);
     frame.writeMemory(UInt256.valueOf(32), UInt256.valueOf(32), word2);
     frame.writeMemory(UInt256.valueOf(64), UInt256.valueOf(32), word3);
-    final TraceFrame traceFrame = traceFrame(frame, Gas.ZERO, new TraceOptions(false, true, false));
+    final TraceFrame traceFrame =
+        traceFrame(frame, Gas.ZERO, new TraceOptions(false, true, false));
     assertThat(traceFrame.getMemory()).isPresent();
-    assertThat(traceFrame.getMemory().get()).containsExactly(word1, word2, word3);
+    assertThat(traceFrame.getMemory().get())
+        .containsExactly(word1, word2, word3);
   }
 
   @Test
   public void shouldNotRecordMemoryWhenDisabled() throws Exception {
-    final TraceFrame traceFrame =
-        traceFrame(validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
+    final TraceFrame traceFrame = traceFrame(
+        validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
     assertThat(traceFrame.getMemory()).isEmpty();
   }
 
@@ -142,15 +147,16 @@ public class DebugOperationTracerTest {
   public void shouldRecordStorageWhenEnabled() throws Exception {
     final MessageFrame frame = validMessageFrame();
     final Map<UInt256, UInt256> updatedStorage = setupStorageForCapture(frame);
-    final TraceFrame traceFrame = traceFrame(frame, Gas.ZERO, new TraceOptions(true, false, false));
+    final TraceFrame traceFrame =
+        traceFrame(frame, Gas.ZERO, new TraceOptions(true, false, false));
     assertThat(traceFrame.getStorage()).isPresent();
     assertThat(traceFrame.getStorage().get()).isEqualTo(updatedStorage);
   }
 
   @Test
   public void shouldNotRecordStorageWhenDisabled() throws Exception {
-    final TraceFrame traceFrame =
-        traceFrame(validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
+    final TraceFrame traceFrame = traceFrame(
+        validMessageFrame(), Gas.ZERO, new TraceOptions(false, false, false));
     assertThat(traceFrame.getStorage()).isEmpty();
   }
 
@@ -164,24 +170,29 @@ public class DebugOperationTracerTest {
 
     final DebugOperationTracer tracer =
         new DebugOperationTracer(new TraceOptions(true, true, true));
-    assertThatThrownBy(
-            () -> tracer.traceExecution(frame, Optional.of(Gas.of(50)), executeOperationAction))
+    assertThatThrownBy(()
+                           -> tracer.traceExecution(frame,
+                                                    Optional.of(Gas.of(50)),
+                                                    executeOperationAction))
         .isSameAs(expectedException);
 
     final TraceFrame traceFrame = getOnlyTraceFrame(tracer);
     assertThat(traceFrame.getStorage()).contains(updatedStorage);
   }
 
-  private TraceFrame traceFrame(final MessageFrame frame, final Gas currentGasCost)
-      throws Exception {
-    return traceFrame(frame, currentGasCost, new TraceOptions(false, false, false));
+  private TraceFrame traceFrame(final MessageFrame frame,
+                                final Gas currentGasCost) throws Exception {
+    return traceFrame(frame, currentGasCost,
+                      new TraceOptions(false, false, false));
   }
 
-  private TraceFrame traceFrame(
-      final MessageFrame frame, final Gas currentGasCost, final TraceOptions traceOptions)
+  private TraceFrame traceFrame(final MessageFrame frame,
+                                final Gas currentGasCost,
+                                final TraceOptions traceOptions)
       throws Exception {
     final DebugOperationTracer tracer = new DebugOperationTracer(traceOptions);
-    tracer.traceExecution(frame, Optional.of(currentGasCost), executeOperationAction);
+    tracer.traceExecution(frame, Optional.of(currentGasCost),
+                          executeOperationAction);
     return getOnlyTraceFrame(tracer);
   }
 
@@ -198,8 +209,10 @@ public class DebugOperationTracerTest {
   }
 
   private MessageFrameTestFixture validMessageFrameBuilder() {
-    final BlockHeader blockHeader = new BlockHeaderTestFixture().number(1).buildHeader();
-    final TestBlockchain blockchain = new TestBlockchain(blockHeader.getNumber());
+    final BlockHeader blockHeader =
+        new BlockHeaderTestFixture().number(1).buildHeader();
+    final TestBlockchain blockchain =
+        new TestBlockchain(blockHeader.getNumber());
     return new MessageFrameTestFixture()
         .initialGas(INITIAL_GAS)
         .worldState(worldUpdater)
@@ -209,11 +222,13 @@ public class DebugOperationTracerTest {
         .depth(DEPTH);
   }
 
-  private Map<UInt256, UInt256> setupStorageForCapture(final MessageFrame frame) {
+  private Map<UInt256, UInt256>
+  setupStorageForCapture(final MessageFrame frame) {
     final DefaultEvmAccount account = mock(DefaultEvmAccount.class);
     final MutableAccount mutableAccount = mock(MutableAccount.class);
     when(account.getMutable()).thenReturn(mutableAccount);
-    when(worldUpdater.getAccount(frame.getRecipientAddress())).thenReturn(account);
+    when(worldUpdater.getAccount(frame.getRecipientAddress()))
+        .thenReturn(account);
 
     final Map<UInt256, UInt256> updatedStorage = new TreeMap<>();
     updatedStorage.put(UInt256.ZERO, UInt256.valueOf(233));

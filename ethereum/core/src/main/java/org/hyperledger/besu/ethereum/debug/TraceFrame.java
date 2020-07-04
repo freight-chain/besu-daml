@@ -1,19 +1,28 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.debug;
 
+import com.google.common.base.MoreObjects;
+import java.util.Map;
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Wei;
@@ -21,14 +30,6 @@ import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.vm.Code;
 import org.hyperledger.besu.ethereum.vm.ExceptionalHaltReason;
 import org.hyperledger.besu.ethereum.vm.internal.MemoryEntry;
-
-import java.util.Map;
-import java.util.Optional;
-
-import com.google.common.base.MoreObjects;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-import org.apache.tuweni.units.bigints.UInt256;
 
 public class TraceFrame {
 
@@ -60,25 +61,16 @@ public class TraceFrame {
   private Optional<Gas> precompiledGasCost;
 
   public TraceFrame(
-      final int pc,
-      final Optional<String> opcode,
-      final Gas gasRemaining,
-      final Optional<Gas> gasCost,
-      final Gas gasRefund,
-      final int depth,
+      final int pc, final Optional<String> opcode, final Gas gasRemaining,
+      final Optional<Gas> gasCost, final Gas gasRefund, final int depth,
       final Optional<ExceptionalHaltReason> exceptionalHaltReason,
-      final Address recipient,
-      final Wei value,
-      final Bytes inputData,
-      final Bytes outputData,
-      final Optional<Bytes32[]> stack,
+      final Address recipient, final Wei value, final Bytes inputData,
+      final Bytes outputData, final Optional<Bytes32[]> stack,
       final Optional<Bytes[]> memory,
       final Optional<Map<UInt256, UInt256>> storage,
-      final WorldUpdater worldUpdater,
-      final Optional<Bytes> revertReason,
+      final WorldUpdater worldUpdater, final Optional<Bytes> revertReason,
       final Optional<Map<Address, Wei>> maybeRefunds,
-      final Optional<Code> maybeCode,
-      final int stackItemsProduced,
+      final Optional<Code> maybeCode, final int stackItemsProduced,
       final Optional<Bytes32[]> stackPostExecution,
       final boolean virtualOperation,
       final Optional<MemoryEntry> maybeUpdatedMemory,
@@ -109,77 +101,46 @@ public class TraceFrame {
     precompiledGasCost = Optional.empty();
   }
 
-  public int getPc() {
-    return pc;
-  }
+  public int getPc() { return pc; }
 
-  public String getOpcode() {
-    return opcode.orElse("");
-  }
+  public String getOpcode() { return opcode.orElse(""); }
 
-  public Gas getGasRemaining() {
-    return gasRemaining;
-  }
+  public Gas getGasRemaining() { return gasRemaining; }
 
-  public Optional<Gas> getGasCost() {
-    return gasCost;
-  }
+  public Optional<Gas> getGasCost() { return gasCost; }
 
-  public Gas getGasRefund() {
-    return gasRefund;
-  }
+  public Gas getGasRefund() { return gasRefund; }
 
-  public int getDepth() {
-    return depth;
-  }
+  public int getDepth() { return depth; }
 
   public Optional<ExceptionalHaltReason> getExceptionalHaltReason() {
     return exceptionalHaltReason;
   }
 
-  public void setExceptionalHaltReason(final ExceptionalHaltReason exceptionalHaltReason) {
+  public void
+  setExceptionalHaltReason(final ExceptionalHaltReason exceptionalHaltReason) {
     this.exceptionalHaltReason = Optional.ofNullable(exceptionalHaltReason);
   }
 
-  public Address getRecipient() {
-    return recipient;
-  }
+  public Address getRecipient() { return recipient; }
 
-  public Wei getValue() {
-    return value;
-  }
+  public Wei getValue() { return value; }
 
-  public Bytes getInputData() {
-    return inputData;
-  }
+  public Bytes getInputData() { return inputData; }
 
-  public Bytes getOutputData() {
-    return outputData;
-  }
+  public Bytes getOutputData() { return outputData; }
 
-  public Optional<Bytes32[]> getStack() {
-    return stack;
-  }
+  public Optional<Bytes32[]> getStack() { return stack; }
 
-  public Optional<Bytes[]> getMemory() {
-    return memory;
-  }
+  public Optional<Bytes[]> getMemory() { return memory; }
 
-  public Optional<Map<UInt256, UInt256>> getStorage() {
-    return storage;
-  }
+  public Optional<Map<UInt256, UInt256>> getStorage() { return storage; }
 
-  public WorldUpdater getWorldUpdater() {
-    return worldUpdater;
-  }
+  public WorldUpdater getWorldUpdater() { return worldUpdater; }
 
-  public Optional<Bytes> getRevertReason() {
-    return revertReason;
-  }
+  public Optional<Bytes> getRevertReason() { return revertReason; }
 
-  public Optional<Map<Address, Wei>> getMaybeRefunds() {
-    return maybeRefunds;
-  }
+  public Optional<Map<Address, Wei>> getMaybeRefunds() { return maybeRefunds; }
 
   @Override
   public String toString() {
@@ -196,13 +157,9 @@ public class TraceFrame {
         .toString();
   }
 
-  public Optional<Code> getMaybeCode() {
-    return maybeCode;
-  }
+  public Optional<Code> getMaybeCode() { return maybeCode; }
 
-  public int getStackItemsProduced() {
-    return stackItemsProduced;
-  }
+  public int getStackItemsProduced() { return stackItemsProduced; }
 
   public Optional<Bytes32[]> getStackPostExecution() {
     return stackPostExecution;
@@ -212,13 +169,12 @@ public class TraceFrame {
     return gasRemainingPostExecution;
   }
 
-  public void setGasRemainingPostExecution(final Gas gasRemainingPostExecution) {
+  public void
+  setGasRemainingPostExecution(final Gas gasRemainingPostExecution) {
     this.gasRemainingPostExecution = gasRemainingPostExecution;
   }
 
-  public boolean isVirtualOperation() {
-    return virtualOperation;
-  }
+  public boolean isVirtualOperation() { return virtualOperation; }
 
   public Optional<MemoryEntry> getMaybeUpdatedMemory() {
     return maybeUpdatedMemory;
@@ -228,9 +184,7 @@ public class TraceFrame {
     return maybeUpdatedStorage;
   }
 
-  public Optional<Gas> getPrecompiledGasCost() {
-    return precompiledGasCost;
-  }
+  public Optional<Gas> getPrecompiledGasCost() { return precompiledGasCost; }
 
   public void setPrecompiledGasCost(final Optional<Gas> precompiledGasCost) {
     this.precompiledGasCost = precompiledGasCost;

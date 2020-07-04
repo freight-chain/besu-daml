@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -34,14 +37,14 @@ public class EIP1559 {
     finalForkBlknum = initialForkBlknum + feeMarket.getDecayRange();
   }
 
-  public long computeBaseFee(final long parentBaseFee, final long parentBlockGasUsed) {
+  public long computeBaseFee(final long parentBaseFee,
+                             final long parentBlockGasUsed) {
     guardActivation();
     long delta = parentBlockGasUsed - feeMarket.getTargetGasUsed();
     long baseFee =
-        parentBaseFee
-            + floorDiv(
-                floorDiv(parentBaseFee * delta, feeMarket.getTargetGasUsed()),
-                feeMarket.getBasefeeMaxChangeDenominator());
+        parentBaseFee +
+        floorDiv(floorDiv(parentBaseFee * delta, feeMarket.getTargetGasUsed()),
+                 feeMarket.getBasefeeMaxChangeDenominator());
     boolean neg = false;
     long diff = baseFee - parentBaseFee;
     if (diff < 0) {
@@ -49,7 +52,8 @@ public class EIP1559 {
       diff = -diff;
     }
 
-    long max = floorDiv(parentBaseFee, feeMarket.getBasefeeMaxChangeDenominator());
+    long max =
+        floorDiv(parentBaseFee, feeMarket.getBasefeeMaxChangeDenominator());
     if (max < 1) {
       max = 1;
     }
@@ -65,8 +69,8 @@ public class EIP1559 {
 
   public boolean isValidBaseFee(final long parentBaseFee, final long baseFee) {
     guardActivation();
-    return Math.abs(baseFee - parentBaseFee)
-        <= Math.max(1, parentBaseFee / feeMarket.getBasefeeMaxChangeDenominator());
+    return Math.abs(baseFee - parentBaseFee) <=
+        Math.max(1, parentBaseFee / feeMarket.getBasefeeMaxChangeDenominator());
   }
 
   public long eip1559GasPool(final long blockNumber) {
@@ -74,8 +78,8 @@ public class EIP1559 {
     if (blockNumber >= finalForkBlknum) {
       return feeMarket.getMaxGas();
     }
-    return (feeMarket.getMaxGas() / 2)
-        + ((blockNumber - initialForkBlknum) * feeMarket.getGasIncrementAmount());
+    return (feeMarket.getMaxGas() / 2) +
+        ((blockNumber - initialForkBlknum) * feeMarket.getGasIncrementAmount());
   }
 
   public long legacyGasPool(final long blockNumber) {
@@ -103,31 +107,33 @@ public class EIP1559 {
     return initialForkBlknum;
   }
 
-  public boolean isValidFormat(
-      final Transaction transaction, final AcceptedTransactionTypes acceptedTransactionTypes) {
+  public boolean
+  isValidFormat(final Transaction transaction,
+                final AcceptedTransactionTypes acceptedTransactionTypes) {
     if (transaction == null) {
       return false;
     }
     switch (acceptedTransactionTypes) {
-      case FRONTIER_TRANSACTIONS:
-        return transaction.isFrontierTransaction();
-      case FEE_MARKET_TRANSITIONAL_TRANSACTIONS:
-        return transaction.isFrontierTransaction() || transaction.isEIP1559Transaction();
-      case FEE_MARKET_TRANSACTIONS:
-        return transaction.isEIP1559Transaction();
-      default:
-        return false;
+    case FRONTIER_TRANSACTIONS:
+      return transaction.isFrontierTransaction();
+    case FEE_MARKET_TRANSITIONAL_TRANSACTIONS:
+      return transaction.isFrontierTransaction() ||
+          transaction.isEIP1559Transaction();
+    case FEE_MARKET_TRANSACTIONS:
+      return transaction.isEIP1559Transaction();
+    default:
+      return false;
     }
   }
 
-  public boolean isValidTransaction(final long blockNumber, final Transaction transaction) {
-    return isValidFormat(
-        transaction,
-        isEIP1559Finalized(blockNumber)
-            ? FEE_MARKET_TRANSACTIONS
-            : isEIP1559(blockNumber)
-                ? FEE_MARKET_TRANSITIONAL_TRANSACTIONS
-                : FRONTIER_TRANSACTIONS);
+  public boolean isValidTransaction(final long blockNumber,
+                                    final Transaction transaction) {
+    return isValidFormat(transaction,
+                         isEIP1559Finalized(blockNumber)
+                             ? FEE_MARKET_TRANSACTIONS
+                             : isEIP1559(blockNumber)
+                                   ? FEE_MARKET_TRANSITIONAL_TRANSACTIONS
+                                   : FRONTIER_TRANSACTIONS);
   }
 
   private void guardActivation() {

@@ -1,23 +1,21 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.cli;
-
-import org.hyperledger.besu.ethereum.core.Wei;
-import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
-import org.hyperledger.besu.ethereum.p2p.config.RlpxConfiguration;
-import org.hyperledger.besu.nat.NatMethod;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,8 +24,11 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.core.Wei;
+import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
+import org.hyperledger.besu.ethereum.p2p.config.RlpxConfiguration;
+import org.hyperledger.besu.nat.NatMethod;
 import picocli.CommandLine;
 
 public interface DefaultCommandValues {
@@ -45,7 +46,8 @@ public interface DefaultCommandValues {
   String MANDATORY_NETWORK_FORMAT_HELP = "<NETWORK>";
   String MANDATORY_NODE_ID_FORMAT_HELP = "<NODEID>";
   Wei DEFAULT_MIN_TRANSACTION_GAS_PRICE = Wei.of(1000);
-  Wei DEFAULT_RPC_TX_FEE_CAP = TransactionPoolConfiguration.DEFAULT_RPC_TX_FEE_CAP;
+  Wei DEFAULT_RPC_TX_FEE_CAP =
+      TransactionPoolConfiguration.DEFAULT_RPC_TX_FEE_CAP;
 
   Double DEFAULT_MIN_BLOCK_OCCUPANCY_RATIO = 0.8;
   Bytes DEFAULT_EXTRA_DATA = Bytes.EMPTY;
@@ -63,7 +65,8 @@ public interface DefaultCommandValues {
   String DEFAULT_SECURITY_MODULE = "localfile";
 
   static Path getDefaultBesuDataPath(final Object command) {
-    // this property is retrieved from Gradle tasks or Besu running shell script.
+    // this property is retrieved from Gradle tasks or Besu running shell
+    // script.
     final String besuHomeProperty = System.getProperty(BESU_HOME_PROPERTY_NAME);
     final Path besuHome;
 
@@ -81,32 +84,35 @@ public interface DefaultCommandValues {
       }
     } else {
       // otherwise use a default path.
-      // That may only be used when NOT run from distribution script and Gradle as they all define
-      // the property.
+      // That may only be used when NOT run from distribution script and Gradle
+      // as they all define the property.
       try {
         final String path = new File(DEFAULT_DATA_DIR_PATH).getCanonicalPath();
         besuHome = Paths.get(path);
       } catch (final IOException e) {
         throw new CommandLine.ParameterException(
-            new CommandLine(command), "Unable to create default data directory.");
+            new CommandLine(command),
+            "Unable to create default data directory.");
       }
     }
 
-    // Try to create it, then verify if the provided path is not already existing and is not a
-    // directory. Otherwise, if it doesn't exist or exists but is already a directory,
-    // Runner will use it to store data.
+    // Try to create it, then verify if the provided path is not already
+    // existing and is not a directory. Otherwise, if it doesn't exist or exists
+    // but is already a directory, Runner will use it to store data.
     try {
       Files.createDirectories(besuHome);
     } catch (final FileAlreadyExistsException e) {
       // Only thrown if it exists but is not a directory
       throw new CommandLine.ParameterException(
           new CommandLine(command),
-          String.format("%s: already exists and is not a directory.", besuHome.toAbsolutePath()),
+          String.format("%s: already exists and is not a directory.",
+                        besuHome.toAbsolutePath()),
           e);
     } catch (final Exception e) {
       throw new CommandLine.ParameterException(
           new CommandLine(command),
-          String.format("Error creating directory %s.", besuHome.toAbsolutePath()),
+          String.format("Error creating directory %s.",
+                        besuHome.toAbsolutePath()),
           e);
     }
     return besuHome;

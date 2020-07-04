@@ -1,49 +1,38 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.results;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.ethereum.api.query.TransactionReceiptWithMetadata;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Log;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import org.apache.tuweni.bytes.Bytes;
-
-@JsonPropertyOrder({
-  "blockHash",
-  "blockNumber",
-  "contractAddress",
-  "cumulativeGasUsed",
-  "from",
-  "gasUsed",
-  "logs",
-  "logsBloom",
-  "root",
-  "status",
-  "to",
-  "transactionHash",
-  "transactionIndex",
-  "revertReason"
-})
+@JsonPropertyOrder({"blockHash", "blockNumber", "contractAddress",
+                    "cumulativeGasUsed", "from", "gasUsed", "logs", "logsBloom",
+                    "root", "status", "to", "transactionHash",
+                    "transactionIndex", "revertReason"})
 public abstract class TransactionReceiptResult {
 
   private final String blockHash;
@@ -61,29 +50,36 @@ public abstract class TransactionReceiptResult {
 
   protected final TransactionReceipt receipt;
 
-  protected TransactionReceiptResult(final TransactionReceiptWithMetadata receiptWithMetadata) {
+  protected TransactionReceiptResult(
+      final TransactionReceiptWithMetadata receiptWithMetadata) {
 
     receipt = receiptWithMetadata.getReceipt();
 
     this.blockHash = receiptWithMetadata.getBlockHash().toString();
     this.blockNumber = Quantity.create(receiptWithMetadata.getBlockNumber());
-    this.contractAddress =
-        receiptWithMetadata.getTransaction().contractAddress().map(Address::toString).orElse(null);
+    this.contractAddress = receiptWithMetadata.getTransaction()
+                               .contractAddress()
+                               .map(Address::toString)
+                               .orElse(null);
     this.cumulativeGasUsed = Quantity.create(receipt.getCumulativeGasUsed());
     this.from = receiptWithMetadata.getTransaction().getSender().toString();
     this.gasUsed = Quantity.create(receiptWithMetadata.getGasUsed());
     this.logs =
-        logReceipts(
-            receipt.getLogs(),
-            receiptWithMetadata.getBlockNumber(),
-            receiptWithMetadata.getTransaction().getHash(),
-            receiptWithMetadata.getBlockHash(),
-            receiptWithMetadata.getTransactionIndex());
+        logReceipts(receipt.getLogs(), receiptWithMetadata.getBlockNumber(),
+                    receiptWithMetadata.getTransaction().getHash(),
+                    receiptWithMetadata.getBlockHash(),
+                    receiptWithMetadata.getTransactionIndex());
     this.logsBloom = receipt.getBloomFilter().toString();
-    this.to = receiptWithMetadata.getTransaction().getTo().map(Bytes::toHexString).orElse(null);
-    this.transactionHash = receiptWithMetadata.getTransaction().getHash().toString();
-    this.transactionIndex = Quantity.create(receiptWithMetadata.getTransactionIndex());
-    this.revertReason = receipt.getRevertReason().map(Bytes::toString).orElse(null);
+    this.to = receiptWithMetadata.getTransaction()
+                  .getTo()
+                  .map(Bytes::toHexString)
+                  .orElse(null);
+    this.transactionHash =
+        receiptWithMetadata.getTransaction().getHash().toString();
+    this.transactionIndex =
+        Quantity.create(receiptWithMetadata.getTransactionIndex());
+    this.revertReason =
+        receipt.getRevertReason().map(Bytes::toString).orElse(null);
   }
 
   @JsonGetter(value = "blockHash")
@@ -147,19 +143,17 @@ public abstract class TransactionReceiptResult {
     return revertReason;
   }
 
-  private List<TransactionReceiptLogResult> logReceipts(
-      final List<Log> logs,
-      final long blockNumber,
-      final Hash transactionHash,
-      final Hash blockHash,
-      final int transactionIndex) {
-    final List<TransactionReceiptLogResult> logResults = new ArrayList<>(logs.size());
+  private List<TransactionReceiptLogResult>
+  logReceipts(final List<Log> logs, final long blockNumber,
+              final Hash transactionHash, final Hash blockHash,
+              final int transactionIndex) {
+    final List<TransactionReceiptLogResult> logResults =
+        new ArrayList<>(logs.size());
 
     for (int i = 0; i < logs.size(); i++) {
       final Log log = logs.get(i);
-      logResults.add(
-          new TransactionReceiptLogResult(
-              log, blockNumber, transactionHash, blockHash, transactionIndex, i));
+      logResults.add(new TransactionReceiptLogResult(
+          log, blockNumber, transactionHash, blockHash, transactionIndex, i));
     }
 
     return logResults;

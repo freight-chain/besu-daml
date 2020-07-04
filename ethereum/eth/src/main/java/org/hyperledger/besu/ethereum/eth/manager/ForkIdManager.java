@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,20 +19,18 @@ package org.hyperledger.besu.ethereum.eth.manager;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import org.hyperledger.besu.ethereum.chain.Blockchain;
-import org.hyperledger.besu.ethereum.core.Hash;
-import org.hyperledger.besu.ethereum.rlp.RLPInput;
-import org.hyperledger.besu.util.EndianUtils;
-
+import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.zip.CRC32;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.ethereum.chain.Blockchain;
+import org.hyperledger.besu.ethereum.core.Hash;
+import org.hyperledger.besu.ethereum.rlp.RLPInput;
+import org.hyperledger.besu.util.EndianUtils;
 
 public class ForkIdManager {
 
@@ -43,19 +44,20 @@ public class ForkIdManager {
   private final long highestKnownFork;
   private Bytes genesisHashCrc;
 
-  public ForkIdManager(final Blockchain blockchain, final List<Long> nonFilteredForks) {
+  public ForkIdManager(final Blockchain blockchain,
+                       final List<Long> nonFilteredForks) {
     checkNotNull(blockchain);
     checkNotNull(nonFilteredForks);
     this.chainHeadSupplier = blockchain::getChainHeadBlockNumber;
     this.genesisHash = blockchain.getGenesisBlock().getHash();
     this.forkAndHashList = new ArrayList<>();
-    this.forks =
-        nonFilteredForks.stream()
-            .filter(fork -> fork > 0)
-            .distinct()
-            .sorted()
-            .collect(Collectors.toUnmodifiableList());
-    this.onlyZerosForkBlocks = nonFilteredForks.stream().allMatch(value -> 0L == value);
+    this.forks = nonFilteredForks.stream()
+                     .filter(fork -> fork > 0)
+                     .distinct()
+                     .sorted()
+                     .collect(Collectors.toUnmodifiableList());
+    this.onlyZerosForkBlocks =
+        nonFilteredForks.stream().allMatch(value -> 0L == value);
     this.forkNext = createForkIds();
     this.highestKnownFork = !forks.isEmpty() ? forks.get(forks.size() - 1) : 0L;
   }
@@ -93,19 +95,23 @@ public class ForkIdManager {
    */
   boolean peerCheck(final ForkId forkId) {
     if (forkId == null || onlyZerosForkBlocks) {
-      return true; // Another method must be used to validate (i.e. genesis hash)
+      return true; // Another method must be used to validate (i.e. genesis
+                   // hash)
     }
     // Run the fork checksum validation rule set:
     //   1. If local and remote FORK_CSUM matches, connect.
-    //        The two nodes are in the same fork state currently. They might know
-    //        of differing future forks, but that's not relevant until the fork
-    //        triggers (might be postponed, nodes might be updated to match).
+    //        The two nodes are in the same fork state currently. They might
+    //        know of differing future forks, but that's not relevant until the
+    //        fork triggers (might be postponed, nodes might be updated to
+    //        match).
     //   2. If the remote FORK_CSUM is a subset of the local past forks and the
-    //      remote FORK_NEXT matches with the locally following fork block number,
-    //      connect.
+    //      remote FORK_NEXT matches with the locally following fork block
+    //      number, connect.
     //        Remote node is currently syncing. It might eventually diverge from
-    //        us, but at this current point in time we don't have enough information.
-    //   3. If the remote FORK_CSUM is a superset of the local past forks and can
+    //        us, but at this current point in time we don't have enough
+    //        information.
+    //   3. If the remote FORK_CSUM is a superset of the local past forks and
+    //   can
     //      be completed with locally known future forks, connect.
     //        Local node is currently syncing. It might eventually diverge from
     //        the remote, but at this current point in time we don't have enough
@@ -114,9 +120,9 @@ public class ForkIdManager {
     if (!isHashKnown(forkId.getHash())) {
       return false;
     }
-    return chainHeadSupplier.getAsLong() < forkNext
-        || (isForkKnown(forkId.getNext())
-            && isRemoteAwareOfPresent(forkId.getHash(), forkId.getNext()));
+    return chainHeadSupplier.getAsLong() < forkNext ||
+        (isForkKnown(forkId.getNext()) &&
+         isRemoteAwareOfPresent(forkId.getHash(), forkId.getNext()));
   }
 
   /**
@@ -130,21 +136,27 @@ public class ForkIdManager {
   }
 
   private boolean isHashKnown(final Bytes forkHash) {
-    return forkAndHashList.stream().map(ForkId::getHash).anyMatch(hash -> hash.equals(forkHash));
+    return forkAndHashList.stream()
+        .map(ForkId::getHash)
+        .anyMatch(hash -> hash.equals(forkHash));
   }
 
   private boolean isForkKnown(final Long nextFork) {
-    return highestKnownFork < nextFork
-        || forkAndHashList.stream().map(ForkId::getNext).anyMatch(fork -> fork.equals(nextFork));
+    return highestKnownFork < nextFork ||
+        forkAndHashList.stream()
+            .map(ForkId::getNext)
+            .anyMatch(fork -> fork.equals(nextFork));
   }
 
-  private boolean isRemoteAwareOfPresent(final Bytes forkHash, final Long nextFork) {
+  private boolean isRemoteAwareOfPresent(final Bytes forkHash,
+                                         final Long nextFork) {
     for (final ForkId j : forkAndHashList) {
       if (forkHash.equals(j.getHash())) {
         if (nextFork.equals(j.getNext())) {
           return true;
         } else if (j.getNext() == 0L) {
-          return highestKnownFork <= nextFork; // Remote aware of an additional future fork
+          return highestKnownFork <=
+              nextFork; // Remote aware of an additional future fork
         } else {
           return false;
         }
@@ -158,11 +170,10 @@ public class ForkIdManager {
     crc.update(genesisHash.toArray());
     genesisHashCrc = getCurrentCrcHash(crc);
     final List<Bytes> forkHashes = new ArrayList<>(List.of(genesisHashCrc));
-    forks.forEach(
-        fork -> {
-          updateCrc(crc, fork);
-          forkHashes.add(getCurrentCrcHash(crc));
-        });
+    forks.forEach(fork -> {
+      updateCrc(crc, fork);
+      forkHashes.add(getCurrentCrcHash(crc));
+    });
 
     // This loop is for all the fork hashes that have an associated "next fork"
     for (int i = 0; i < forks.size(); i++) {

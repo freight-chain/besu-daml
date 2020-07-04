@@ -1,23 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth.transactions;
 
+import java.util.Objects;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.util.number.Percentage;
-
-import java.util.Objects;
 
 public class TransactionPoolConfiguration {
   public static final int DEFAULT_TX_MSG_KEEP_ALIVE = 60;
@@ -37,13 +39,12 @@ public class TransactionPoolConfiguration {
 
   private final Wei txFeeCap;
 
-  public TransactionPoolConfiguration(
-      final int txPoolMaxSize,
-      final int pooledTransactionHashesSize,
-      final int pendingTxRetentionPeriod,
-      final int txMessageKeepAliveSeconds,
-      final Percentage priceBump,
-      final Wei txFeeCap) {
+  public TransactionPoolConfiguration(final int txPoolMaxSize,
+                                      final int pooledTransactionHashesSize,
+                                      final int pendingTxRetentionPeriod,
+                                      final int txMessageKeepAliveSeconds,
+                                      final Percentage priceBump,
+                                      final Wei txFeeCap) {
     this.txPoolMaxSize = txPoolMaxSize;
     this.pooledTransactionHashesSize = pooledTransactionHashesSize;
     this.pendingTxRetentionPeriod = pendingTxRetentionPeriod;
@@ -52,29 +53,21 @@ public class TransactionPoolConfiguration {
     this.txFeeCap = txFeeCap;
   }
 
-  public int getTxPoolMaxSize() {
-    return txPoolMaxSize;
-  }
+  public int getTxPoolMaxSize() { return txPoolMaxSize; }
 
   public int getPooledTransactionHashesSize() {
     return pooledTransactionHashesSize;
   }
 
-  public int getPendingTxRetentionPeriod() {
-    return pendingTxRetentionPeriod;
-  }
+  public int getPendingTxRetentionPeriod() { return pendingTxRetentionPeriod; }
 
   public int getTxMessageKeepAliveSeconds() {
     return txMessageKeepAliveSeconds;
   }
 
-  public Percentage getPriceBump() {
-    return priceBump;
-  }
+  public Percentage getPriceBump() { return priceBump; }
 
-  public Wei getTxFeeCap() {
-    return txFeeCap;
-  }
+  public Wei getTxFeeCap() { return txFeeCap; }
 
   @Override
   public boolean equals(final Object o) {
@@ -84,39 +77,32 @@ public class TransactionPoolConfiguration {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final TransactionPoolConfiguration that = (TransactionPoolConfiguration) o;
-    return txPoolMaxSize == that.txPoolMaxSize
-        && Objects.equals(pendingTxRetentionPeriod, that.pendingTxRetentionPeriod)
-        && Objects.equals(txMessageKeepAliveSeconds, that.txMessageKeepAliveSeconds)
-        && Objects.equals(priceBump, that.priceBump)
-        && Objects.equals(txFeeCap, that.txFeeCap);
+    final TransactionPoolConfiguration that = (TransactionPoolConfiguration)o;
+    return txPoolMaxSize == that.txPoolMaxSize &&
+        Objects.equals(pendingTxRetentionPeriod,
+                       that.pendingTxRetentionPeriod) &&
+        Objects.equals(txMessageKeepAliveSeconds,
+                       that.txMessageKeepAliveSeconds) &&
+        Objects.equals(priceBump, that.priceBump) &&
+        Objects.equals(txFeeCap, that.txFeeCap);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        txPoolMaxSize, pendingTxRetentionPeriod, txMessageKeepAliveSeconds, priceBump, txFeeCap);
+    return Objects.hash(txPoolMaxSize, pendingTxRetentionPeriod,
+                        txMessageKeepAliveSeconds, priceBump, txFeeCap);
   }
 
   @Override
   public String toString() {
     return "TransactionPoolConfiguration{"
-        + "txPoolMaxSize="
-        + txPoolMaxSize
-        + ", pendingTxRetentionPeriod="
-        + pendingTxRetentionPeriod
-        + ", txMessageKeepAliveSeconds="
-        + txMessageKeepAliveSeconds
-        + ", priceBump="
-        + priceBump
-        + ", txFeeCap="
-        + txFeeCap
-        + '}';
+        + "txPoolMaxSize=" + txPoolMaxSize +
+        ", pendingTxRetentionPeriod=" + pendingTxRetentionPeriod +
+        ", txMessageKeepAliveSeconds=" + txMessageKeepAliveSeconds +
+        ", priceBump=" + priceBump + ", txFeeCap=" + txFeeCap + '}';
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
   public static class Builder {
     private int txPoolMaxSize = MAX_PENDING_TRANSACTIONS;
@@ -131,17 +117,20 @@ public class TransactionPoolConfiguration {
       return this;
     }
 
-    public Builder pooledTransactionHashesSize(final int pooledTransactionHashesSize) {
+    public Builder
+    pooledTransactionHashesSize(final int pooledTransactionHashesSize) {
       this.pooledTransactionHashesSize = pooledTransactionHashesSize;
       return this;
     }
 
-    public Builder pendingTxRetentionPeriod(final int pendingTxRetentionPeriod) {
+    public Builder
+    pendingTxRetentionPeriod(final int pendingTxRetentionPeriod) {
       this.pendingTxRetentionPeriod = pendingTxRetentionPeriod;
       return this;
     }
 
-    public Builder txMessageKeepAliveSeconds(final int txMessageKeepAliveSeconds) {
+    public Builder
+    txMessageKeepAliveSeconds(final int txMessageKeepAliveSeconds) {
       this.txMessageKeepAliveSeconds = txMessageKeepAliveSeconds;
       return this;
     }
@@ -162,12 +151,8 @@ public class TransactionPoolConfiguration {
 
     public TransactionPoolConfiguration build() {
       return new TransactionPoolConfiguration(
-          txPoolMaxSize,
-          pooledTransactionHashesSize,
-          pendingTxRetentionPeriod,
-          txMessageKeepAliveSeconds,
-          priceBump,
-          txFeeCap);
+          txPoolMaxSize, pooledTransactionHashesSize, pendingTxRetentionPeriod,
+          txMessageKeepAliveSeconds, priceBump, txFeeCap);
     }
   }
 }

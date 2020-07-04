@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +25,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Account;
@@ -37,10 +42,6 @@ import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor.Result;
 import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor.Result.Status;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
-
-import java.util.Optional;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,13 +53,14 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class TransactionSimulatorTest {
 
   private static final SECP256K1.Signature FAKE_SIGNATURE =
-      SECP256K1.Signature.create(SECP256K1.HALF_CURVE_ORDER, SECP256K1.HALF_CURVE_ORDER, (byte) 0);
+      SECP256K1.Signature.create(SECP256K1.HALF_CURVE_ORDER,
+                                 SECP256K1.HALF_CURVE_ORDER, (byte)0);
 
   private static final Address DEFAULT_FROM =
       Address.fromHexString("0x0000000000000000000000000000000000000000");
 
-  private static final Hash DEFAULT_BLOCK_HEADER_HASH =
-      Hash.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
+  private static final Hash DEFAULT_BLOCK_HEADER_HASH = Hash.fromHexString(
+      "0x0000000000000000000000000000000000000000000000000000000000000001");
 
   private TransactionSimulator transactionSimulator;
 
@@ -71,8 +73,8 @@ public class TransactionSimulatorTest {
 
   @Before
   public void setUp() {
-    this.transactionSimulator =
-        new TransactionSimulator(blockchain, worldStateArchive, protocolSchedule);
+    this.transactionSimulator = new TransactionSimulator(
+        blockchain, worldStateArchive, protocolSchedule);
   }
 
   @Test
@@ -103,7 +105,8 @@ public class TransactionSimulatorTest {
             .payload(callParameter.getPayload())
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     final Optional<TransactionSimulatorResult> result =
         transactionSimulator.process(callParameter, 1L);
@@ -130,7 +133,8 @@ public class TransactionSimulatorTest {
             .payload(Bytes.EMPTY)
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     transactionSimulator.process(callParameter, 1L);
 
@@ -155,7 +159,8 @@ public class TransactionSimulatorTest {
             .payload(Bytes.EMPTY)
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     transactionSimulator.process(callParameter, 1L);
 
@@ -217,7 +222,8 @@ public class TransactionSimulatorTest {
             .payload(callParameter.getPayload())
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     final Optional<TransactionSimulatorResult> result =
         transactionSimulator.process(callParameter, DEFAULT_BLOCK_HEADER_HASH);
@@ -244,7 +250,8 @@ public class TransactionSimulatorTest {
             .payload(Bytes.EMPTY)
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     transactionSimulator.process(callParameter, DEFAULT_BLOCK_HEADER_HASH);
 
@@ -269,7 +276,8 @@ public class TransactionSimulatorTest {
             .payload(Bytes.EMPTY)
             .signature(FAKE_SIGNATURE)
             .build();
-    mockProcessorStatusForTransaction(1L, expectedTransaction, Status.SUCCESSFUL);
+    mockProcessorStatusForTransaction(1L, expectedTransaction,
+                                      Status.SUCCESSFUL);
 
     transactionSimulator.process(callParameter, DEFAULT_BLOCK_HEADER_HASH);
 
@@ -303,67 +311,76 @@ public class TransactionSimulatorTest {
     verifyTransactionWasProcessed(expectedTransaction);
   }
 
-  private void mockWorldStateForAccount(
-      final Hash stateRoot, final Address address, final long nonce) {
+  private void mockWorldStateForAccount(final Hash stateRoot,
+                                        final Address address,
+                                        final long nonce) {
     final Account account = mock(Account.class);
     when(account.getNonce()).thenReturn(nonce);
-    when(worldStateArchive.getMutable(eq(stateRoot))).thenReturn(Optional.of(worldState));
+    when(worldStateArchive.getMutable(eq(stateRoot)))
+        .thenReturn(Optional.of(worldState));
     when(worldState.get(eq(address))).thenReturn(account);
   }
 
   private void mockWorldStateForAbsentAccount(final Hash stateRoot) {
-    when(worldStateArchive.getMutable(eq(stateRoot))).thenReturn(Optional.of(worldState));
+    when(worldStateArchive.getMutable(eq(stateRoot)))
+        .thenReturn(Optional.of(worldState));
     when(worldState.get(any())).thenReturn(null);
   }
 
-  private void mockBlockchainForBlockHeader(final Hash stateRoot, final long blockNumber) {
+  private void mockBlockchainForBlockHeader(final Hash stateRoot,
+                                            final long blockNumber) {
     mockBlockchainForBlockHeader(stateRoot, blockNumber, Hash.ZERO);
   }
 
-  private void mockBlockchainForBlockHeader(
-      final Hash stateRoot, final long blockNumber, final Hash headerHash) {
+  private void mockBlockchainForBlockHeader(final Hash stateRoot,
+                                            final long blockNumber,
+                                            final Hash headerHash) {
     final BlockHeader blockHeader = mock(BlockHeader.class);
     when(blockHeader.getStateRoot()).thenReturn(stateRoot);
     when(blockHeader.getNumber()).thenReturn(blockNumber);
-    when(blockchain.getBlockHeader(blockNumber)).thenReturn(Optional.of(blockHeader));
-    when(blockchain.getBlockHeader(headerHash)).thenReturn(Optional.of(blockHeader));
+    when(blockchain.getBlockHeader(blockNumber))
+        .thenReturn(Optional.of(blockHeader));
+    when(blockchain.getBlockHeader(headerHash))
+        .thenReturn(Optional.of(blockHeader));
   }
 
-  private void mockProcessorStatusForTransaction(
-      final long blockNumber, final Transaction transaction, final Status status) {
-    when(protocolSchedule.getByBlockNumber(eq(blockNumber))).thenReturn(protocolSpec);
-    when(protocolSpec.getTransactionProcessor()).thenReturn(transactionProcessor);
-    when(protocolSpec.getMiningBeneficiaryCalculator()).thenReturn(BlockHeader::getCoinbase);
+  private void mockProcessorStatusForTransaction(final long blockNumber,
+                                                 final Transaction transaction,
+                                                 final Status status) {
+    when(protocolSchedule.getByBlockNumber(eq(blockNumber)))
+        .thenReturn(protocolSpec);
+    when(protocolSpec.getTransactionProcessor())
+        .thenReturn(transactionProcessor);
+    when(protocolSpec.getMiningBeneficiaryCalculator())
+        .thenReturn(BlockHeader::getCoinbase);
 
     final Result result = mock(Result.class);
     switch (status) {
-      case SUCCESSFUL:
-        when(result.isSuccessful()).thenReturn(true);
-        break;
-      case INVALID:
-      case FAILED:
-        when(result.isSuccessful()).thenReturn(false);
-        break;
+    case SUCCESSFUL:
+      when(result.isSuccessful()).thenReturn(true);
+      break;
+    case INVALID:
+    case FAILED:
+      when(result.isSuccessful()).thenReturn(false);
+      break;
     }
 
-    when(transactionProcessor.processTransaction(
-            any(), any(), any(), eq(transaction), any(), any(), anyBoolean(), any(), any()))
+    when(transactionProcessor.processTransaction(any(), any(), any(),
+                                                 eq(transaction), any(), any(),
+                                                 anyBoolean(), any(), any()))
         .thenReturn(result);
   }
 
-  private void verifyTransactionWasProcessed(final Transaction expectedTransaction) {
+  private void
+  verifyTransactionWasProcessed(final Transaction expectedTransaction) {
     verify(transactionProcessor)
-        .processTransaction(
-            any(), any(), any(), eq(expectedTransaction), any(), any(), anyBoolean(), any(), any());
+        .processTransaction(any(), any(), any(), eq(expectedTransaction), any(),
+                            any(), anyBoolean(), any(), any());
   }
 
   private CallParameter callParameter() {
-    return new CallParameter(
-        Address.fromHexString("0x0"),
-        Address.fromHexString("0x0"),
-        0,
-        Wei.of(0),
-        Wei.of(0),
-        Bytes.EMPTY);
+    return new CallParameter(Address.fromHexString("0x0"),
+                             Address.fromHexString("0x0"), 0, Wei.of(0),
+                             Wei.of(0), Bytes.EMPTY);
   }
 }

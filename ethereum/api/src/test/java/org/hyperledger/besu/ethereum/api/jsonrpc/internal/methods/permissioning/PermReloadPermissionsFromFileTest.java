@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
@@ -26,9 +30,6 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcRespon
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.permissioning.AccountLocalConfigPermissioningController;
 import org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController;
-
-import java.util.Optional;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,16 +39,19 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class PermReloadPermissionsFromFileTest {
 
-  @Mock private AccountLocalConfigPermissioningController accountLocalConfigPermissioningController;
-  @Mock private NodeLocalConfigPermissioningController nodeLocalConfigPermissioningController;
+  @Mock
+  private AccountLocalConfigPermissioningController
+      accountLocalConfigPermissioningController;
+  @Mock
+  private NodeLocalConfigPermissioningController
+      nodeLocalConfigPermissioningController;
   private PermReloadPermissionsFromFile method;
 
   @Before
   public void before() {
-    method =
-        new PermReloadPermissionsFromFile(
-            Optional.of(accountLocalConfigPermissioningController),
-            Optional.of(nodeLocalConfigPermissioningController));
+    method = new PermReloadPermissionsFromFile(
+        Optional.of(accountLocalConfigPermissioningController),
+        Optional.of(nodeLocalConfigPermissioningController));
   }
 
   @Test
@@ -56,11 +60,13 @@ public class PermReloadPermissionsFromFileTest {
   }
 
   @Test
-  public void whenBothControllersAreNotPresentMethodShouldReturnPermissioningDisabled() {
+  public void
+  whenBothControllersAreNotPresentMethodShouldReturnPermissioningDisabled() {
     JsonRpcResponse expectedErrorResponse =
         new JsonRpcErrorResponse(null, JsonRpcError.PERMISSIONING_NOT_ENABLED);
 
-    method = new PermReloadPermissionsFromFile(Optional.empty(), Optional.empty());
+    method =
+        new PermReloadPermissionsFromFile(Optional.empty(), Optional.empty());
 
     JsonRpcResponse response = method.response(reloadRequest());
 
@@ -79,7 +85,9 @@ public class PermReloadPermissionsFromFileTest {
 
   @Test
   public void whenControllerReloadFailsMethodShouldReturnError() {
-    doThrow(new RuntimeException()).when(accountLocalConfigPermissioningController).reload();
+    doThrow(new RuntimeException())
+        .when(accountLocalConfigPermissioningController)
+        .reload();
     JsonRpcResponse expectedErrorResponse =
         new JsonRpcErrorResponse(null, JsonRpcError.ALLOWLIST_RELOAD_ERROR);
 

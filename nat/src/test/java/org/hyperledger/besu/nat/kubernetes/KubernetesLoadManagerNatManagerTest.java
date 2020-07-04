@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,16 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.nat.kubernetes.KubernetesNatManager.DEFAULT_BESU_SERVICE_NAME_FILTER;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.nat.core.domain.NatPortMapping;
-import org.hyperledger.besu.nat.core.domain.NatServiceType;
-import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
-
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.models.V1LoadBalancerIngressBuilder;
 import io.kubernetes.client.models.V1LoadBalancerStatusBuilder;
@@ -36,6 +29,14 @@ import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.models.V1ServicePort;
 import io.kubernetes.client.models.V1ServiceSpec;
 import io.kubernetes.client.models.V1ServiceStatus;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+import org.hyperledger.besu.nat.core.domain.NatPortMapping;
+import org.hyperledger.besu.nat.core.domain.NatServiceType;
+import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,39 +57,37 @@ public final class KubernetesLoadManagerNatManagerTest {
 
   @Before
   public void initialize() throws IOException {
-    final V1ServiceStatus v1ServiceStatus =
-        new V1ServiceStatus()
-            .loadBalancer(
-                new V1LoadBalancerStatusBuilder()
-                    .addToIngress(
-                        new V1LoadBalancerIngressBuilder().withIp(detectedAdvertisedHost).build())
-                    .build());
+    final V1ServiceStatus v1ServiceStatus = new V1ServiceStatus().loadBalancer(
+        new V1LoadBalancerStatusBuilder()
+            .addToIngress(new V1LoadBalancerIngressBuilder()
+                              .withIp(detectedAdvertisedHost)
+                              .build())
+            .build());
     when(v1Service.getStatus()).thenReturn(v1ServiceStatus);
     when(v1Service.getSpec())
-        .thenReturn(
-            new V1ServiceSpec()
-                .type("LoadBalancer")
-                .ports(
-                    Arrays.asList(
-                        new V1ServicePort()
-                            .name(NatServiceType.JSON_RPC.getValue())
-                            .port(rpcHttpPort)
-                            .targetPort(new IntOrString(rpcHttpPort)),
-                        new V1ServicePort()
-                            .name(NatServiceType.RLPX.getValue())
-                            .port(p2pPort)
-                            .targetPort(new IntOrString(p2pPort)),
-                        new V1ServicePort()
-                            .name(NatServiceType.DISCOVERY.getValue())
-                            .port(p2pPort)
-                            .targetPort(new IntOrString(p2pPort)))));
+        .thenReturn(new V1ServiceSpec()
+                        .type("LoadBalancer")
+                        .ports(Arrays.asList(
+                            new V1ServicePort()
+                                .name(NatServiceType.JSON_RPC.getValue())
+                                .port(rpcHttpPort)
+                                .targetPort(new IntOrString(rpcHttpPort)),
+                            new V1ServicePort()
+                                .name(NatServiceType.RLPX.getValue())
+                                .port(p2pPort)
+                                .targetPort(new IntOrString(p2pPort)),
+                            new V1ServicePort()
+                                .name(NatServiceType.DISCOVERY.getValue())
+                                .port(p2pPort)
+                                .targetPort(new IntOrString(p2pPort)))));
     when(v1Service.getMetadata())
         .thenReturn(new V1ObjectMeta().name(DEFAULT_BESU_SERVICE_NAME_FILTER));
     natManager = new KubernetesNatManager(DEFAULT_BESU_SERVICE_NAME_FILTER);
     try {
       natManager.start();
     } catch (Exception ignored) {
-      System.err.println("Ignored missing Kube config file in testing context.");
+      System.err.println(
+          "Ignored missing Kube config file in testing context.");
     }
     natManager.updateUsingBesuService(v1Service);
   }
@@ -97,7 +96,8 @@ public final class KubernetesLoadManagerNatManagerTest {
   public void assertThatExternalIPIsEqualToRemoteHost()
       throws ExecutionException, InterruptedException {
 
-    assertThat(natManager.queryExternalIPAddress().get()).isEqualTo(detectedAdvertisedHost);
+    assertThat(natManager.queryExternalIPAddress().get())
+        .isEqualTo(detectedAdvertisedHost);
   }
 
   @Test
@@ -111,17 +111,12 @@ public final class KubernetesLoadManagerNatManagerTest {
   public void assertThatMappingForDiscoveryWorks() throws UnknownHostException {
     final String internalHost = InetAddress.getLocalHost().getHostAddress();
 
-    final NatPortMapping mapping =
-        natManager.getPortMapping(NatServiceType.DISCOVERY, NetworkProtocol.UDP);
+    final NatPortMapping mapping = natManager.getPortMapping(
+        NatServiceType.DISCOVERY, NetworkProtocol.UDP);
 
-    final NatPortMapping expectedMapping =
-        new NatPortMapping(
-            NatServiceType.DISCOVERY,
-            NetworkProtocol.UDP,
-            internalHost,
-            detectedAdvertisedHost,
-            p2pPort,
-            p2pPort);
+    final NatPortMapping expectedMapping = new NatPortMapping(
+        NatServiceType.DISCOVERY, NetworkProtocol.UDP, internalHost,
+        detectedAdvertisedHost, p2pPort, p2pPort);
 
     assertThat(mapping).isEqualToComparingFieldByField(expectedMapping);
   }
@@ -133,14 +128,9 @@ public final class KubernetesLoadManagerNatManagerTest {
     final NatPortMapping mapping =
         natManager.getPortMapping(NatServiceType.JSON_RPC, NetworkProtocol.TCP);
 
-    final NatPortMapping expectedMapping =
-        new NatPortMapping(
-            NatServiceType.JSON_RPC,
-            NetworkProtocol.TCP,
-            internalHost,
-            detectedAdvertisedHost,
-            rpcHttpPort,
-            rpcHttpPort);
+    final NatPortMapping expectedMapping = new NatPortMapping(
+        NatServiceType.JSON_RPC, NetworkProtocol.TCP, internalHost,
+        detectedAdvertisedHost, rpcHttpPort, rpcHttpPort);
 
     assertThat(mapping).isEqualToComparingFieldByField(expectedMapping);
   }
@@ -152,14 +142,9 @@ public final class KubernetesLoadManagerNatManagerTest {
     final NatPortMapping mapping =
         natManager.getPortMapping(NatServiceType.RLPX, NetworkProtocol.TCP);
 
-    final NatPortMapping expectedMapping =
-        new NatPortMapping(
-            NatServiceType.RLPX,
-            NetworkProtocol.TCP,
-            internalHost,
-            detectedAdvertisedHost,
-            p2pPort,
-            p2pPort);
+    final NatPortMapping expectedMapping = new NatPortMapping(
+        NatServiceType.RLPX, NetworkProtocol.TCP, internalHost,
+        detectedAdvertisedHost, p2pPort, p2pPort);
 
     assertThat(mapping).isEqualToComparingFieldByField(expectedMapping);
   }

@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,16 +19,14 @@ package org.hyperledger.besu.metrics.prometheus;
 
 import static org.hyperledger.besu.metrics.BesuMetricCategory.DEFAULT_METRIC_CATEGORIES;
 
-import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
-
+import com.google.common.base.MoreObjects;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import com.google.common.base.MoreObjects;
+import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 
 public class MetricsConfiguration {
   private static final String DEFAULT_METRICS_HOST = "127.0.0.1";
@@ -48,22 +49,16 @@ public class MetricsConfiguration {
   private final List<String> hostsAllowlist;
   private final boolean timersEnabled;
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
-  private MetricsConfiguration(
-      final boolean enabled,
-      final int port,
-      final String host,
-      final Set<MetricCategory> metricCategories,
-      final boolean pushEnabled,
-      final int pushPort,
-      final String pushHost,
-      final int pushInterval,
-      final String prometheusJob,
-      final List<String> hostsAllowlist,
-      final boolean timersEnabled) {
+  private MetricsConfiguration(final boolean enabled, final int port,
+                               final String host,
+                               final Set<MetricCategory> metricCategories,
+                               final boolean pushEnabled, final int pushPort,
+                               final String pushHost, final int pushInterval,
+                               final String prometheusJob,
+                               final List<String> hostsAllowlist,
+                               final boolean timersEnabled) {
     this.enabled = enabled;
     this.port = port;
     this.host = host;
@@ -77,49 +72,27 @@ public class MetricsConfiguration {
     this.timersEnabled = timersEnabled;
   }
 
-  public boolean isEnabled() {
-    return enabled;
-  }
+  public boolean isEnabled() { return enabled; }
 
-  public String getHost() {
-    return host;
-  }
+  public String getHost() { return host; }
 
-  public int getPort() {
-    return port;
-  }
+  public int getPort() { return port; }
 
-  public int getActualPort() {
-    return actualPort;
-  }
+  public int getActualPort() { return actualPort; }
 
-  void setActualPort(final int actualPort) {
-    this.actualPort = actualPort;
-  }
+  void setActualPort(final int actualPort) { this.actualPort = actualPort; }
 
-  public Set<MetricCategory> getMetricCategories() {
-    return metricCategories;
-  }
+  public Set<MetricCategory> getMetricCategories() { return metricCategories; }
 
-  public int getPushPort() {
-    return pushPort;
-  }
+  public int getPushPort() { return pushPort; }
 
-  public String getPushHost() {
-    return pushHost;
-  }
+  public String getPushHost() { return pushHost; }
 
-  public boolean isPushEnabled() {
-    return pushEnabled;
-  }
+  public boolean isPushEnabled() { return pushEnabled; }
 
-  public int getPushInterval() {
-    return pushInterval;
-  }
+  public int getPushInterval() { return pushInterval; }
 
-  public String getPrometheusJob() {
-    return prometheusJob;
-  }
+  public String getPrometheusJob() { return prometheusJob; }
 
   // use getHostsAllowlist instead
   @Deprecated
@@ -131,9 +104,7 @@ public class MetricsConfiguration {
     return Collections.unmodifiableCollection(this.hostsAllowlist);
   }
 
-  public boolean isTimersEnabled() {
-    return timersEnabled;
-  }
+  public boolean isTimersEnabled() { return timersEnabled; }
 
   @Override
   public String toString() {
@@ -159,32 +130,21 @@ public class MetricsConfiguration {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final MetricsConfiguration that = (MetricsConfiguration) o;
-    return enabled == that.enabled
-        && port == that.port
-        && pushEnabled == that.pushEnabled
-        && pushPort == that.pushPort
-        && pushInterval == that.pushInterval
-        && Objects.equals(host, that.host)
-        && Objects.equals(metricCategories, that.metricCategories)
-        && Objects.equals(pushHost, that.pushHost)
-        && Objects.equals(prometheusJob, that.prometheusJob)
-        && Objects.equals(hostsAllowlist, that.hostsAllowlist);
+    final MetricsConfiguration that = (MetricsConfiguration)o;
+    return enabled == that.enabled && port == that.port &&
+        pushEnabled == that.pushEnabled && pushPort == that.pushPort &&
+        pushInterval == that.pushInterval && Objects.equals(host, that.host) &&
+        Objects.equals(metricCategories, that.metricCategories) &&
+        Objects.equals(pushHost, that.pushHost) &&
+        Objects.equals(prometheusJob, that.prometheusJob) &&
+        Objects.equals(hostsAllowlist, that.hostsAllowlist);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        enabled,
-        port,
-        host,
-        metricCategories,
-        pushEnabled,
-        pushPort,
-        pushHost,
-        pushInterval,
-        prometheusJob,
-        hostsAllowlist);
+    return Objects.hash(enabled, port, host, metricCategories, pushEnabled,
+                        pushPort, pushHost, pushInterval, prometheusJob,
+                        hostsAllowlist);
   }
 
   public static class Builder {
@@ -197,7 +157,8 @@ public class MetricsConfiguration {
     private String pushHost = DEFAULT_METRICS_PUSH_HOST;
     private int pushInterval = 15;
     private String prometheusJob = "besu-client";
-    private List<String> hostsAllowlist = Arrays.asList("localhost", "127.0.0.1");
+    private List<String> hostsAllowlist =
+        Arrays.asList("localhost", "127.0.0.1");
     private boolean timersEnabled = DEFAULT_TIMERS_ENABLED;
 
     private Builder() {}
@@ -217,7 +178,8 @@ public class MetricsConfiguration {
       return this;
     }
 
-    public Builder metricCategories(final Set<MetricCategory> metricCategories) {
+    public Builder
+    metricCategories(final Set<MetricCategory> metricCategories) {
       this.metricCategories = metricCategories;
       return this;
     }
@@ -266,17 +228,8 @@ public class MetricsConfiguration {
 
     public MetricsConfiguration build() {
       return new MetricsConfiguration(
-          enabled,
-          port,
-          host,
-          metricCategories,
-          pushEnabled,
-          pushPort,
-          pushHost,
-          pushInterval,
-          prometheusJob,
-          hostsAllowlist,
-          timersEnabled);
+          enabled, port, host, metricCategories, pushEnabled, pushPort,
+          pushHost, pushInterval, prometheusJob, hostsAllowlist, timersEnabled);
     }
   }
 }

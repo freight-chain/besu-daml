@@ -1,19 +1,25 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.eth.messages;
 
+import java.math.BigInteger;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.eth.manager.ForkId;
@@ -24,42 +30,32 @@ import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 
-import java.math.BigInteger;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
-
 public final class StatusMessage extends AbstractMessageData {
 
   private EthStatus status;
 
-  public StatusMessage(final Bytes data) {
-    super(data);
-  }
+  public StatusMessage(final Bytes data) { super(data); }
 
-  public static StatusMessage create(
-      final int protocolVersion,
-      final BigInteger networkId,
-      final Difficulty totalDifficulty,
-      final Hash bestHash,
-      final Hash genesisHash) {
-    final EthStatus status =
-        new EthStatus(protocolVersion, networkId, totalDifficulty, bestHash, genesisHash);
+  public static StatusMessage create(final int protocolVersion,
+                                     final BigInteger networkId,
+                                     final Difficulty totalDifficulty,
+                                     final Hash bestHash,
+                                     final Hash genesisHash) {
+    final EthStatus status = new EthStatus(
+        protocolVersion, networkId, totalDifficulty, bestHash, genesisHash);
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
     status.writeTo(out);
 
     return new StatusMessage(out.encoded());
   }
 
-  public static StatusMessage create(
-      final int protocolVersion,
-      final BigInteger networkId,
-      final Difficulty totalDifficulty,
-      final Hash bestHash,
-      final Hash genesisHash,
-      final ForkId forkId) {
+  public static StatusMessage
+  create(final int protocolVersion, final BigInteger networkId,
+         final Difficulty totalDifficulty, final Hash bestHash,
+         final Hash genesisHash, final ForkId forkId) {
     final EthStatus status =
-        new EthStatus(protocolVersion, networkId, totalDifficulty, bestHash, genesisHash, forkId);
+        new EthStatus(protocolVersion, networkId, totalDifficulty, bestHash,
+                      genesisHash, forkId);
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
     status.writeTo(out);
 
@@ -68,12 +64,12 @@ public final class StatusMessage extends AbstractMessageData {
 
   public static StatusMessage readFrom(final MessageData message) {
     if (message instanceof StatusMessage) {
-      return (StatusMessage) message;
+      return (StatusMessage)message;
     }
     final int code = message.getCode();
     if (code != EthPV62.STATUS) {
-      throw new IllegalArgumentException(
-          String.format("Message has code %d and thus is not a StatusMessage.", code));
+      throw new IllegalArgumentException(String.format(
+          "Message has code %d and thus is not a StatusMessage.", code));
     }
     return new StatusMessage(message.getData());
   }
@@ -88,54 +84,46 @@ public final class StatusMessage extends AbstractMessageData {
    *
    * @return The eth protocol version the associated node is running.
    */
-  public int protocolVersion() {
-    return status().protocolVersion;
-  }
+  public int protocolVersion() { return status().protocolVersion; }
 
   /**
    * Return The id of the network the associated node is participating in.
    *
    * @return The id of the network the associated node is participating in.
    */
-  public BigInteger networkId() {
-    return status().networkId;
-  }
+  public BigInteger networkId() { return status().networkId; }
 
   /**
-   * Return The total difficulty of the head of the associated node's local blockchain.
+   * Return The total difficulty of the head of the associated node's local
+   * blockchain.
    *
-   * @return The total difficulty of the head of the associated node's local blockchain.
+   * @return The total difficulty of the head of the associated node's local
+   *     blockchain.
    */
-  public Difficulty totalDifficulty() {
-    return status().totalDifficulty;
-  }
+  public Difficulty totalDifficulty() { return status().totalDifficulty; }
 
   /**
    * Return The hash of the head of the associated node's local blockchian.
    *
    * @return The hash of the head of the associated node's local blockchian.
    */
-  public Hash bestHash() {
-    return status().bestHash;
-  }
+  public Hash bestHash() { return status().bestHash; }
 
   /**
-   * Return The hash of the genesis block of the network the associated node is participating in.
+   * Return The hash of the genesis block of the network the associated node is
+   * participating in.
    *
-   * @return The hash of the genesis block of the network the associated node is participating in.
+   * @return The hash of the genesis block of the network the associated node is
+   *     participating in.
    */
-  public Bytes32 genesisHash() {
-    return status().genesisHash;
-  }
+  public Bytes32 genesisHash() { return status().genesisHash; }
 
   /**
    * Return The fork id of the network the associated node is participating in.
    *
    * @return The fork id of the network the associated node is participating in.
    */
-  public ForkId forkId() {
-    return status().forkId;
-  }
+  public ForkId forkId() { return status().forkId; }
 
   private EthStatus status() {
     if (status == null) {
@@ -153,12 +141,9 @@ public final class StatusMessage extends AbstractMessageData {
     private final Hash genesisHash;
     private final ForkId forkId;
 
-    EthStatus(
-        final int protocolVersion,
-        final BigInteger networkId,
-        final Difficulty totalDifficulty,
-        final Hash bestHash,
-        final Hash genesisHash) {
+    EthStatus(final int protocolVersion, final BigInteger networkId,
+              final Difficulty totalDifficulty, final Hash bestHash,
+              final Hash genesisHash) {
       this.protocolVersion = protocolVersion;
       this.networkId = networkId;
       this.totalDifficulty = totalDifficulty;
@@ -167,13 +152,9 @@ public final class StatusMessage extends AbstractMessageData {
       this.forkId = null;
     }
 
-    EthStatus(
-        final int protocolVersion,
-        final BigInteger networkId,
-        final Difficulty totalDifficulty,
-        final Hash bestHash,
-        final Hash genesisHash,
-        final ForkId forkHash) {
+    EthStatus(final int protocolVersion, final BigInteger networkId,
+              final Difficulty totalDifficulty, final Hash bestHash,
+              final Hash genesisHash, final ForkId forkHash) {
       this.protocolVersion = protocolVersion;
       this.networkId = networkId;
       this.totalDifficulty = totalDifficulty;
@@ -212,8 +193,8 @@ public final class StatusMessage extends AbstractMessageData {
       }
       in.leaveList();
 
-      return new EthStatus(
-          protocolVersion, networkId, totalDifficulty, bestHash, genesisHash, forkId);
+      return new EthStatus(protocolVersion, networkId, totalDifficulty,
+                           bestHash, genesisHash, forkId);
     }
   }
 }

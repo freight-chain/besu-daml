@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,21 +20,8 @@ package org.hyperledger.besu.tests.acceptance.dsl.node.configuration.permissioni
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 
-import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
-import org.hyperledger.besu.ethereum.core.Address;
-import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor;
-import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor.ALLOWLIST_TYPE;
-import org.hyperledger.besu.ethereum.permissioning.LocalPermissioningConfiguration;
-import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
-import org.hyperledger.besu.ethereum.permissioning.SmartContractPermissioningConfiguration;
-import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
-import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
-import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeConfigurationBuilder;
-import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeFactory;
-
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -46,10 +36,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
 import org.assertj.core.util.Lists;
+import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
+import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor;
+import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor.ALLOWLIST_TYPE;
+import org.hyperledger.besu.ethereum.permissioning.LocalPermissioningConfiguration;
+import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
+import org.hyperledger.besu.ethereum.permissioning.SmartContractPermissioningConfiguration;
+import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
+import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
+import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeConfigurationBuilder;
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeFactory;
 
 public class PermissionedNodeBuilder {
 
@@ -99,7 +100,8 @@ public class PermissionedNodeBuilder {
 
   public PermissionedNodeBuilder nodesPermittedInConfig(final Node... nodes) {
     this.localConfigNodesPermissioningEnabled = true;
-    this.localConfigPermittedNodes = new ArrayList<>(convertToEnodes(Lists.newArrayList(nodes)));
+    this.localConfigPermittedNodes =
+        new ArrayList<>(convertToEnodes(Lists.newArrayList(nodes)));
     return this;
   }
 
@@ -116,7 +118,8 @@ public class PermissionedNodeBuilder {
     return this;
   }
 
-  public PermissionedNodeBuilder accountsPermittedInConfig(final List<String> accounts) {
+  public PermissionedNodeBuilder
+  accountsPermittedInConfig(final List<String> accounts) {
     this.localConfigAccountsPermissioningEnabled = true;
     this.localConfigPermittedAccounts = new ArrayList<>(accounts);
     return this;
@@ -148,9 +151,11 @@ public class PermissionedNodeBuilder {
   public PermissionedNodeBuilder genesisFile(final String path) {
     try {
       URI uri = this.getClass().getResource(path).toURI();
-      this.genesisFile = Resources.toString(uri.toURL(), Charset.defaultCharset());
+      this.genesisFile =
+          Resources.toString(uri.toURL(), Charset.defaultCharset());
     } catch (final URISyntaxException | IOException e) {
-      throw new IllegalStateException("Unable to read genesis file from: " + path, e);
+      throw new IllegalStateException(
+          "Unable to read genesis file from: " + path, e);
     }
     return this;
   }
@@ -160,22 +165,28 @@ public class PermissionedNodeBuilder {
       name = "perm_node_" + UUID.randomUUID().toString().substring(0, 8);
     }
 
-    Optional<LocalPermissioningConfiguration> localPermConfig = Optional.empty();
-    if (localConfigNodesPermissioningEnabled || localConfigAccountsPermissioningEnabled) {
+    Optional<LocalPermissioningConfiguration> localPermConfig =
+        Optional.empty();
+    if (localConfigNodesPermissioningEnabled ||
+        localConfigAccountsPermissioningEnabled) {
       localPermConfig = Optional.of(localConfigPermissioningConfiguration());
     }
 
-    Optional<SmartContractPermissioningConfiguration> smartContractPermConfig = Optional.empty();
-    if (nodeSmartContractPermissioningEnabled || accountSmartContractPermissioningEnabled) {
-      smartContractPermConfig = Optional.of(smartContractPermissioningConfiguration());
+    Optional<SmartContractPermissioningConfiguration> smartContractPermConfig =
+        Optional.empty();
+    if (nodeSmartContractPermissioningEnabled ||
+        accountSmartContractPermissioningEnabled) {
+      smartContractPermConfig =
+          Optional.of(smartContractPermissioningConfiguration());
     }
 
     final PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(localPermConfig, smartContractPermConfig);
+        new PermissioningConfiguration(localPermConfig,
+                                       smartContractPermConfig);
 
-    final BesuNodeConfigurationBuilder builder = new BesuNodeConfigurationBuilder();
-    builder
-        .name(name)
+    final BesuNodeConfigurationBuilder builder =
+        new BesuNodeConfigurationBuilder();
+    builder.name(name)
         .jsonRpcConfiguration(jsonRpcConfigWithPermApiEnabled())
         .permissioningConfiguration(permissioningConfiguration)
         .bootnodeEligible(false);
@@ -200,7 +211,8 @@ public class PermissionedNodeBuilder {
     }
   }
 
-  private LocalPermissioningConfiguration localConfigPermissioningConfiguration() {
+  private LocalPermissioningConfiguration
+  localConfigPermissioningConfiguration() {
     LocalPermissioningConfiguration localPermissioningConfiguration =
         LocalPermissioningConfiguration.createDefault();
 
@@ -209,12 +221,15 @@ public class PermissionedNodeBuilder {
         localConfigNodesPermissioningFile = createTemporaryPermissionsFile();
       }
 
-      List<String> nodesAsListOfStrings =
-          localConfigPermittedNodes.stream().map(URI::toASCIIString).collect(Collectors.toList());
-      initPermissioningConfigurationFile(
-          ALLOWLIST_TYPE.NODES, nodesAsListOfStrings, localConfigNodesPermissioningFile);
+      List<String> nodesAsListOfStrings = localConfigPermittedNodes.stream()
+                                              .map(URI::toASCIIString)
+                                              .collect(Collectors.toList());
+      initPermissioningConfigurationFile(ALLOWLIST_TYPE.NODES,
+                                         nodesAsListOfStrings,
+                                         localConfigNodesPermissioningFile);
 
-      localPermissioningConfiguration.setNodeAllowlist(localConfigPermittedNodes);
+      localPermissioningConfiguration.setNodeAllowlist(
+          localConfigPermittedNodes);
       localPermissioningConfiguration.setNodePermissioningConfigFilePath(
           localConfigNodesPermissioningFile.toAbsolutePath().toString());
     }
@@ -224,12 +239,12 @@ public class PermissionedNodeBuilder {
         localConfigAccountsPermissioningFile = createTemporaryPermissionsFile();
       }
 
-      initPermissioningConfigurationFile(
-          ALLOWLIST_TYPE.ACCOUNTS,
-          localConfigPermittedAccounts,
-          localConfigAccountsPermissioningFile);
+      initPermissioningConfigurationFile(ALLOWLIST_TYPE.ACCOUNTS,
+                                         localConfigPermittedAccounts,
+                                         localConfigAccountsPermissioningFile);
 
-      localPermissioningConfiguration.setAccountAllowlist(localConfigPermittedAccounts);
+      localPermissioningConfiguration.setAccountAllowlist(
+          localConfigPermittedAccounts);
       localPermissioningConfiguration.setAccountPermissioningConfigFilePath(
           localConfigAccountsPermissioningFile.toAbsolutePath().toString());
     }
@@ -237,7 +252,8 @@ public class PermissionedNodeBuilder {
     return localPermissioningConfiguration;
   }
 
-  private SmartContractPermissioningConfiguration smartContractPermissioningConfiguration() {
+  private SmartContractPermissioningConfiguration
+  smartContractPermissioningConfiguration() {
     SmartContractPermissioningConfiguration config =
         SmartContractPermissioningConfiguration.createDefault();
     if (nodePermissioningSmartContractAddress != null) {
@@ -261,13 +277,15 @@ public class PermissionedNodeBuilder {
       tempFile = File.createTempFile("temp", "temp");
       tempFile.deleteOnExit();
     } catch (IOException e) {
-      throw new RuntimeException("Error creating temporary permissioning file", e);
+      throw new RuntimeException("Error creating temporary permissioning file",
+                                 e);
     }
     return tempFile.toPath();
   }
 
   private JsonRpcConfiguration jsonRpcConfigWithPermApiEnabled() {
-    final JsonRpcConfiguration jsonRpcConfig = JsonRpcConfiguration.createDefault();
+    final JsonRpcConfiguration jsonRpcConfig =
+        JsonRpcConfiguration.createDefault();
     jsonRpcConfig.setEnabled(true);
     jsonRpcConfig.setPort(0);
     jsonRpcConfig.setHostsAllowlist(singletonList("*"));
@@ -279,18 +297,17 @@ public class PermissionedNodeBuilder {
     return jsonRpcConfig;
   }
 
-  private void initPermissioningConfigurationFile(
-      final ALLOWLIST_TYPE listType,
-      final Collection<String> allowlistVal,
-      final Path configFilePath) {
+  private void
+  initPermissioningConfigurationFile(final ALLOWLIST_TYPE listType,
+                                     final Collection<String> allowlistVal,
+                                     final Path configFilePath) {
     try {
-      AllowlistPersistor.addNewConfigItem(listType, allowlistVal, configFilePath);
+      AllowlistPersistor.addNewConfigItem(listType, allowlistVal,
+                                          configFilePath);
 
-      Files.write(
-          configFilePath,
-          System.lineSeparator().getBytes(Charsets.UTF_8),
-          StandardOpenOption.WRITE,
-          StandardOpenOption.APPEND);
+      Files.write(configFilePath,
+                  System.lineSeparator().getBytes(Charsets.UTF_8),
+                  StandardOpenOption.WRITE, StandardOpenOption.APPEND);
     } catch (IOException e) {
       throw new RuntimeException("Error populating permissioning file", e);
     }
@@ -298,7 +315,7 @@ public class PermissionedNodeBuilder {
 
   private List<URI> convertToEnodes(final List<Node> nodes) {
     return nodes.stream()
-        .map(node -> (RunnableNode) node)
+        .map(node -> (RunnableNode)node)
         .map(RunnableNode::enodeUrl)
         .collect(toList());
   }

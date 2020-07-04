@@ -1,19 +1,24 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.methods;
 
+import java.util.Map;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
@@ -33,17 +38,18 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning.
 import org.hyperledger.besu.ethereum.permissioning.AccountLocalConfigPermissioningController;
 import org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController;
 
-import java.util.Map;
-import java.util.Optional;
-
 public class PermJsonRpcMethods extends ApiGroupJsonRpcMethods {
 
-  private final Optional<AccountLocalConfigPermissioningController> accountsWhitelistController;
-  private final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController;
+  private final Optional<AccountLocalConfigPermissioningController>
+      accountsWhitelistController;
+  private final Optional<NodeLocalConfigPermissioningController>
+      nodeWhitelistController;
 
   public PermJsonRpcMethods(
-      final Optional<AccountLocalConfigPermissioningController> accountsWhitelistController,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController) {
+      final Optional<AccountLocalConfigPermissioningController>
+          accountsWhitelistController,
+      final Optional<NodeLocalConfigPermissioningController>
+          nodeWhitelistController) {
     this.accountsWhitelistController = accountsWhitelistController;
     this.nodeWhitelistController = nodeWhitelistController;
   }
@@ -68,6 +74,7 @@ public class PermJsonRpcMethods extends ApiGroupJsonRpcMethods {
         new PermAddAccountsToAllowlist(accountsWhitelistController),
         new PermRemoveAccountsFromWhitelist(accountsWhitelistController),
         new PermRemoveAccountsFromAllowlist(accountsWhitelistController),
-        new PermReloadPermissionsFromFile(accountsWhitelistController, nodeWhitelistController));
+        new PermReloadPermissionsFromFile(accountsWhitelistController,
+                                          nodeWhitelistController));
   }
 }

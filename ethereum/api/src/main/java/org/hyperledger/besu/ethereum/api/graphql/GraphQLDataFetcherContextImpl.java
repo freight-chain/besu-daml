@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,7 +24,8 @@ import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 
-public class GraphQLDataFetcherContextImpl implements GraphQLDataFetcherContext {
+public class GraphQLDataFetcherContextImpl
+    implements GraphQLDataFetcherContext {
 
   private final BlockchainQueries blockchainQueries;
   private final MiningCoordinator miningCoordinator;
@@ -30,15 +34,11 @@ public class GraphQLDataFetcherContextImpl implements GraphQLDataFetcherContext 
   private final TransactionPool transactionPool;
   private final IsAliveHandler isAliveHandler;
 
-  public GraphQLDataFetcherContextImpl(
-      final GraphQLDataFetcherContext context, final IsAliveHandler isAliveHandler) {
-    this(
-        context.getBlockchainQueries(),
-        context.getProtocolSchedule(),
-        context.getTransactionPool(),
-        context.getMiningCoordinator(),
-        context.getSynchronizer(),
-        isAliveHandler);
+  public GraphQLDataFetcherContextImpl(final GraphQLDataFetcherContext context,
+                                       final IsAliveHandler isAliveHandler) {
+    this(context.getBlockchainQueries(), context.getProtocolSchedule(),
+         context.getTransactionPool(), context.getMiningCoordinator(),
+         context.getSynchronizer(), isAliveHandler);
   }
 
   public GraphQLDataFetcherContextImpl(
@@ -47,13 +47,8 @@ public class GraphQLDataFetcherContextImpl implements GraphQLDataFetcherContext 
       final TransactionPool transactionPool,
       final MiningCoordinator miningCoordinator,
       final Synchronizer synchronizer) {
-    this(
-        blockchainQueries,
-        protocolSchedule,
-        transactionPool,
-        miningCoordinator,
-        synchronizer,
-        new IsAliveHandler(true));
+    this(blockchainQueries, protocolSchedule, transactionPool,
+         miningCoordinator, synchronizer, new IsAliveHandler(true));
   }
 
   public GraphQLDataFetcherContextImpl(
@@ -61,8 +56,7 @@ public class GraphQLDataFetcherContextImpl implements GraphQLDataFetcherContext 
       final ProtocolSchedule protocolSchedule,
       final TransactionPool transactionPool,
       final MiningCoordinator miningCoordinator,
-      final Synchronizer synchronizer,
-      final IsAliveHandler isAliveHandler) {
+      final Synchronizer synchronizer, final IsAliveHandler isAliveHandler) {
     this.blockchainQueries = blockchainQueries;
     this.protocolSchedule = protocolSchedule;
     this.miningCoordinator = miningCoordinator;

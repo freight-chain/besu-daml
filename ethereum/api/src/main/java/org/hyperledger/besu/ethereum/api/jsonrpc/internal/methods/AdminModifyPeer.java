@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,30 +36,31 @@ public abstract class AdminModifyPeer implements JsonRpcMethod {
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
     if (requestContext.getRequest().getParamLength() != 1) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.INVALID_PARAMS);
     }
     try {
-      final String enodeString = requestContext.getRequiredParameter(0, String.class);
+      final String enodeString =
+          requestContext.getRequiredParameter(0, String.class);
       return performOperation(requestContext.getRequest().getId(), enodeString);
     } catch (final InvalidJsonRpcParameters e) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.INVALID_PARAMS);
     } catch (final IllegalArgumentException e) {
-      if (e.getMessage()
-          .endsWith(
+      if (e.getMessage().endsWith(
               "Invalid node ID: node ID must have exactly 128 hexadecimal characters and should not include any '0x' hex prefix.")) {
-        return new JsonRpcErrorResponse(
-            requestContext.getRequest().getId(), JsonRpcError.ENODE_ID_INVALID);
+        return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                        JsonRpcError.ENODE_ID_INVALID);
       } else {
-        return new JsonRpcErrorResponse(
-            requestContext.getRequest().getId(), JsonRpcError.PARSE_ERROR);
+        return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                        JsonRpcError.PARSE_ERROR);
       }
     } catch (final P2PDisabledException e) {
-      return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), JsonRpcError.P2P_DISABLED);
+      return new JsonRpcErrorResponse(requestContext.getRequest().getId(),
+                                      JsonRpcError.P2P_DISABLED);
     }
   }
 
-  protected abstract JsonRpcResponse performOperation(final Object id, final String enode);
+  protected abstract JsonRpcResponse performOperation(final Object id,
+                                                      final String enode);
 }

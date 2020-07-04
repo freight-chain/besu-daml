@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,12 +28,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.ethereum.core.Address;
-import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Counter;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,7 +35,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
+import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,100 +60,112 @@ public class AccountLocalConfigPermissioningControllerTest {
   @Before
   public void before() {
 
-    when(metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "account_local_check_count",
+    when(
+        metricsSystem.createCounter(
+            BesuMetricCategory.PERMISSIONING, "account_local_check_count",
             "Number of times the account local permissioning provider has been checked"))
         .thenReturn(checkCounter);
 
-    when(metricsSystem.createCounter(
+    when(
+        metricsSystem.createCounter(
             BesuMetricCategory.PERMISSIONING,
             "account_local_check_count_permitted",
             "Number of times the account local permissioning provider has been checked and returned permitted"))
         .thenReturn(checkPermittedCounter);
 
-    when(metricsSystem.createCounter(
+    when(
+        metricsSystem.createCounter(
             BesuMetricCategory.PERMISSIONING,
             "account_local_check_count_unpermitted",
             "Number of times the account local permissioning provider has been checked and returned unpermitted"))
         .thenReturn(checkUnpermittedCounter);
 
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
   }
 
   @Test
   public void whenPermConfigHasAccountsShouldAddAllAccountsToAllowlist() {
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
     assertThat(controller.getAccountAllowlist())
         .contains("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
   }
 
   @Test
-  public void whenLoadingAccountsFromConfigShouldNormalizeAccountsToLowerCase() {
+  public void
+  whenLoadingAccountsFromConfigShouldNormalizeAccountsToLowerCase() {
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(singletonList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            singletonList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
     assertThat(controller.getAccountAllowlist())
         .containsExactly("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
   }
 
   @Test
-  public void whenPermConfigContainsEmptyListOfAccountsContainsShouldReturnFalse() {
+  public void
+  whenPermConfigContainsEmptyListOfAccountsContainsShouldReturnFalse() {
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
-    when(permissioningConfig.getAccountAllowlist()).thenReturn(new ArrayList<>());
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+    when(permissioningConfig.getAccountAllowlist())
+        .thenReturn(new ArrayList<>());
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
-    assertThat(controller.contains("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73")).isFalse();
+    assertThat(
+        controller.contains("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"))
+        .isFalse();
   }
 
   @Test
   public void addAccountsWithInvalidAccountShouldReturnInvalidEntryResult() {
-    AllowlistOperationResult addResult = controller.addAccounts(Arrays.asList("0x0"));
+    AllowlistOperationResult addResult =
+        controller.addAccounts(Arrays.asList("0x0"));
 
-    assertThat(addResult).isEqualTo(AllowlistOperationResult.ERROR_INVALID_ENTRY);
+    assertThat(addResult).isEqualTo(
+        AllowlistOperationResult.ERROR_INVALID_ENTRY);
     assertThat(controller.getAccountAllowlist()).isEmpty();
   }
 
   @Test
   public void addExistingAccountShouldReturnExistingEntryResult() {
-    controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    AllowlistOperationResult addResult =
-        controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult addResult = controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    assertThat(addResult).isEqualTo(AllowlistOperationResult.ERROR_EXISTING_ENTRY);
+    assertThat(addResult).isEqualTo(
+        AllowlistOperationResult.ERROR_EXISTING_ENTRY);
     assertThat(controller.getAccountAllowlist())
         .containsExactly("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
   }
 
   @Test
-  public void addExistingAccountWithDifferentCasingShouldReturnExistingEntryResult() {
-    controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    AllowlistOperationResult addResult =
-        controller.addAccounts(Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
+  public void
+  addExistingAccountWithDifferentCasingShouldReturnExistingEntryResult() {
+    controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult addResult = controller.addAccounts(
+        Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
 
-    assertThat(addResult).isEqualTo(AllowlistOperationResult.ERROR_EXISTING_ENTRY);
+    assertThat(addResult).isEqualTo(
+        AllowlistOperationResult.ERROR_EXISTING_ENTRY);
     assertThat(controller.getAccountAllowlist())
         .containsExactly("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
   }
 
   @Test
   public void addValidAccountsShouldReturnSuccessResult() {
-    AllowlistOperationResult addResult =
-        controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult addResult = controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
     assertThat(addResult).isEqualTo(AllowlistOperationResult.SUCCESS);
     assertThat(controller.getAccountAllowlist())
@@ -161,8 +174,8 @@ public class AccountLocalConfigPermissioningControllerTest {
 
   @Test
   public void addAccountsShouldAddAccountNormalizedToLowerCase() {
-    AllowlistOperationResult addResult =
-        controller.addAccounts(Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
+    AllowlistOperationResult addResult = controller.addAccounts(
+        Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
 
     assertThat(addResult).isEqualTo(AllowlistOperationResult.SUCCESS);
     assertThat(controller.getAccountAllowlist())
@@ -171,10 +184,11 @@ public class AccountLocalConfigPermissioningControllerTest {
 
   @Test
   public void removeExistingAccountShouldReturnSuccessResult() {
-    controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    AllowlistOperationResult removeResult =
-        controller.removeAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult removeResult = controller.removeAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
     assertThat(removeResult).isEqualTo(AllowlistOperationResult.SUCCESS);
     assertThat(controller.getAccountAllowlist()).isEmpty();
@@ -182,10 +196,11 @@ public class AccountLocalConfigPermissioningControllerTest {
 
   @Test
   public void removeAccountShouldNormalizeAccountToLowerCAse() {
-    controller.addAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    AllowlistOperationResult removeResult =
-        controller.removeAccounts(Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
+    AllowlistOperationResult removeResult = controller.removeAccounts(
+        Arrays.asList("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"));
 
     assertThat(removeResult).isEqualTo(AllowlistOperationResult.SUCCESS);
     assertThat(controller.getAccountAllowlist()).isEmpty();
@@ -193,107 +208,121 @@ public class AccountLocalConfigPermissioningControllerTest {
 
   @Test
   public void removeAbsentAccountShouldReturnAbsentEntryResult() {
-    AllowlistOperationResult removeResult =
-        controller.removeAccounts(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult removeResult = controller.removeAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    assertThat(removeResult).isEqualTo(AllowlistOperationResult.ERROR_ABSENT_ENTRY);
+    assertThat(removeResult)
+        .isEqualTo(AllowlistOperationResult.ERROR_ABSENT_ENTRY);
     assertThat(controller.getAccountAllowlist()).isEmpty();
   }
 
   @Test
   public void removeInvalidAccountShouldReturnInvalidEntryResult() {
-    AllowlistOperationResult removeResult = controller.removeAccounts(Arrays.asList("0x0"));
+    AllowlistOperationResult removeResult =
+        controller.removeAccounts(Arrays.asList("0x0"));
 
-    assertThat(removeResult).isEqualTo(AllowlistOperationResult.ERROR_INVALID_ENTRY);
+    assertThat(removeResult)
+        .isEqualTo(AllowlistOperationResult.ERROR_INVALID_ENTRY);
     assertThat(controller.getAccountAllowlist()).isEmpty();
   }
 
   @Test
   public void addDuplicatedAccountShouldReturnDuplicatedEntryResult() {
-    AllowlistOperationResult addResult =
-        controller.addAccounts(
-            Arrays.asList(
-                "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
-                "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult addResult = controller.addAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
+                      "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    assertThat(addResult).isEqualTo(AllowlistOperationResult.ERROR_DUPLICATED_ENTRY);
+    assertThat(addResult).isEqualTo(
+        AllowlistOperationResult.ERROR_DUPLICATED_ENTRY);
   }
 
   @Test
   public void removeDuplicatedAccountShouldReturnDuplicatedEntryResult() {
-    AllowlistOperationResult removeResult =
-        controller.removeAccounts(
-            Arrays.asList(
-                "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
-                "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    AllowlistOperationResult removeResult = controller.removeAccounts(
+        Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
+                      "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
-    assertThat(removeResult).isEqualTo(AllowlistOperationResult.ERROR_DUPLICATED_ENTRY);
+    assertThat(removeResult)
+        .isEqualTo(AllowlistOperationResult.ERROR_DUPLICATED_ENTRY);
   }
 
   @Test
   public void removeNullListShouldReturnEmptyEntryResult() {
     AllowlistOperationResult removeResult = controller.removeAccounts(null);
 
-    assertThat(removeResult).isEqualTo(AllowlistOperationResult.ERROR_EMPTY_ENTRY);
+    assertThat(removeResult)
+        .isEqualTo(AllowlistOperationResult.ERROR_EMPTY_ENTRY);
   }
 
   @Test
   public void removeEmptyListShouldReturnEmptyEntryResult() {
-    AllowlistOperationResult removeResult = controller.removeAccounts(new ArrayList<>());
+    AllowlistOperationResult removeResult =
+        controller.removeAccounts(new ArrayList<>());
 
-    assertThat(removeResult).isEqualTo(AllowlistOperationResult.ERROR_EMPTY_ENTRY);
+    assertThat(removeResult)
+        .isEqualTo(AllowlistOperationResult.ERROR_EMPTY_ENTRY);
   }
 
   @Test
   public void stateShouldRevertIfAllowlistPersistFails()
       throws IOException, AllowlistFileSyncException {
-    List<String> newAccount = singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
-    List<String> newAccount2 = singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd72");
+    List<String> newAccount =
+        singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73");
+    List<String> newAccount2 =
+        singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd72");
 
     assertThat(controller.getAccountAllowlist().size()).isEqualTo(0);
 
     controller.addAccounts(newAccount);
     assertThat(controller.getAccountAllowlist().size()).isEqualTo(1);
 
-    doThrow(new IOException()).when(allowlistPersistor).updateConfig(any(), any());
+    doThrow(new IOException())
+        .when(allowlistPersistor)
+        .updateConfig(any(), any());
     controller.addAccounts(newAccount2);
 
     assertThat(controller.getAccountAllowlist().size()).isEqualTo(1);
     assertThat(controller.getAccountAllowlist()).isEqualTo(newAccount);
 
-    verify(allowlistPersistor, times(3)).verifyConfigFileMatchesState(any(), any());
+    verify(allowlistPersistor, times(3))
+        .verifyConfigFileMatchesState(any(), any());
     verify(allowlistPersistor, times(2)).updateConfig(any(), any());
     verifyNoMoreInteractions(allowlistPersistor);
   }
 
   @Test
-  public void reloadAccountAllowlistWithValidConfigFileShouldUpdateAllowlist() throws Exception {
+  public void reloadAccountAllowlistWithValidConfigFileShouldUpdateAllowlist()
+      throws Exception {
     final String expectedAccount = "0x627306090abab3a6e1400e9345bc60c78a8bef57";
-    final Path permissionsFile = createPermissionsFileWithAccount(expectedAccount);
+    final Path permissionsFile =
+        createPermissionsFileWithAccount(expectedAccount);
 
     when(permissioningConfig.getAccountPermissioningConfigFilePath())
         .thenReturn(permissionsFile.toAbsolutePath().toString());
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
     controller.reload();
 
-    assertThat(controller.getAccountAllowlist()).containsExactly(expectedAccount);
+    assertThat(controller.getAccountAllowlist())
+        .containsExactly(expectedAccount);
   }
 
   @Test
-  public void reloadAccountAllowlistWithErrorReadingConfigFileShouldKeepOldAllowlist() {
-    when(permissioningConfig.getAccountPermissioningConfigFilePath()).thenReturn("foo");
+  public void
+  reloadAccountAllowlistWithErrorReadingConfigFileShouldKeepOldAllowlist() {
+    when(permissioningConfig.getAccountPermissioningConfigFilePath())
+        .thenReturn("foo");
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            Arrays.asList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
     final Throwable thrown = catchThrowable(() -> controller.reload());
 
@@ -307,14 +336,14 @@ public class AccountLocalConfigPermissioningControllerTest {
 
   @Test
   public void accountThatDoesNotStartWith0xIsNotValid() {
-    assertThat(AccountLocalConfigPermissioningController.isValidAccountString("bob")).isFalse();
     assertThat(
-            AccountLocalConfigPermissioningController.isValidAccountString(
-                "b9b81ee349c3807e46bc71aa2632203c5b462032"))
+        AccountLocalConfigPermissioningController.isValidAccountString("bob"))
         .isFalse();
-    assertThat(
-            AccountLocalConfigPermissioningController.isValidAccountString(
-                "0xb9b81ee349c3807e46bc71aa2632203c5b462032"))
+    assertThat(AccountLocalConfigPermissioningController.isValidAccountString(
+                   "b9b81ee349c3807e46bc71aa2632203c5b462032"))
+        .isFalse();
+    assertThat(AccountLocalConfigPermissioningController.isValidAccountString(
+                   "0xb9b81ee349c3807e46bc71aa2632203c5b462032"))
         .isTrue();
   }
 
@@ -322,26 +351,29 @@ public class AccountLocalConfigPermissioningControllerTest {
   public void shouldMatchAccountsWithInconsistentCasing() {
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
-    assertThat(controller.contains("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73")).isTrue();
+    assertThat(
+        controller.contains("0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73"))
+        .isTrue();
   }
 
   @Test
   public void isPermittedShouldCheckIfAccountExistInTheAllowlist() {
     when(permissioningConfig.isAccountAllowlistEnabled()).thenReturn(true);
     when(permissioningConfig.getAccountAllowlist())
-        .thenReturn(singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    controller =
-        new AccountLocalConfigPermissioningController(
-            permissioningConfig, allowlistPersistor, metricsSystem);
+        .thenReturn(
+            singletonList("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+    controller = new AccountLocalConfigPermissioningController(
+        permissioningConfig, allowlistPersistor, metricsSystem);
 
     final Transaction transaction = mock(Transaction.class);
     when(transaction.getSender())
-        .thenReturn(Address.fromHexString("0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+        .thenReturn(Address.fromHexString(
+            "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"));
 
     verifyCountersUntouched();
 
@@ -366,11 +398,15 @@ public class AccountLocalConfigPermissioningControllerTest {
     verifyCountersUnpermitted();
   }
 
-  private Path createPermissionsFileWithAccount(final String account) throws IOException {
-    final String nodePermissionsFileContent = "accounts-allowlist=[\"" + account + "\"]";
-    final Path permissionsFile = Files.createTempFile("account_permissions", "");
+  private Path createPermissionsFileWithAccount(final String account)
+      throws IOException {
+    final String nodePermissionsFileContent =
+        "accounts-allowlist=[\"" + account + "\"]";
+    final Path permissionsFile =
+        Files.createTempFile("account_permissions", "");
     permissionsFile.toFile().deleteOnExit();
-    Files.write(permissionsFile, nodePermissionsFileContent.getBytes(StandardCharsets.UTF_8));
+    Files.write(permissionsFile,
+                nodePermissionsFileContent.getBytes(StandardCharsets.UTF_8));
     return permissionsFile;
   }
 

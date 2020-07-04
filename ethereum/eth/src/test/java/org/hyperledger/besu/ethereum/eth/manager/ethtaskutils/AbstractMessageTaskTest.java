@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +20,11 @@ package org.hyperledger.besu.ethereum.eth.manager.ethtaskutils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.spy;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
@@ -41,13 +49,6 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
-
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -70,63 +71,54 @@ public abstract class AbstractMessageTaskTest<T, R> {
 
   @BeforeClass
   public static void setup() {
-    final BlockchainSetupUtil blockchainSetupUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil blockchainSetupUtil =
+        BlockchainSetupUtil.forTesting();
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     protocolSchedule = blockchainSetupUtil.getProtocolSchedule();
     protocolContext = blockchainSetupUtil.getProtocolContext();
 
-    assertThat(blockchainSetupUtil.getMaxBlockNumber()).isGreaterThanOrEqualTo(20L);
+    assertThat(blockchainSetupUtil.getMaxBlockNumber())
+        .isGreaterThanOrEqualTo(20L);
   }
 
   @Before
   public void setupTest() {
     peersDoTimeout = new AtomicBoolean(false);
     peerCountToTimeout = new AtomicInteger(0);
-    ethPeers = spy(new EthPeers(EthProtocol.NAME, TestClock.fixed(), metricsSystem));
+    ethPeers =
+        spy(new EthPeers(EthProtocol.NAME, TestClock.fixed(), metricsSystem));
     final EthMessages ethMessages = new EthMessages();
-    final EthScheduler ethScheduler =
-        new DeterministicEthScheduler(
-            () -> peerCountToTimeout.getAndDecrement() > 0 || peersDoTimeout.get());
+    final EthScheduler ethScheduler = new DeterministicEthScheduler(
+        () -> peerCountToTimeout.getAndDecrement() > 0 || peersDoTimeout.get());
     ethContext = new EthContext(ethPeers, ethMessages, ethScheduler);
-    final SyncState syncState = new SyncState(blockchain, ethContext.getEthPeers());
-    transactionPool =
-        TransactionPoolFactory.createTransactionPool(
-            protocolSchedule,
-            protocolContext,
-            ethContext,
-            TestClock.fixed(),
-            metricsSystem,
-            syncState,
-            Wei.of(1),
-            TransactionPoolConfiguration.builder().build(),
-            true,
-            Optional.empty());
-    ethProtocolManager =
-        EthProtocolManagerTestUtil.create(
-            blockchain,
-            ethScheduler,
-            protocolContext.getWorldStateArchive(),
-            transactionPool,
-            EthProtocolConfiguration.defaultConfig(),
-            ethPeers,
-            ethMessages,
-            ethContext);
+    final SyncState syncState =
+        new SyncState(blockchain, ethContext.getEthPeers());
+    transactionPool = TransactionPoolFactory.createTransactionPool(
+        protocolSchedule, protocolContext, ethContext, TestClock.fixed(),
+        metricsSystem, syncState, Wei.of(1),
+        TransactionPoolConfiguration.builder().build(), true, Optional.empty());
+    ethProtocolManager = EthProtocolManagerTestUtil.create(
+        blockchain, ethScheduler, protocolContext.getWorldStateArchive(),
+        transactionPool, EthProtocolConfiguration.defaultConfig(), ethPeers,
+        ethMessages, ethContext);
   }
 
   protected abstract T generateDataToBeRequested();
 
   protected abstract EthTask<R> createTask(T requestedData);
 
-  protected abstract void assertResultMatchesExpectation(
-      T requestedData, R response, EthPeer respondingPeer);
+  protected abstract void
+  assertResultMatchesExpectation(T requestedData, R response,
+                                 EthPeer respondingPeer);
 
   @Test
   public void completesWhenPeersAreResponsive() {
     // Setup a responsive peer
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(
-            blockchain, protocolContext.getWorldStateArchive(), transactionPool);
+            blockchain, protocolContext.getWorldStateArchive(),
+            transactionPool);
     final RespondingEthPeer respondingPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1000);
 
@@ -139,14 +131,14 @@ public abstract class AbstractMessageTaskTest<T, R> {
     final EthTask<R> task = createTask(requestedData);
     final CompletableFuture<R> future = task.run();
     respondingPeer.respondWhile(responder, () -> !future.isDone());
-    future.whenComplete(
-        (result, error) -> {
-          actualResult.set(result);
-          done.compareAndSet(false, true);
-        });
+    future.whenComplete((result, error) -> {
+      actualResult.set(result);
+      done.compareAndSet(false, true);
+    });
 
     assertThat(done).isTrue();
-    assertResultMatchesExpectation(requestedData, actualResult.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, actualResult.get(),
+                                   respondingPeer.getEthPeer());
   }
 
   @Test
@@ -162,9 +154,7 @@ public abstract class AbstractMessageTaskTest<T, R> {
     final EthTask<R> task = createTask(requestedData);
     final CompletableFuture<R> future = task.run();
     future.whenComplete(
-        (response, error) -> {
-          done.compareAndSet(false, true);
-        });
+        (response, error) -> { done.compareAndSet(false, true); });
     assertThat(done).isFalse();
   }
 

@@ -1,24 +1,26 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal;
 
+import io.vertx.ext.auth.User;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
-
-import io.vertx.ext.auth.User;
 
 public class JsonRpcRequestContext {
 
@@ -30,41 +32,40 @@ public class JsonRpcRequestContext {
     this(jsonRpcRequest, () -> true);
   }
 
-  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest, final Supplier<Boolean> alive) {
+  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest,
+                               final Supplier<Boolean> alive) {
     this(jsonRpcRequest, Optional.empty(), alive);
   }
 
-  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest, final User user) {
+  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest,
+                               final User user) {
     this(jsonRpcRequest, Optional.of(user), () -> true);
   }
 
-  public JsonRpcRequestContext(
-      final JsonRpcRequest jsonRpcRequest, final User user, final Supplier<Boolean> alive) {
+  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest,
+                               final User user, final Supplier<Boolean> alive) {
     this(jsonRpcRequest, Optional.of(user), alive);
   }
 
-  public JsonRpcRequestContext(
-      final JsonRpcRequest jsonRpcRequest,
-      final Optional<User> user,
-      final Supplier<Boolean> alive) {
+  public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest,
+                               final Optional<User> user,
+                               final Supplier<Boolean> alive) {
     this.jsonRpcRequest = jsonRpcRequest;
     this.user = user;
     this.alive = alive;
   }
 
-  public JsonRpcRequest getRequest() {
-    return jsonRpcRequest;
-  }
+  public JsonRpcRequest getRequest() { return jsonRpcRequest; }
 
-  public Optional<User> getUser() {
-    return user;
-  }
+  public Optional<User> getUser() { return user; }
 
-  public <T> T getRequiredParameter(final int index, final Class<T> paramClass) {
+  public <T> T getRequiredParameter(final int index,
+                                    final Class<T> paramClass) {
     return jsonRpcRequest.getRequiredParameter(index, paramClass);
   }
 
-  public <T> Optional<T> getOptionalParameter(final int index, final Class<T> paramClass) {
+  public <T> Optional<T> getOptionalParameter(final int index,
+                                              final Class<T> paramClass) {
     return jsonRpcRequest.getOptionalParameter(index, paramClass);
   }
 
@@ -76,8 +77,9 @@ public class JsonRpcRequestContext {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final JsonRpcRequestContext that = (JsonRpcRequestContext) o;
-    return Objects.equals(jsonRpcRequest, that.jsonRpcRequest) && Objects.equals(user, that.user);
+    final JsonRpcRequestContext that = (JsonRpcRequestContext)o;
+    return Objects.equals(jsonRpcRequest, that.jsonRpcRequest) &&
+        Objects.equals(user, that.user);
   }
 
   @Override
@@ -85,7 +87,5 @@ public class JsonRpcRequestContext {
     return Objects.hash(jsonRpcRequest, user);
   }
 
-  public boolean isAlive() {
-    return alive.get();
-  }
+  public boolean isAlive() { return alive.get(); }
 }

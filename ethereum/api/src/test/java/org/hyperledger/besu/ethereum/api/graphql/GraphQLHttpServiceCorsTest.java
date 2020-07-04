@@ -1,19 +1,31 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.graphql;
 
+import com.google.common.collect.Lists;
+import graphql.GraphQL;
+import io.vertx.core.Vertx;
+import java.util.HashSet;
+import java.util.Set;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
@@ -21,17 +33,6 @@ import org.hyperledger.besu.ethereum.eth.EthProtocol;
 import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import com.google.common.collect.Lists;
-import graphql.GraphQL;
-import io.vertx.core.Vertx;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -48,7 +49,8 @@ public class GraphQLHttpServiceCorsTest {
 
   @Before
   public void before() {
-    final GraphQLConfiguration configuration = GraphQLConfiguration.createDefault();
+    final GraphQLConfiguration configuration =
+        GraphQLConfiguration.createDefault();
     configuration.setPort(0);
   }
 
@@ -62,7 +64,8 @@ public class GraphQLHttpServiceCorsTest {
 
   @Test
   public void requestWithNonAcceptedOriginShouldFail() throws Exception {
-    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
+    graphQLHttpService =
+        createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
 
     final Request request =
         new Request.Builder()
@@ -77,7 +80,8 @@ public class GraphQLHttpServiceCorsTest {
 
   @Test
   public void requestWithAcceptedOriginShouldSucceed() throws Exception {
-    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
+    graphQLHttpService =
+        createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
 
     final Request request =
         new Request.Builder()
@@ -92,9 +96,10 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithOneOfMultipleAcceptedOriginsShouldSucceed() throws Exception {
-    graphQLHttpService =
-        createGraphQLHttpServiceWithAllowedDomains("http://foo.io", "http://bar.me");
+  public void requestWithOneOfMultipleAcceptedOriginsShouldSucceed()
+      throws Exception {
+    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains(
+        "http://foo.io", "http://bar.me");
 
     final Request request =
         new Request.Builder()
@@ -108,9 +113,10 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithNoneOfMultipleAcceptedOriginsShouldFail() throws Exception {
-    graphQLHttpService =
-        createGraphQLHttpServiceWithAllowedDomains("http://foo.io", "http://bar.me");
+  public void requestWithNoneOfMultipleAcceptedOriginsShouldFail()
+      throws Exception {
+    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains(
+        "http://foo.io", "http://bar.me");
 
     final Request request =
         new Request.Builder()
@@ -124,7 +130,8 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithNoOriginShouldSucceedWhenNoCorsConfigSet() throws Exception {
+  public void requestWithNoOriginShouldSucceedWhenNoCorsConfigSet()
+      throws Exception {
     graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains();
 
     final Request request =
@@ -139,7 +146,8 @@ public class GraphQLHttpServiceCorsTest {
 
   @Test
   public void requestWithNoOriginShouldSucceedWhenCorsIsSet() throws Exception {
-    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
+    graphQLHttpService =
+        createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
 
     final Request request =
         new Request.Builder()
@@ -152,7 +160,8 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithAnyOriginShouldNotSucceedWhenCorsIsEmpty() throws Exception {
+  public void requestWithAnyOriginShouldNotSucceedWhenCorsIsEmpty()
+      throws Exception {
     graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("");
 
     final Request request =
@@ -167,7 +176,8 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithAnyOriginShouldSucceedWhenCorsIsStart() throws Exception {
+  public void requestWithAnyOriginShouldSucceedWhenCorsIsStart()
+      throws Exception {
     graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("*");
 
     final Request request =
@@ -182,8 +192,10 @@ public class GraphQLHttpServiceCorsTest {
   }
 
   @Test
-  public void requestWithAccessControlRequestMethodShouldReturnAllowedHeaders() throws Exception {
-    graphQLHttpService = createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
+  public void requestWithAccessControlRequestMethodShouldReturnAllowedHeaders()
+      throws Exception {
+    graphQLHttpService =
+        createGraphQLHttpServiceWithAllowedDomains("http://foo.io");
 
     final Request request =
         new Request.Builder()
@@ -199,15 +211,17 @@ public class GraphQLHttpServiceCorsTest {
     }
   }
 
-  private GraphQLHttpService createGraphQLHttpServiceWithAllowedDomains(
-      final String... corsAllowedDomains) throws Exception {
+  private GraphQLHttpService
+  createGraphQLHttpServiceWithAllowedDomains(final String... corsAllowedDomains)
+      throws Exception {
     final GraphQLConfiguration config = GraphQLConfiguration.createDefault();
     config.setPort(0);
     if (corsAllowedDomains != null) {
       config.setCorsAllowedDomains(Lists.newArrayList(corsAllowedDomains));
     }
 
-    final BlockchainQueries blockchainQueries = Mockito.mock(BlockchainQueries.class);
+    final BlockchainQueries blockchainQueries =
+        Mockito.mock(BlockchainQueries.class);
     final Synchronizer synchronizer = Mockito.mock(Synchronizer.class);
 
     final EthHashMiningCoordinator miningCoordinatorMock =
@@ -215,8 +229,10 @@ public class GraphQLHttpServiceCorsTest {
 
     final GraphQLDataFetcherContextImpl dataFetcherContext =
         Mockito.mock(GraphQLDataFetcherContextImpl.class);
-    Mockito.when(dataFetcherContext.getBlockchainQueries()).thenReturn(blockchainQueries);
-    Mockito.when(dataFetcherContext.getMiningCoordinator()).thenReturn(miningCoordinatorMock);
+    Mockito.when(dataFetcherContext.getBlockchainQueries())
+        .thenReturn(blockchainQueries);
+    Mockito.when(dataFetcherContext.getMiningCoordinator())
+        .thenReturn(miningCoordinatorMock);
 
     Mockito.when(dataFetcherContext.getTransactionPool())
         .thenReturn(Mockito.mock(TransactionPool.class));
@@ -225,17 +241,13 @@ public class GraphQLHttpServiceCorsTest {
     final Set<Capability> supportedCapabilities = new HashSet<>();
     supportedCapabilities.add(EthProtocol.ETH62);
     supportedCapabilities.add(EthProtocol.ETH63);
-    final GraphQLDataFetchers dataFetchers = new GraphQLDataFetchers(supportedCapabilities);
+    final GraphQLDataFetchers dataFetchers =
+        new GraphQLDataFetchers(supportedCapabilities);
     final GraphQL graphQL = GraphQLProvider.buildGraphQL(dataFetchers);
 
-    final GraphQLHttpService graphQLHttpService =
-        new GraphQLHttpService(
-            vertx,
-            folder.newFolder().toPath(),
-            config,
-            graphQL,
-            dataFetcherContext,
-            Mockito.mock(EthScheduler.class));
+    final GraphQLHttpService graphQLHttpService = new GraphQLHttpService(
+        vertx, folder.newFolder().toPath(), config, graphQL, dataFetcherContext,
+        Mockito.mock(EthScheduler.class));
     graphQLHttpService.start().join();
 
     return graphQLHttpService;

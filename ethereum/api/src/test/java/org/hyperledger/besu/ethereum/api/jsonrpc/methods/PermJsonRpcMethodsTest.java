@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,6 +31,8 @@ import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod.PERM_REMOVE_AC
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod.PERM_REMOVE_NODES_FROM_ALLOWLIST;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod.PERM_REMOVE_NODES_FROM_WHITELIST;
 
+import java.util.Map;
+import java.util.Optional;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning.PermAddAccountsToAllowlist;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning.PermAddAccountsToWhitelist;
@@ -42,10 +47,6 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning.
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.permissioning.PermRemoveNodesFromWhitelist;
 import org.hyperledger.besu.ethereum.permissioning.AccountLocalConfigPermissioningController;
 import org.hyperledger.besu.ethereum.permissioning.NodeLocalConfigPermissioningController;
-
-import java.util.Map;
-import java.util.Optional;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,17 +56,20 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class PermJsonRpcMethodsTest {
 
-  @Mock private AccountLocalConfigPermissioningController accountLocalConfigPermissioningController;
-  @Mock private NodeLocalConfigPermissioningController nodeLocalConfigPermissioningController;
+  @Mock
+  private AccountLocalConfigPermissioningController
+      accountLocalConfigPermissioningController;
+  @Mock
+  private NodeLocalConfigPermissioningController
+      nodeLocalConfigPermissioningController;
 
   private PermJsonRpcMethods permJsonRpcMethods;
 
   @Before
   public void setup() {
-    permJsonRpcMethods =
-        new PermJsonRpcMethods(
-            Optional.of(accountLocalConfigPermissioningController),
-            Optional.of(nodeLocalConfigPermissioningController));
+    permJsonRpcMethods = new PermJsonRpcMethods(
+        Optional.of(accountLocalConfigPermissioningController),
+        Optional.of(nodeLocalConfigPermissioningController));
   }
 
   @Test
@@ -77,7 +81,8 @@ public class PermJsonRpcMethodsTest {
         .isInstanceOf(PermGetAccountsAllowlist.class);
     assertThat(rpcMethods.get(PERM_ADD_ACCOUNTS_TO_ALLOWLIST.getMethodName()))
         .isInstanceOf(PermAddAccountsToAllowlist.class);
-    assertThat(rpcMethods.get(PERM_REMOVE_ACCOUNTS_FROM_ALLOWLIST.getMethodName()))
+    assertThat(
+        rpcMethods.get(PERM_REMOVE_ACCOUNTS_FROM_ALLOWLIST.getMethodName()))
         .isInstanceOf(PermRemoveAccountsFromAllowlist.class);
 
     // Node methods x 3
@@ -100,7 +105,8 @@ public class PermJsonRpcMethodsTest {
         .isInstanceOf(PermGetAccountsWhitelist.class);
     assertThat(rpcMethods.get(PERM_ADD_ACCOUNTS_TO_WHITELIST.getMethodName()))
         .isInstanceOf(PermAddAccountsToWhitelist.class);
-    assertThat(rpcMethods.get(PERM_REMOVE_ACCOUNTS_FROM_WHITELIST.getMethodName()))
+    assertThat(
+        rpcMethods.get(PERM_REMOVE_ACCOUNTS_FROM_WHITELIST.getMethodName()))
         .isInstanceOf(PermRemoveAccountsFromWhitelist.class);
 
     // Node methods x 3

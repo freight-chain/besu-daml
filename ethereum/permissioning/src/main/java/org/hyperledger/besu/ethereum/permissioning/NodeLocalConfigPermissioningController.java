@@ -1,28 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.permissioning;
 
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
-import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor.ALLOWLIST_TYPE;
-import org.hyperledger.besu.ethereum.permissioning.node.NodeAllowlistUpdatedEvent;
-import org.hyperledger.besu.ethereum.permissioning.node.NodePermissioningProvider;
-import org.hyperledger.besu.metrics.BesuMetricCategory;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
-import org.hyperledger.besu.plugin.services.metrics.Counter;
-import org.hyperledger.besu.util.Subscribers;
-
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -34,13 +29,20 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.permissioning.AllowlistPersistor.ALLOWLIST_TYPE;
+import org.hyperledger.besu.ethereum.permissioning.node.NodeAllowlistUpdatedEvent;
+import org.hyperledger.besu.ethereum.permissioning.node.NodePermissioningProvider;
+import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Counter;
+import org.hyperledger.besu.util.Subscribers;
 
-public class NodeLocalConfigPermissioningController implements NodePermissioningProvider {
+public class NodeLocalConfigPermissioningController
+    implements NodePermissioningProvider {
 
   private static final Logger LOG = LogManager.getLogger();
 
@@ -49,8 +51,8 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
   private final Bytes localNodeId;
   private final List<EnodeURL> nodesAllowlist = new ArrayList<>();
   private final AllowlistPersistor allowlistPersistor;
-  private final Subscribers<Consumer<NodeAllowlistUpdatedEvent>> nodeAllowlistUpdatedObservers =
-      Subscribers.create();
+  private final Subscribers<Consumer<NodeAllowlistUpdatedEvent>>
+      nodeAllowlistUpdatedObservers = Subscribers.create();
 
   private final Counter checkCounter;
   private final Counter checkCounterPermitted;
@@ -58,21 +60,17 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
 
   public NodeLocalConfigPermissioningController(
       final LocalPermissioningConfiguration permissioningConfiguration,
-      final List<EnodeURL> fixedNodes,
-      final Bytes localNodeId,
+      final List<EnodeURL> fixedNodes, final Bytes localNodeId,
       final MetricsSystem metricsSystem) {
-    this(
-        permissioningConfiguration,
-        fixedNodes,
-        localNodeId,
-        new AllowlistPersistor(permissioningConfiguration.getNodePermissioningConfigFilePath()),
-        metricsSystem);
+    this(permissioningConfiguration, fixedNodes, localNodeId,
+         new AllowlistPersistor(
+             permissioningConfiguration.getNodePermissioningConfigFilePath()),
+         metricsSystem);
   }
 
   public NodeLocalConfigPermissioningController(
       final LocalPermissioningConfiguration configuration,
-      final List<EnodeURL> fixedNodes,
-      final Bytes localNodeId,
+      final List<EnodeURL> fixedNodes, final Bytes localNodeId,
       final AllowlistPersistor allowlistPersistor,
       final MetricsSystem metricsSystem) {
     this.configuration = configuration;
@@ -81,25 +79,21 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     this.allowlistPersistor = allowlistPersistor;
     readNodesFromConfig(configuration);
 
-    this.checkCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "node_local_check_count",
-            "Number of times the node local permissioning provider has been checked");
-    this.checkCounterPermitted =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "node_local_check_count_permitted",
-            "Number of times the node local permissioning provider has been checked and returned permitted");
-    this.checkCounterUnpermitted =
-        metricsSystem.createCounter(
-            BesuMetricCategory.PERMISSIONING,
-            "node_local_check_count_unpermitted",
-            "Number of times the node local permissioning provider has been checked and returned unpermitted");
+    this.checkCounter = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING, "node_local_check_count",
+        "Number of times the node local permissioning provider has been checked");
+    this.checkCounterPermitted = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING, "node_local_check_count_permitted",
+        "Number of times the node local permissioning provider has been checked and returned permitted");
+    this.checkCounterUnpermitted = metricsSystem.createCounter(
+        BesuMetricCategory.PERMISSIONING, "node_local_check_count_unpermitted",
+        "Number of times the node local permissioning provider has been checked and returned unpermitted");
   }
 
-  private void readNodesFromConfig(final LocalPermissioningConfiguration configuration) {
-    if (configuration.isNodeAllowlistEnabled() && configuration.getNodeAllowlist() != null) {
+  private void
+  readNodesFromConfig(final LocalPermissioningConfiguration configuration) {
+    if (configuration.isNodeAllowlistEnabled() &&
+        configuration.getNodeAllowlist() != null) {
       for (URI uri : configuration.getNodeAllowlist()) {
         addNode(EnodeURL.fromString(uri.toString()));
       }
@@ -111,22 +105,26 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     if (inputValidationResult.result() != AllowlistOperationResult.SUCCESS) {
       return inputValidationResult;
     }
-    final List<EnodeURL> peers =
-        enodeURLs.stream().map(EnodeURL::fromString).collect(Collectors.toList());
+    final List<EnodeURL> peers = enodeURLs.stream()
+                                     .map(EnodeURL::fromString)
+                                     .collect(Collectors.toList());
 
     for (EnodeURL peer : peers) {
       if (nodesAllowlist.contains(peer)) {
         return new NodesAllowlistResult(
             AllowlistOperationResult.ERROR_EXISTING_ENTRY,
-            String.format("Specified peer: %s already exists in allowlist.", peer.getNodeId()));
+            String.format("Specified peer: %s already exists in allowlist.",
+                          peer.getNodeId()));
       }
     }
 
     final List<EnodeURL> oldAllowlist = new ArrayList<>(this.nodesAllowlist);
     peers.forEach(this::addNode);
-    notifyListUpdatedSubscribers(new NodeAllowlistUpdatedEvent(peers, Collections.emptyList()));
+    notifyListUpdatedSubscribers(
+        new NodeAllowlistUpdatedEvent(peers, Collections.emptyList()));
 
-    final NodesAllowlistResult updateConfigFileResult = updateAllowlistInConfigFile(oldAllowlist);
+    final NodesAllowlistResult updateConfigFileResult =
+        updateAllowlistInConfigFile(oldAllowlist);
     if (updateConfigFileResult.result() != AllowlistOperationResult.SUCCESS) {
       return updateConfigFileResult;
     }
@@ -143,27 +141,32 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     if (inputValidationResult.result() != AllowlistOperationResult.SUCCESS) {
       return inputValidationResult;
     }
-    final List<EnodeURL> peers =
-        enodeURLs.stream().map(EnodeURL::fromString).collect(Collectors.toList());
+    final List<EnodeURL> peers = enodeURLs.stream()
+                                     .map(EnodeURL::fromString)
+                                     .collect(Collectors.toList());
 
     boolean anyBootnode = peers.stream().anyMatch(fixedNodes::contains);
     if (anyBootnode) {
-      return new NodesAllowlistResult(AllowlistOperationResult.ERROR_FIXED_NODE_CANNOT_BE_REMOVED);
+      return new NodesAllowlistResult(
+          AllowlistOperationResult.ERROR_FIXED_NODE_CANNOT_BE_REMOVED);
     }
 
     for (EnodeURL peer : peers) {
       if (!(nodesAllowlist.contains(peer))) {
         return new NodesAllowlistResult(
             AllowlistOperationResult.ERROR_ABSENT_ENTRY,
-            String.format("Specified peer: %s does not exist in allowlist.", peer.getNodeId()));
+            String.format("Specified peer: %s does not exist in allowlist.",
+                          peer.getNodeId()));
       }
     }
 
     final List<EnodeURL> oldAllowlist = new ArrayList<>(this.nodesAllowlist);
     peers.forEach(this::removeNode);
-    notifyListUpdatedSubscribers(new NodeAllowlistUpdatedEvent(Collections.emptyList(), peers));
+    notifyListUpdatedSubscribers(
+        new NodeAllowlistUpdatedEvent(Collections.emptyList(), peers));
 
-    final NodesAllowlistResult updateConfigFileResult = updateAllowlistInConfigFile(oldAllowlist);
+    final NodesAllowlistResult updateConfigFileResult =
+        updateAllowlistInConfigFile(oldAllowlist);
     if (updateConfigFileResult.result() != AllowlistOperationResult.SUCCESS) {
       return updateConfigFileResult;
     }
@@ -175,16 +178,19 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     return nodesAllowlist.remove(enodeURL);
   }
 
-  private NodesAllowlistResult updateAllowlistInConfigFile(final List<EnodeURL> oldAllowlist) {
+  private NodesAllowlistResult
+  updateAllowlistInConfigFile(final List<EnodeURL> oldAllowlist) {
     try {
       verifyConfigurationFileState(peerToEnodeURI(oldAllowlist));
       updateConfigurationFile(peerToEnodeURI(nodesAllowlist));
       verifyConfigurationFileState(peerToEnodeURI(nodesAllowlist));
     } catch (IOException e) {
       revertState(oldAllowlist);
-      return new NodesAllowlistResult(AllowlistOperationResult.ERROR_ALLOWLIST_PERSIST_FAIL);
+      return new NodesAllowlistResult(
+          AllowlistOperationResult.ERROR_ALLOWLIST_PERSIST_FAIL);
     } catch (AllowlistFileSyncException e) {
-      return new NodesAllowlistResult(AllowlistOperationResult.ERROR_ALLOWLIST_FILE_SYNC);
+      return new NodesAllowlistResult(
+          AllowlistOperationResult.ERROR_ALLOWLIST_FILE_SYNC);
     }
 
     return new NodesAllowlistResult(AllowlistOperationResult.SUCCESS);
@@ -193,7 +199,8 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
   private NodesAllowlistResult validInput(final List<String> peers) {
     if (peers == null || peers.isEmpty()) {
       return new NodesAllowlistResult(
-          AllowlistOperationResult.ERROR_EMPTY_ENTRY, String.format("Null/empty peers list"));
+          AllowlistOperationResult.ERROR_EMPTY_ENTRY,
+          String.format("Null/empty peers list"));
     }
 
     if (peerListHasDuplicates(peers)) {
@@ -211,10 +218,12 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
 
   private void verifyConfigurationFileState(final Collection<String> oldNodes)
       throws IOException, AllowlistFileSyncException {
-    allowlistPersistor.verifyConfigFileMatchesState(ALLOWLIST_TYPE.NODES, oldNodes);
+    allowlistPersistor.verifyConfigFileMatchesState(ALLOWLIST_TYPE.NODES,
+                                                    oldNodes);
   }
 
-  private void updateConfigurationFile(final Collection<String> nodes) throws IOException {
+  private void updateConfigurationFile(final Collection<String> nodes)
+      throws IOException {
     allowlistPersistor.updateConfig(ALLOWLIST_TYPE.NODES, nodes);
   }
 
@@ -224,7 +233,9 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
   }
 
   private Collection<String> peerToEnodeURI(final Collection<EnodeURL> peers) {
-    return peers.parallelStream().map(EnodeURL::toString).collect(Collectors.toList());
+    return peers.parallelStream()
+        .map(EnodeURL::toString)
+        .collect(Collectors.toList());
   }
 
   public boolean isPermitted(final String enodeURL) {
@@ -235,11 +246,14 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     if (Objects.equals(localNodeId, node.getNodeId())) {
       return true;
     }
-    return nodesAllowlist.stream().anyMatch(p -> EnodeURL.sameListeningEndpoint(p, node));
+    return nodesAllowlist.stream().anyMatch(
+        p -> EnodeURL.sameListeningEndpoint(p, node));
   }
 
   public List<String> getNodesAllowlist() {
-    return nodesAllowlist.stream().map(Object::toString).collect(Collectors.toList());
+    return nodesAllowlist.stream()
+        .map(Object::toString)
+        .collect(Collectors.toList());
   }
 
   public synchronized void reload() throws RuntimeException {
@@ -257,7 +271,8 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
       readNodesFromConfig(updatedConfig);
       configuration = updatedConfig;
 
-      createNodeAllowlistModifiedEventAfterReload(currentAccountsList, nodesAllowlist);
+      createNodeAllowlistModifiedEventAfterReload(currentAccountsList,
+                                                  nodesAllowlist);
     } catch (Exception e) {
       LOG.warn(
           "Error reloading permissions file. In-memory nodes allowlist will be reverted to previous valid configuration. "
@@ -270,7 +285,8 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
   }
 
   private void createNodeAllowlistModifiedEventAfterReload(
-      final List<EnodeURL> previousNodeAllowlist, final List<EnodeURL> currentNodesList) {
+      final List<EnodeURL> previousNodeAllowlist,
+      final List<EnodeURL> currentNodesList) {
     final List<EnodeURL> removedNodes =
         previousNodeAllowlist.stream()
             .filter(n -> !currentNodesList.contains(n))
@@ -282,19 +298,20 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
             .collect(Collectors.toList());
 
     if (!removedNodes.isEmpty() || !addedNodes.isEmpty()) {
-      notifyListUpdatedSubscribers(new NodeAllowlistUpdatedEvent(addedNodes, removedNodes));
+      notifyListUpdatedSubscribers(
+          new NodeAllowlistUpdatedEvent(addedNodes, removedNodes));
     }
   }
 
-  public long subscribeToListUpdatedEvent(final Consumer<NodeAllowlistUpdatedEvent> subscriber) {
+  public long subscribeToListUpdatedEvent(
+      final Consumer<NodeAllowlistUpdatedEvent> subscriber) {
     return nodeAllowlistUpdatedObservers.subscribe(subscriber);
   }
 
-  private void notifyListUpdatedSubscribers(final NodeAllowlistUpdatedEvent event) {
-    LOG.trace(
-        "Sending NodeAllowlistUpdatedEvent (added: {}, removed {})",
-        event.getAddedNodes().size(),
-        event.getRemovedNodes().size());
+  private void
+  notifyListUpdatedSubscribers(final NodeAllowlistUpdatedEvent event) {
+    LOG.trace("Sending NodeAllowlistUpdatedEvent (added: {}, removed {})",
+              event.getAddedNodes().size(), event.getRemovedNodes().size());
 
     nodeAllowlistUpdatedObservers.forEach(c -> c.accept(event));
   }
@@ -303,7 +320,8 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
     private final AllowlistOperationResult result;
     private final Optional<String> message;
 
-    NodesAllowlistResult(final AllowlistOperationResult result, final String message) {
+    NodesAllowlistResult(final AllowlistOperationResult result,
+                         final String message) {
       this.result = result;
       this.message = Optional.of(message);
     }
@@ -314,17 +332,14 @@ public class NodeLocalConfigPermissioningController implements NodePermissioning
       this.message = Optional.empty();
     }
 
-    public AllowlistOperationResult result() {
-      return result;
-    }
+    public AllowlistOperationResult result() { return result; }
 
-    public Optional<String> message() {
-      return message;
-    }
+    public Optional<String> message() { return message; }
   }
 
   @Override
-  public boolean isPermitted(final EnodeURL sourceEnode, final EnodeURL destinationEnode) {
+  public boolean isPermitted(final EnodeURL sourceEnode,
+                             final EnodeURL destinationEnode) {
     this.checkCounter.inc();
     if (isPermitted(sourceEnode) && isPermitted(destinationEnode)) {
       this.checkCounterPermitted.inc();

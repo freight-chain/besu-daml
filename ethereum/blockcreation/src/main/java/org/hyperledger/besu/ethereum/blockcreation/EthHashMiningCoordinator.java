@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,11 @@ package org.hyperledger.besu.ethereum.blockcreation;
 
 import static org.apache.logging.log4j.LogManager.getLogger;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.chain.BlockAddedObserver;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -24,18 +32,13 @@ import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.mainnet.EthHashSolution;
 import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
 
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import org.apache.logging.log4j.Logger;
-
 /**
- * Responsible for determining when a block mining operation should be started/stopped, then
- * creating an appropriate miner and starting it running in a thread.
+ * Responsible for determining when a block mining operation should be
+ * started/stopped, then creating an appropriate miner and starting it running
+ * in a thread.
  */
-public class EthHashMiningCoordinator extends AbstractMiningCoordinator<EthHashBlockMiner>
+public class EthHashMiningCoordinator
+    extends AbstractMiningCoordinator<EthHashBlockMiner>
     implements BlockAddedObserver {
 
   private static final Logger LOG = getLogger();
@@ -46,12 +49,11 @@ public class EthHashMiningCoordinator extends AbstractMiningCoordinator<EthHashB
 
   private volatile Optional<Long> cachedHashesPerSecond = Optional.empty();
 
-  public EthHashMiningCoordinator(
-      final Blockchain blockchain,
-      final EthHashMinerExecutor executor,
-      final SyncState syncState,
-      final int remoteSealersLimit,
-      final long remoteSealersTimeToLive) {
+  public EthHashMiningCoordinator(final Blockchain blockchain,
+                                  final EthHashMinerExecutor executor,
+                                  final SyncState syncState,
+                                  final int remoteSealersLimit,
+                                  final long remoteSealersTimeToLive) {
     super(blockchain, executor, syncState);
     this.executor = executor;
     this.sealerHashRate =
@@ -90,7 +92,11 @@ public class EthHashMiningCoordinator extends AbstractMiningCoordinator<EthHashB
   }
 
   private Optional<Long> remoteHashesPerSecond() {
-    return Optional.of(sealerHashRate.asMap().values().stream().mapToLong(Long::longValue).sum());
+    return Optional.of(sealerHashRate.asMap()
+                           .values()
+                           .stream()
+                           .mapToLong(Long::longValue)
+                           .sum());
   }
 
   private Optional<Long> localHashesPerSecond() {
@@ -123,18 +129,21 @@ public class EthHashMiningCoordinator extends AbstractMiningCoordinator<EthHashB
   @Override
   public boolean submitWork(final EthHashSolution solution) {
     synchronized (this) {
-      return currentRunningMiner.map(miner -> miner.submitWork(solution)).orElse(false);
+      return currentRunningMiner.map(miner -> miner.submitWork(solution))
+          .orElse(false);
     }
   }
 
   @Override
   protected void haltMiner(final EthHashBlockMiner miner) {
     miner.cancel();
-    miner.getHashesPerSecond().ifPresent(val -> cachedHashesPerSecond = Optional.of(val));
+    miner.getHashesPerSecond().ifPresent(
+        val -> cachedHashesPerSecond = Optional.of(val));
   }
 
   @Override
-  protected boolean newChainHeadInvalidatesMiningOperation(final BlockHeader newChainHeadHeader) {
+  protected boolean
+  newChainHeadInvalidatesMiningOperation(final BlockHeader newChainHeadHeader) {
     return true;
   }
 }

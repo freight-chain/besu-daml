@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +24,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import java.math.BigInteger;
+import java.util.Optional;
+import java.util.function.Function;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MinedBlockObserver;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -33,12 +40,6 @@ import org.hyperledger.besu.ethereum.mainnet.MutableProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.util.Subscribers;
-
-import java.math.BigInteger;
-import java.util.Optional;
-import java.util.function.Function;
-
-import com.google.common.collect.Lists;
 import org.junit.Test;
 
 public class BlockMinerTest {
@@ -48,10 +49,11 @@ public class BlockMinerTest {
     final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
 
     final Block blockToCreate =
-        new Block(
-            headerBuilder.buildHeader(), new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
+        new Block(headerBuilder.buildHeader(),
+                  new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
 
-    final ProtocolContext protocolContext = new ProtocolContext(null, null, null);
+    final ProtocolContext protocolContext =
+        new ProtocolContext(null, null, null);
 
     final EthHashBlockCreator blockCreator = mock(EthHashBlockCreator.class);
     final Function<BlockHeader, EthHashBlockCreator> blockCreatorSupplier =
@@ -69,29 +71,29 @@ public class BlockMinerTest {
     final MinedBlockObserver observer = mock(MinedBlockObserver.class);
     final DefaultBlockScheduler scheduler = mock(DefaultBlockScheduler.class);
     when(scheduler.waitUntilNextBlockCanBeMined(any())).thenReturn(5L);
-    final BlockMiner<EthHashBlockCreator> miner =
-        new EthHashBlockMiner(
-            blockCreatorSupplier,
-            protocolSchedule,
-            protocolContext,
-            subscribersContaining(observer),
-            scheduler,
-            headerBuilder.buildHeader()); // parent header is arbitrary for the test.
+    final BlockMiner<EthHashBlockCreator> miner = new EthHashBlockMiner(
+        blockCreatorSupplier, protocolSchedule, protocolContext,
+        subscribersContaining(observer), scheduler,
+        headerBuilder
+            .buildHeader()); // parent header is arbitrary for the test.
 
     miner.run();
-    verify(blockImporter).importBlock(protocolContext, blockToCreate, HeaderValidationMode.FULL);
+    verify(blockImporter)
+        .importBlock(protocolContext, blockToCreate, HeaderValidationMode.FULL);
     verify(observer, times(1)).blockMined(blockToCreate);
   }
 
   @Test
-  public void failureToImportDoesNotTriggerObservers() throws InterruptedException {
+  public void failureToImportDoesNotTriggerObservers()
+      throws InterruptedException {
     final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
 
     final Block blockToCreate =
-        new Block(
-            headerBuilder.buildHeader(), new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
+        new Block(headerBuilder.buildHeader(),
+                  new BlockBody(Lists.newArrayList(), Lists.newArrayList()));
 
-    final ProtocolContext protocolContext = new ProtocolContext(null, null, null);
+    final ProtocolContext protocolContext =
+        new ProtocolContext(null, null, null);
 
     final EthHashBlockCreator blockCreator = mock(EthHashBlockCreator.class);
     final Function<BlockHeader, EthHashBlockCreator> blockCreatorSupplier =
@@ -103,19 +105,17 @@ public class BlockMinerTest {
     final ProtocolSchedule protocolSchedule = singleSpecSchedule(protocolSpec);
 
     when(protocolSpec.getBlockImporter()).thenReturn(blockImporter);
-    when(blockImporter.importBlock(any(), any(), any())).thenReturn(false, false, true);
+    when(blockImporter.importBlock(any(), any(), any()))
+        .thenReturn(false, false, true);
 
     final MinedBlockObserver observer = mock(MinedBlockObserver.class);
     final DefaultBlockScheduler scheduler = mock(DefaultBlockScheduler.class);
     when(scheduler.waitUntilNextBlockCanBeMined(any())).thenReturn(5L);
-    final BlockMiner<EthHashBlockCreator> miner =
-        new EthHashBlockMiner(
-            blockCreatorSupplier,
-            protocolSchedule,
-            protocolContext,
-            subscribersContaining(observer),
-            scheduler,
-            headerBuilder.buildHeader()); // parent header is arbitrary for the test.
+    final BlockMiner<EthHashBlockCreator> miner = new EthHashBlockMiner(
+        blockCreatorSupplier, protocolSchedule, protocolContext,
+        subscribersContaining(observer), scheduler,
+        headerBuilder
+            .buildHeader()); // parent header is arbitrary for the test.
 
     miner.run();
     verify(blockImporter, times(3))
@@ -123,8 +123,8 @@ public class BlockMinerTest {
     verify(observer, times(1)).blockMined(blockToCreate);
   }
 
-  private static Subscribers<MinedBlockObserver> subscribersContaining(
-      final MinedBlockObserver... observers) {
+  private static Subscribers<MinedBlockObserver>
+  subscribersContaining(final MinedBlockObserver... observers) {
     final Subscribers<MinedBlockObserver> result = Subscribers.create();
     for (final MinedBlockObserver obs : observers) {
       result.subscribe(obs);

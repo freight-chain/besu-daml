@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +22,10 @@ import static org.hyperledger.besu.ethereum.core.PrivateTransactionDataFixture.V
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.jwt.impl.JWTUser;
+import java.util.Optional;
 import org.hyperledger.besu.enclave.EnclaveClientException;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
@@ -36,12 +43,6 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.privacy.ExecutedPrivateTransaction;
 import org.hyperledger.besu.ethereum.privacy.PrivacyController;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
-
-import java.util.Optional;
-
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.jwt.impl.JWTUser;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,9 +54,10 @@ public class PrivGetPrivateTransactionTest {
 
   @Mock private PrivacyController privacyController;
 
-  private final User user =
-      new JWTUser(
-          new JsonObject().put("privacyPublicKey", VALID_BASE64_ENCLAVE_KEY.toBase64String()), "");
+  private final User user = new JWTUser(
+      new JsonObject().put("privacyPublicKey",
+                           VALID_BASE64_ENCLAVE_KEY.toBase64String()),
+      "");
   private final EnclavePublicKeyProvider enclavePublicKeyProvider =
       (user) -> VALID_BASE64_ENCLAVE_KEY.toBase64String();
 
@@ -64,10 +66,11 @@ public class PrivGetPrivateTransactionTest {
 
   @Before
   public void before() {
-    privGetPrivateTransaction =
-        new PrivGetPrivateTransaction(privacyController, enclavePublicKeyProvider);
+    privGetPrivateTransaction = new PrivGetPrivateTransaction(
+        privacyController, enclavePublicKeyProvider);
 
-    markerTransaction = PrivateTransactionDataFixture.privacyMarkerTransaction();
+    markerTransaction =
+        PrivateTransactionDataFixture.privacyMarkerTransaction();
   }
 
   @Test
@@ -116,7 +119,7 @@ public class PrivGetPrivateTransactionTest {
     final JsonRpcRequestContext request = createRequestContext();
 
     final JsonRpcSuccessResponse response =
-        (JsonRpcSuccessResponse) privGetPrivateTransaction.response(request);
+        (JsonRpcSuccessResponse)privGetPrivateTransaction.response(request);
 
     assertThat(response.getResult()).isNull();
   }
@@ -124,13 +127,14 @@ public class PrivGetPrivateTransactionTest {
   @Test
   public void failsWithEnclaveErrorOnEnclaveError() {
     final JsonRpcRequestContext request = createRequestContext();
-    final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getRequest().getId(), JsonRpcError.ENCLAVE_ERROR);
+    final JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        request.getRequest().getId(), JsonRpcError.ENCLAVE_ERROR);
 
     when(privacyController.findPrivateTransactionByPmtHash(any(), any()))
         .thenThrow(new EnclaveClientException(500, "enclave failure"));
 
-    final JsonRpcResponse response = privGetPrivateTransaction.response(request);
+    final JsonRpcResponse response =
+        privGetPrivateTransaction.response(request);
 
     assertThat(response).isEqualTo(expectedResponse);
   }
@@ -141,17 +145,19 @@ public class PrivGetPrivateTransactionTest {
         new JsonRpcRequest("1", "priv_getTransactionReceipt", params), user);
   }
 
-  private PrivateTransactionResult makeRequest(final JsonRpcRequestContext request) {
+  private PrivateTransactionResult
+  makeRequest(final JsonRpcRequestContext request) {
     final PrivGetPrivateTransaction privGetPrivateTransaction =
-        new PrivGetPrivateTransaction(privacyController, enclavePublicKeyProvider);
+        new PrivGetPrivateTransaction(privacyController,
+                                      enclavePublicKeyProvider);
     final JsonRpcSuccessResponse response =
-        (JsonRpcSuccessResponse) privGetPrivateTransaction.response(request);
-    return (PrivateTransactionResult) response.getResult();
+        (JsonRpcSuccessResponse)privGetPrivateTransaction.response(request);
+    return (PrivateTransactionResult)response.getResult();
   }
 
   private ExecutedPrivateTransaction createExecutedPrivateTransaction(
       final PrivateTransaction legacyPrivateTransaction) {
-    return new ExecutedPrivateTransaction(
-        Hash.EMPTY, 0L, Hash.EMPTY, 0, "", legacyPrivateTransaction);
+    return new ExecutedPrivateTransaction(Hash.EMPTY, 0L, Hash.EMPTY, 0, "",
+                                          legacyPrivateTransaction);
   }
 }

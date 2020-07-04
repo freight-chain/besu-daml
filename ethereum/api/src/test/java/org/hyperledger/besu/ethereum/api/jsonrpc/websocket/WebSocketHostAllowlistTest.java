@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,21 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 
-import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods.WebSocketMethodsFactory;
-import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
-import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
-import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-
-import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
@@ -41,6 +29,19 @@ import io.vertx.core.http.HttpClientRequest;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods.WebSocketMethodsFactory;
+import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
+import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -72,20 +73,17 @@ public class WebSocketHostAllowlistTest {
 
     final Map<String, JsonRpcMethod> websocketMethods =
         new WebSocketMethodsFactory(
-                new SubscriptionManager(new NoOpMetricsSystem()), new HashMap<>())
+            new SubscriptionManager(new NoOpMetricsSystem()), new HashMap<>())
             .methods();
-    webSocketRequestHandlerSpy =
-        spy(
-            new WebSocketRequestHandler(
-                vertx,
-                websocketMethods,
-                mock(EthScheduler.class),
-                TimeoutOptions.defaultOptions().getTimeoutSeconds()));
+    webSocketRequestHandlerSpy = spy(new WebSocketRequestHandler(
+        vertx, websocketMethods, mock(EthScheduler.class),
+        TimeoutOptions.defaultOptions().getTimeoutSeconds()));
 
-    websocketService =
-        new WebSocketService(vertx, webSocketConfiguration, webSocketRequestHandlerSpy);
+    websocketService = new WebSocketService(vertx, webSocketConfiguration,
+                                            webSocketRequestHandlerSpy);
     websocketService.start().join();
-    final InetSocketAddress inetSocketAddress = websocketService.socketAddress();
+    final InetSocketAddress inetSocketAddress =
+        websocketService.socketAddress();
 
     websocketPort = inetSocketAddress.getPort();
     final HttpClientOptions httpClientOptions =
@@ -104,34 +102,41 @@ public class WebSocketHostAllowlistTest {
 
   @Test
   public void websocketRequestWithDefaultHeaderAndDefaultConfigIsAccepted() {
-    boolean result = websocketService.hasAllowedHostnameHeader(Optional.of("localhost:50012"));
+    boolean result = websocketService.hasAllowedHostnameHeader(
+        Optional.of("localhost:50012"));
     assertThat(result).isTrue();
   }
 
   @Test
-  public void httpRequestWithDefaultHeaderAndDefaultConfigIsAccepted(final TestContext context) {
+  public void httpRequestWithDefaultHeaderAndDefaultConfigIsAccepted(
+      final TestContext context) {
     doHttpRequestAndVerify(context, "localhost:50012", 400);
   }
 
   @Test
   public void websocketRequestWithEmptyHeaderAndDefaultConfigIsRejected() {
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of(""))).isFalse();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("")))
+        .isFalse();
   }
 
   @Test
-  public void httpRequestWithEmptyHeaderAndDefaultConfigIsRejected(final TestContext context) {
+  public void httpRequestWithEmptyHeaderAndDefaultConfigIsRejected(
+      final TestContext context) {
     doHttpRequestAndVerify(context, "", 403);
   }
 
   @Test
   public void websocketRequestWithAnyHostnameAndWildcardConfigIsAccepted() {
     webSocketConfiguration.setHostsAllowlist(Collections.singletonList("*"));
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally"))).isTrue();
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("foe"))).isTrue();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally")))
+        .isTrue();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("foe")))
+        .isTrue();
   }
 
   @Test
-  public void httpRequestWithAnyHostnameAndWildcardConfigIsAccepted(final TestContext context) {
+  public void httpRequestWithAnyHostnameAndWildcardConfigIsAccepted(
+      final TestContext context) {
     webSocketConfiguration.setHostsAllowlist(Collections.singletonList("*"));
     doHttpRequestAndVerify(context, "ally", 400);
     doHttpRequestAndVerify(context, "foe", 400);
@@ -140,9 +145,13 @@ public class WebSocketHostAllowlistTest {
   @Test
   public void websocketRequestWithAllowedHostIsAccepted() {
     webSocketConfiguration.setHostsAllowlist(hostsAllowlist);
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally"))).isTrue();
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally:12345"))).isTrue();
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("friend"))).isTrue();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally")))
+        .isTrue();
+    assertThat(
+        websocketService.hasAllowedHostnameHeader(Optional.of("ally:12345")))
+        .isTrue();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("friend")))
+        .isTrue();
   }
 
   @Test
@@ -156,7 +165,8 @@ public class WebSocketHostAllowlistTest {
   @Test
   public void websocketRequestWithUnknownHostIsRejected() {
     webSocketConfiguration.setHostsAllowlist(hostsAllowlist);
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("foe"))).isFalse();
+    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("foe")))
+        .isFalse();
   }
 
   @Test
@@ -169,14 +179,20 @@ public class WebSocketHostAllowlistTest {
   public void websocketRequestWithMalformedHostIsRejected() {
     webSocketConfiguration.setAuthenticationEnabled(false);
     webSocketConfiguration.setHostsAllowlist(hostsAllowlist);
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally:friend"))).isFalse();
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally:123456"))).isFalse();
-    assertThat(websocketService.hasAllowedHostnameHeader(Optional.of("ally:friend:1234")))
+    assertThat(
+        websocketService.hasAllowedHostnameHeader(Optional.of("ally:friend")))
+        .isFalse();
+    assertThat(
+        websocketService.hasAllowedHostnameHeader(Optional.of("ally:123456")))
+        .isFalse();
+    assertThat(websocketService.hasAllowedHostnameHeader(
+                   Optional.of("ally:friend:1234")))
         .isFalse();
   }
 
   @Test
-  public void httpRequestWithMalformedHostIsRejected(final TestContext context) {
+  public void
+  httpRequestWithMalformedHostIsRejected(final TestContext context) {
     webSocketConfiguration.setAuthenticationEnabled(false);
     webSocketConfiguration.setHostsAllowlist(hostsAllowlist);
     doHttpRequestAndVerify(context, "ally:friend", 403);
@@ -184,19 +200,16 @@ public class WebSocketHostAllowlistTest {
     doHttpRequestAndVerify(context, "ally:friend:1234", 403);
   }
 
-  private void doHttpRequestAndVerify(
-      final TestContext context, final String hostname, final int expectedResponse) {
+  private void doHttpRequestAndVerify(final TestContext context,
+                                      final String hostname,
+                                      final int expectedResponse) {
     final Async async = context.async();
 
-    final HttpClientRequest request =
-        httpClient.post(
-            websocketPort,
-            webSocketConfiguration.getHost(),
-            "/",
-            response -> {
-              assertThat(response.statusCode()).isEqualTo(expectedResponse);
-              async.complete();
-            });
+    final HttpClientRequest request = httpClient.post(
+        websocketPort, webSocketConfiguration.getHost(), "/", response -> {
+          assertThat(response.statusCode()).isEqualTo(expectedResponse);
+          async.complete();
+        });
 
     request.putHeader("Host", hostname);
     request.end();

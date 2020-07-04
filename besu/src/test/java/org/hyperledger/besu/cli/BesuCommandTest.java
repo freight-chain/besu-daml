@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -40,6 +43,30 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
+import io.vertx.core.json.JsonObject;
+import java.io.File;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.toml.Toml;
+import org.apache.tuweni.toml.TomlParseResult;
 import org.hyperledger.besu.BesuInfo;
 import org.hyperledger.besu.cli.config.EthNetworkConfig;
 import org.hyperledger.besu.config.GenesisConfigFile;
@@ -67,32 +94,6 @@ import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.nat.NatMethod;
 import org.hyperledger.besu.util.number.Fraction;
 import org.hyperledger.besu.util.number.Percentage;
-
-import java.io.File;
-import java.io.IOException;
-import java.math.BigInteger;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import com.google.common.collect.Lists;
-import com.google.common.io.Resources;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.toml.Toml;
-import org.apache.tuweni.toml.TomlParseResult;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -104,10 +105,12 @@ import picocli.CommandLine;
 public class BesuCommandTest extends CommandTestAbstract {
 
   private static final String ENCLAVE_URI = "http://1.2.3.4:5555";
-  private static final String ENCLAVE_PUBLIC_KEY = "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
+  private static final String ENCLAVE_PUBLIC_KEY =
+      "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
   private static final String VALID_NODE_ID =
       "6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0";
-  private static final String PERMISSIONING_CONFIG_TOML = "/permissioning_config.toml";
+  private static final String PERMISSIONING_CONFIG_TOML =
+      "/permissioning_config.toml";
   private static final JsonRpcConfiguration DEFAULT_JSON_RPC_CONFIGURATION;
   private static final GraphQLConfiguration DEFAULT_GRAPH_QL_CONFIGURATION;
   private static final WebSocketConfiguration DEFAULT_WEB_SOCKET_CONFIGURATION;
@@ -115,17 +118,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   private static final int GENESIS_CONFIG_TEST_CHAINID = 3141592;
   private static final JsonObject GENESIS_VALID_JSON =
       (new JsonObject())
-          .put("config", (new JsonObject()).put("chainId", GENESIS_CONFIG_TEST_CHAINID));
+          .put("config",
+               (new JsonObject()).put("chainId", GENESIS_CONFIG_TEST_CHAINID));
   private static final JsonObject GENESIS_INVALID_DATA =
       (new JsonObject()).put("config", new JsonObject());
   private static final String ENCLAVE_PUBLIC_KEY_PATH =
       BesuCommand.class.getResource("/orion_publickey.pub").getPath();
 
   private final String[] validENodeStrings = {
-    "enode://" + VALID_NODE_ID + "@192.168.0.1:4567",
-    "enode://" + VALID_NODE_ID + "@192.168.0.2:4567",
-    "enode://" + VALID_NODE_ID + "@192.168.0.3:4567"
-  };
+      "enode://" + VALID_NODE_ID + "@192.168.0.1:4567",
+      "enode://" + VALID_NODE_ID + "@192.168.0.2:4567",
+      "enode://" + VALID_NODE_ID + "@192.168.0.3:4567"};
 
   static {
     DEFAULT_JSON_RPC_CONFIGURATION = JsonRpcConfiguration.createDefault();
@@ -137,7 +140,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void callingHelpSubCommandMustDisplayUsage() {
     parseCommand("--help");
-    final String expectedOutputStart = String.format("Usage:%n%nbesu [OPTIONS] [COMMAND]");
+    final String expectedOutputStart =
+        String.format("Usage:%n%nbesu [OPTIONS] [COMMAND]");
     assertThat(commandOutput.toString()).startsWith(expectedOutputStart);
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
@@ -152,55 +156,65 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void callingVersionDisplayBesuInfoVersion() {
     parseCommand("--version");
-    assertThat(commandOutput.toString()).isEqualToIgnoringWhitespace(BesuInfo.version());
+    assertThat(commandOutput.toString())
+        .isEqualToIgnoringWhitespace(BesuInfo.version());
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
   // Testing default values
   @Test
-  public void callingBesuCommandWithoutOptionsMustSyncWithDefaultValues() throws Exception {
+  public void callingBesuCommandWithoutOptionsMustSyncWithDefaultValues()
+      throws Exception {
     parseCommand();
 
     final ArgumentCaptor<EthNetworkConfig> ethNetworkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
     verify(mockRunnerBuilder).discovery(eq(true));
     verify(mockRunnerBuilder)
-        .ethNetworkConfig(
-            new EthNetworkConfig(
-                EthNetworkConfig.jsonConfig(MAINNET),
-                EthNetworkConfig.MAINNET_NETWORK_ID,
-                MAINNET_BOOTSTRAP_NODES));
+        .ethNetworkConfig(new EthNetworkConfig(
+            EthNetworkConfig.jsonConfig(MAINNET),
+            EthNetworkConfig.MAINNET_NETWORK_ID, MAINNET_BOOTSTRAP_NODES));
     verify(mockRunnerBuilder).p2pAdvertisedHost(eq("127.0.0.1"));
     verify(mockRunnerBuilder).p2pListenPort(eq(30303));
     verify(mockRunnerBuilder).maxPeers(eq(25));
     verify(mockRunnerBuilder).fractionRemoteConnectionsAllowed(eq(0.6f));
-    verify(mockRunnerBuilder).jsonRpcConfiguration(eq(DEFAULT_JSON_RPC_CONFIGURATION));
-    verify(mockRunnerBuilder).graphQLConfiguration(eq(DEFAULT_GRAPH_QL_CONFIGURATION));
-    verify(mockRunnerBuilder).webSocketConfiguration(eq(DEFAULT_WEB_SOCKET_CONFIGURATION));
-    verify(mockRunnerBuilder).metricsConfiguration(eq(DEFAULT_METRICS_CONFIGURATION));
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(eq(DEFAULT_JSON_RPC_CONFIGURATION));
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(eq(DEFAULT_GRAPH_QL_CONFIGURATION));
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(eq(DEFAULT_WEB_SOCKET_CONFIGURATION));
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(eq(DEFAULT_METRICS_CONFIGURATION));
     verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkArg.capture());
     verify(mockRunnerBuilder).autoLogBloomCaching(eq(true));
     verify(mockRunnerBuilder).build();
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(ethNetworkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(ethNetworkArg.capture(), any());
     final ArgumentCaptor<MiningParameters> miningArg =
         ArgumentCaptor.forClass(MiningParameters.class);
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
     verify(mockControllerBuilder).dataDirectory(isNotNull());
     verify(mockControllerBuilder).miningParameters(miningArg.capture());
     verify(mockControllerBuilder).nodeKey(isNotNull());
-    verify(mockControllerBuilder).storageProvider(storageProviderArgumentCaptor.capture());
+    verify(mockControllerBuilder)
+        .storageProvider(storageProviderArgumentCaptor.capture());
     verify(mockControllerBuilder).targetGasLimit(eq(Optional.empty()));
     verify(mockControllerBuilder).build();
 
     assertThat(storageProviderArgumentCaptor.getValue()).isNotNull();
-    assertThat(syncConfigurationCaptor.getValue().getSyncMode()).isEqualTo(SyncMode.FAST);
+    assertThat(syncConfigurationCaptor.getValue().getSyncMode())
+        .isEqualTo(SyncMode.FAST);
     assertThat(commandErrorOutput.toString()).isEmpty();
     assertThat(miningArg.getValue().getCoinbase()).isEqualTo(Optional.empty());
-    assertThat(miningArg.getValue().getMinTransactionGasPrice()).isEqualTo(Wei.of(1000));
+    assertThat(miningArg.getValue().getMinTransactionGasPrice())
+        .isEqualTo(Wei.of(1000));
     assertThat(miningArg.getValue().getExtraData()).isEqualTo(Bytes.EMPTY);
     assertThat(ethNetworkArg.getValue().getNetworkId()).isEqualTo(1);
-    assertThat(ethNetworkArg.getValue().getBootNodes()).isEqualTo(MAINNET_BOOTSTRAP_NODES);
+    assertThat(ethNetworkArg.getValue().getBootNodes())
+        .isEqualTo(MAINNET_BOOTSTRAP_NODES);
   }
 
   // Testing each option
@@ -215,8 +229,10 @@ public class BesuCommandTest extends CommandTestAbstract {
   }
 
   @Test
-  public void callingWithConfigOptionButNonExistingFileShouldDisplayHelp() throws IOException {
-    final Path tempConfigFilePath = createTempFile("an-invalid-file-name-without-extension", "");
+  public void callingWithConfigOptionButNonExistingFileShouldDisplayHelp()
+      throws IOException {
+    final Path tempConfigFilePath =
+        createTempFile("an-invalid-file-name-without-extension", "");
     parseCommand("--config-file", tempConfigFilePath.toString());
 
     final String expectedOutputStart =
@@ -227,24 +243,28 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void callingWithConfigOptionButTomlFileNotFoundShouldDisplayHelp() {
-    parseCommand("--config-file", "./an-invalid-file-name-sdsd87sjhqoi34io23.toml");
+    parseCommand("--config-file",
+                 "./an-invalid-file-name-sdsd87sjhqoi34io23.toml");
 
-    final String expectedOutputStart = "Unable to read TOML configuration, file not found.";
+    final String expectedOutputStart =
+        "Unable to read TOML configuration, file not found.";
     assertThat(commandErrorOutput.toString()).startsWith(expectedOutputStart);
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
-  public void callingWithConfigOptionButInvalidContentTomlFileShouldDisplayHelp() throws Exception {
-    // We write a config file to prevent an invalid file in resource folder to raise errors in
-    // code checks (CI + IDE)
+  public void
+  callingWithConfigOptionButInvalidContentTomlFileShouldDisplayHelp()
+      throws Exception {
+    // We write a config file to prevent an invalid file in resource folder to
+    // raise errors in code checks (CI + IDE)
     final Path tempConfigFile = createTempFile("invalid_config.toml", ".");
 
     parseCommand("--config-file", tempConfigFile.toString());
 
     final String expectedOutputStart =
         "Invalid TOML configuration: Unexpected '.', expected a-z, A-Z, 0-9, ', \", a table key, "
-            + "a newline, or end-of-input (line 1, column 1)";
+        + "a newline, or end-of-input (line 1, column 1)";
     assertThat(commandErrorOutput.toString()).startsWith(expectedOutputStart);
     assertThat(commandOutput.toString()).isEmpty();
   }
@@ -252,87 +272,103 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void callingWithNoBootnodesConfig() throws Exception {
     final URL configFile = this.getClass().getResource("/no_bootnodes.toml");
-    final Path toml = createTempFile("toml", Resources.toString(configFile, UTF_8));
+    final Path toml =
+        createTempFile("toml", Resources.toString(configFile, UTF_8));
 
     parseCommand("--config-file", toml.toAbsolutePath().toString());
 
-    verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
-    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes()).isEmpty();
+    verify(mockRunnerBuilder)
+        .ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
+    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes())
+        .isEmpty();
 
     assertThat(commandErrorOutput.toString()).isEmpty();
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
-  public void callingWithConfigOptionButInvalidValueTomlFileShouldDisplayHelp() throws Exception {
-    // We write a config file to prevent an invalid file in resource folder to raise errors in
-    // code checks (CI + IDE)
-    final Path tempConfigFile = createTempFile("invalid_config.toml", "tester===========.......");
+  public void callingWithConfigOptionButInvalidValueTomlFileShouldDisplayHelp()
+      throws Exception {
+    // We write a config file to prevent an invalid file in resource folder to
+    // raise errors in code checks (CI + IDE)
+    final Path tempConfigFile =
+        createTempFile("invalid_config.toml", "tester===========.......");
     parseCommand("--config-file", tempConfigFile.toString());
 
     final String expectedOutputStart =
         "Invalid TOML configuration: Unexpected '=', expected ', \", ''', \"\"\", a number, "
-            + "a boolean, a date/time, an array, or a table (line 1, column 8)";
+        + "a boolean, a date/time, an array, or a table (line 1, column 8)";
     assertThat(commandErrorOutput.toString()).startsWith(expectedOutputStart);
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
-  public void overrideDefaultValuesIfKeyIsPresentInConfigFile() throws IOException {
+  public void overrideDefaultValuesIfKeyIsPresentInConfigFile()
+      throws IOException {
     final URL configFile = this.getClass().getResource("/complete_config.toml");
     final Path genesisFile = createFakeGenesisFile(GENESIS_VALID_JSON);
     final File dataFolder = temp.newFolder();
     final String updatedConfig =
         Resources.toString(configFile, UTF_8)
-            .replace("/opt/besu/genesis.json", escapeTomlString(genesisFile.toString()))
-            .replace(
-                "data-path=\"/opt/besu\"",
-                "data-path=\"" + escapeTomlString(dataFolder.getPath()) + "\"");
+            .replace("/opt/besu/genesis.json",
+                     escapeTomlString(genesisFile.toString()))
+            .replace("data-path=\"/opt/besu\"",
+                     "data-path=\"" + escapeTomlString(dataFolder.getPath()) +
+                         "\"");
 
     final Path toml = createTempFile("toml", updatedConfig.getBytes(UTF_8));
 
     final List<RpcApi> expectedApis = asList(ETH, WEB3);
 
-    final JsonRpcConfiguration jsonRpcConfiguration = JsonRpcConfiguration.createDefault();
+    final JsonRpcConfiguration jsonRpcConfiguration =
+        JsonRpcConfiguration.createDefault();
     jsonRpcConfiguration.setEnabled(false);
     jsonRpcConfiguration.setHost("5.6.7.8");
     jsonRpcConfiguration.setPort(5678);
     jsonRpcConfiguration.setCorsAllowedDomains(Collections.emptyList());
     jsonRpcConfiguration.setRpcApis(expectedApis);
 
-    final GraphQLConfiguration graphQLConfiguration = GraphQLConfiguration.createDefault();
+    final GraphQLConfiguration graphQLConfiguration =
+        GraphQLConfiguration.createDefault();
     graphQLConfiguration.setEnabled(false);
     graphQLConfiguration.setHost("6.7.8.9");
     graphQLConfiguration.setPort(6789);
 
-    final WebSocketConfiguration webSocketConfiguration = WebSocketConfiguration.createDefault();
+    final WebSocketConfiguration webSocketConfiguration =
+        WebSocketConfiguration.createDefault();
     webSocketConfiguration.setEnabled(false);
     webSocketConfiguration.setHost("9.10.11.12");
     webSocketConfiguration.setPort(9101);
     webSocketConfiguration.setRpcApis(expectedApis);
 
     final MetricsConfiguration metricsConfiguration =
-        MetricsConfiguration.builder().enabled(false).host("8.6.7.5").port(309).build();
+        MetricsConfiguration.builder()
+            .enabled(false)
+            .host("8.6.7.5")
+            .port(309)
+            .build();
 
     parseCommand("--config-file", toml.toString());
 
     verify(mockRunnerBuilder).discovery(eq(false));
-    verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).p2pAdvertisedHost(eq("1.2.3.4"));
     verify(mockRunnerBuilder).p2pListenPort(eq(1234));
     verify(mockRunnerBuilder).maxPeers(eq(42));
     verify(mockRunnerBuilder).jsonRpcConfiguration(eq(jsonRpcConfiguration));
     verify(mockRunnerBuilder).graphQLConfiguration(eq(graphQLConfiguration));
-    verify(mockRunnerBuilder).webSocketConfiguration(eq(webSocketConfiguration));
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(eq(webSocketConfiguration));
     verify(mockRunnerBuilder).metricsConfiguration(eq(metricsConfiguration));
     verify(mockRunnerBuilder).build();
 
-    final List<EnodeURL> nodes =
-        asList(
-            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
-            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
-            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"));
-    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes()).isEqualTo(nodes);
+    final List<EnodeURL> nodes = asList(
+        EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
+        EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
+        EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"));
+    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes())
+        .isEqualTo(nodes);
 
     final EthNetworkConfig networkConfig =
         new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(MAINNET))
@@ -341,11 +377,15 @@ public class BesuCommandTest extends CommandTestAbstract {
             .setBootNodes(nodes)
             .build();
     verify(mockControllerBuilder).dataDirectory(eq(dataFolder.toPath()));
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(eq(networkConfig), any());
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(eq(networkConfig), any());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    assertThat(syncConfigurationCaptor.getValue().getSyncMode()).isEqualTo(SyncMode.FAST);
-    assertThat(syncConfigurationCaptor.getValue().getFastSyncMinimumPeerCount()).isEqualTo(13);
+    assertThat(syncConfigurationCaptor.getValue().getSyncMode())
+        .isEqualTo(SyncMode.FAST);
+    assertThat(syncConfigurationCaptor.getValue().getFastSyncMinimumPeerCount())
+        .isEqualTo(13);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -358,7 +398,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Missing required parameter for option '--permissions-nodes-contract-address'");
+        .startsWith(
+            "Missing required parameter for option '--permissions-nodes-contract-address'");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
@@ -375,10 +416,9 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void nodePermissionsEnabledWithInvalidContractAddressMustError() {
-    parseCommand(
-        "--permissions-nodes-contract-enabled",
-        "--permissions-nodes-contract-address",
-        "invalid-smart-contract-address");
+    parseCommand("--permissions-nodes-contract-enabled",
+                 "--permissions-nodes-contract-address",
+                 "invalid-smart-contract-address");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -388,8 +428,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void nodePermissionsEnabledWithTooShortContractAddressMustError() {
-    parseCommand(
-        "--permissions-nodes-contract-enabled", "--permissions-nodes-contract-address", "0x1234");
+    parseCommand("--permissions-nodes-contract-enabled",
+                 "--permissions-nodes-contract-address", "0x1234");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -400,25 +440,29 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void nodePermissionsSmartContractMustUseOption() {
 
-    final String smartContractAddress = "0x0000000000000000000000000000000000001234";
+    final String smartContractAddress =
+        "0x0000000000000000000000000000000000001234";
 
-    parseCommand(
-        "--permissions-nodes-contract-enabled",
-        "--permissions-nodes-contract-address",
-        smartContractAddress);
-    final SmartContractPermissioningConfiguration smartContractPermissioningConfiguration =
-        new SmartContractPermissioningConfiguration();
+    parseCommand("--permissions-nodes-contract-enabled",
+                 "--permissions-nodes-contract-address", smartContractAddress);
+    final SmartContractPermissioningConfiguration
+        smartContractPermissioningConfiguration =
+            new SmartContractPermissioningConfiguration();
     smartContractPermissioningConfiguration.setNodeSmartContractAddress(
         Address.fromHexString(smartContractAddress));
-    smartContractPermissioningConfiguration.setSmartContractNodeAllowlistEnabled(true);
+    smartContractPermissioningConfiguration
+        .setSmartContractNodeAllowlistEnabled(true);
 
     verify(mockRunnerBuilder)
-        .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
+        .permissioningConfiguration(
+            permissioningConfigurationArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    final PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
+    final PermissioningConfiguration config =
+        permissioningConfigurationArgumentCaptor.getValue();
     assertThat(config.getSmartContractConfig().get())
-        .isEqualToComparingFieldByField(smartContractPermissioningConfiguration);
+        .isEqualToComparingFieldByField(
+            smartContractPermissioningConfiguration);
 
     assertThat(commandErrorOutput.toString()).isEmpty();
     assertThat(commandOutput.toString()).isEmpty();
@@ -449,10 +493,9 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void accountPermissionsEnabledWithInvalidContractAddressMustError() {
-    parseCommand(
-        "--permissions-accounts-contract-enabled",
-        "--permissions-accounts-contract-address",
-        "invalid-smart-contract-address");
+    parseCommand("--permissions-accounts-contract-enabled",
+                 "--permissions-accounts-contract-address",
+                 "invalid-smart-contract-address");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -462,10 +505,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void accountPermissionsEnabledWithTooShortContractAddressMustError() {
-    parseCommand(
-        "--permissions-accounts-contract-enabled",
-        "--permissions-accounts-contract-address",
-        "0x1234");
+    parseCommand("--permissions-accounts-contract-enabled",
+                 "--permissions-accounts-contract-address", "0x1234");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -475,27 +516,32 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void accountPermissionsSmartContractMustUseOption() {
-    final String smartContractAddress = "0x0000000000000000000000000000000000001234";
+    final String smartContractAddress =
+        "0x0000000000000000000000000000000000001234";
 
-    parseCommand(
-        "--permissions-accounts-contract-enabled",
-        "--permissions-accounts-contract-address",
-        smartContractAddress);
-    final SmartContractPermissioningConfiguration smartContractPermissioningConfiguration =
-        new SmartContractPermissioningConfiguration();
+    parseCommand("--permissions-accounts-contract-enabled",
+                 "--permissions-accounts-contract-address",
+                 smartContractAddress);
+    final SmartContractPermissioningConfiguration
+        smartContractPermissioningConfiguration =
+            new SmartContractPermissioningConfiguration();
     smartContractPermissioningConfiguration.setAccountSmartContractAddress(
         Address.fromHexString(smartContractAddress));
-    smartContractPermissioningConfiguration.setSmartContractAccountAllowlistEnabled(true);
+    smartContractPermissioningConfiguration
+        .setSmartContractAccountAllowlistEnabled(true);
 
     verify(mockRunnerBuilder)
-        .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
+        .permissioningConfiguration(
+            permissioningConfigurationArgumentCaptor.capture());
     final PermissioningConfiguration permissioningConfiguration =
         permissioningConfigurationArgumentCaptor.getValue();
     assertThat(permissioningConfiguration.getSmartContractConfig()).isPresent();
 
     final SmartContractPermissioningConfiguration effectiveSmartContractConfig =
         permissioningConfiguration.getSmartContractConfig().get();
-    assertThat(effectiveSmartContractConfig.isSmartContractAccountAllowlistEnabled()).isTrue();
+    assertThat(
+        effectiveSmartContractConfig.isSmartContractAccountAllowlistEnabled())
+        .isTrue();
     assertThat(effectiveSmartContractConfig.getAccountSmartContractAddress())
         .isEqualTo(Address.fromHexString(smartContractAddress));
 
@@ -510,7 +556,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Missing required parameter for option '--permissions-nodes-config-file'");
+        .startsWith(
+            "Missing required parameter for option '--permissions-nodes-config-file'");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
@@ -521,41 +568,43 @@ public class BesuCommandTest extends CommandTestAbstract {
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Missing required parameter for option '--permissions-accounts-config-file'");
+        .startsWith(
+            "Missing required parameter for option '--permissions-accounts-config-file'");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
   public void nodePermissioningEnabledWithNonexistentConfigFileMustError() {
-    parseCommand(
-        "--permissions-nodes-config-file-enabled",
-        "--permissions-nodes-config-file",
-        "file-does-not-exist");
+    parseCommand("--permissions-nodes-config-file-enabled",
+                 "--permissions-nodes-config-file", "file-does-not-exist");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
-    assertThat(commandErrorOutput.toString()).contains("Configuration file does not exist");
+    assertThat(commandErrorOutput.toString())
+        .contains("Configuration file does not exist");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
   public void accountPermissioningEnabledWithNonexistentConfigFileMustError() {
-    parseCommand(
-        "--permissions-accounts-config-file-enabled",
-        "--permissions-accounts-config-file",
-        "file-does-not-exist");
+    parseCommand("--permissions-accounts-config-file-enabled",
+                 "--permissions-accounts-config-file", "file-does-not-exist");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
-    assertThat(commandErrorOutput.toString()).contains("Configuration file does not exist");
+    assertThat(commandErrorOutput.toString())
+        .contains("Configuration file does not exist");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
-  public void nodePermissioningTomlFileWithNoPermissionsEnabledMustNotError() throws IOException {
+  public void nodePermissioningTomlFileWithNoPermissionsEnabledMustNotError()
+      throws IOException {
 
-    final URL configFile = this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
-    final Path permToml = createTempFile("toml", Resources.toByteArray(configFile));
+    final URL configFile =
+        this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
+    final Path permToml =
+        createTempFile("toml", Resources.toByteArray(configFile));
     parseCommand("--permissions-nodes-config-file", permToml.toString());
 
     verify(mockRunnerBuilder).build();
@@ -568,8 +617,10 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void accountPermissioningTomlFileWithNoPermissionsEnabledMustNotError()
       throws IOException {
 
-    final URL configFile = this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
-    final Path permToml = createTempFile("toml", Resources.toByteArray(configFile));
+    final URL configFile =
+        this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
+    final Path permToml =
+        createTempFile("toml", Resources.toByteArray(configFile));
     parseCommand("--permissions-accounts-config-file", permToml.toString());
 
     verify(mockRunnerBuilder).build();
@@ -584,40 +635,43 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     verify(mockRunnerBuilder).build();
 
-    assertThat(commandErrorOutput.toString()).doesNotContain("no permissions enabled");
+    assertThat(commandErrorOutput.toString())
+        .doesNotContain("no permissions enabled");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test
   public void nodePermissioningTomlPathMustUseOption() throws IOException {
-    final List<URI> allowedNodes =
-        Lists.newArrayList(
-            URI.create(
-                "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.168.0.9:4567"),
-            URI.create(
-                "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.169.0.9:4568"));
+    final List<URI> allowedNodes = Lists.newArrayList(
+        URI.create(
+            "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.168.0.9:4567"),
+        URI.create(
+            "enode://6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.169.0.9:4568"));
 
-    final URL configFile = this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
-    final Path permToml = createTempFile("toml", Resources.toByteArray(configFile));
+    final URL configFile =
+        this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
+    final Path permToml =
+        createTempFile("toml", Resources.toByteArray(configFile));
 
-    final String allowedNodesString =
-        allowedNodes.stream().map(Object::toString).collect(Collectors.joining(","));
-    parseCommand(
-        "--permissions-nodes-config-file-enabled",
-        "--permissions-nodes-config-file",
-        permToml.toString(),
-        "--bootnodes",
-        allowedNodesString);
+    final String allowedNodesString = allowedNodes.stream()
+                                          .map(Object::toString)
+                                          .collect(Collectors.joining(","));
+    parseCommand("--permissions-nodes-config-file-enabled",
+                 "--permissions-nodes-config-file", permToml.toString(),
+                 "--bootnodes", allowedNodesString);
     final LocalPermissioningConfiguration localPermissioningConfiguration =
         LocalPermissioningConfiguration.createDefault();
-    localPermissioningConfiguration.setNodePermissioningConfigFilePath(permToml.toString());
+    localPermissioningConfiguration.setNodePermissioningConfigFilePath(
+        permToml.toString());
     localPermissioningConfiguration.setNodeAllowlist(allowedNodes);
 
     verify(mockRunnerBuilder)
-        .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
+        .permissioningConfiguration(
+            permissioningConfigurationArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    final PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
+    final PermissioningConfiguration config =
+        permissioningConfigurationArgumentCaptor.getValue();
     assertThat(config.getLocalConfig().get())
         .isEqualToComparingFieldByField(localPermissioningConfiguration);
 
@@ -628,29 +682,34 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void accountPermissioningTomlPathMustUseOption() throws IOException {
 
-    final URL configFile = this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
-    final Path permToml = createTempFile("toml", Resources.toByteArray(configFile));
+    final URL configFile =
+        this.getClass().getResource(PERMISSIONING_CONFIG_TOML);
+    final Path permToml =
+        createTempFile("toml", Resources.toByteArray(configFile));
 
-    parseCommand(
-        "--permissions-accounts-config-file-enabled",
-        "--permissions-accounts-config-file",
-        permToml.toString());
+    parseCommand("--permissions-accounts-config-file-enabled",
+                 "--permissions-accounts-config-file", permToml.toString());
     final LocalPermissioningConfiguration localPermissioningConfiguration =
         LocalPermissioningConfiguration.createDefault();
-    localPermissioningConfiguration.setAccountPermissioningConfigFilePath(permToml.toString());
+    localPermissioningConfiguration.setAccountPermissioningConfigFilePath(
+        permToml.toString());
     localPermissioningConfiguration.setAccountAllowlist(
-        Collections.singletonList("0x0000000000000000000000000000000000000009"));
+        Collections.singletonList(
+            "0x0000000000000000000000000000000000000009"));
 
     verify(mockRunnerBuilder)
-        .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
+        .permissioningConfiguration(
+            permissioningConfigurationArgumentCaptor.capture());
     final PermissioningConfiguration permissioningConfiguration =
         permissioningConfigurationArgumentCaptor.getValue();
     assertThat(permissioningConfiguration.getLocalConfig()).isPresent();
 
     final LocalPermissioningConfiguration effectiveLocalPermissioningConfig =
         permissioningConfiguration.getLocalConfig().get();
-    assertThat(effectiveLocalPermissioningConfig.isAccountAllowlistEnabled()).isTrue();
-    assertThat(effectiveLocalPermissioningConfig.getAccountPermissioningConfigFilePath())
+    assertThat(effectiveLocalPermissioningConfig.isAccountAllowlistEnabled())
+        .isTrue();
+    assertThat(effectiveLocalPermissioningConfig
+                   .getAccountPermissioningConfigFilePath())
         .isEqualTo(permToml.toString());
 
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -658,17 +717,22 @@ public class BesuCommandTest extends CommandTestAbstract {
   }
 
   @Test
-  public void tomlThatConfiguresEverythingExceptPermissioningToml() throws IOException {
-    // Load a TOML that configures literally everything (except permissioning TOML config)
-    final URL configFile = this.getClass().getResource("/everything_config.toml");
+  public void tomlThatConfiguresEverythingExceptPermissioningToml()
+      throws IOException {
+    // Load a TOML that configures literally everything (except permissioning
+    // TOML config)
+    final URL configFile =
+        this.getClass().getResource("/everything_config.toml");
     final Path toml = createTempFile("toml", Resources.toByteArray(configFile));
 
     // Parse it.
-    final CommandLine.Model.CommandSpec spec = parseCommand("--config-file", toml.toString()).spec;
+    final CommandLine.Model.CommandSpec spec =
+        parseCommand("--config-file", toml.toString()).spec;
     final TomlParseResult tomlResult = Toml.parse(toml);
 
     // Verify we configured everything
-    final HashSet<CommandLine.Model.OptionSpec> options = new HashSet<>(spec.options());
+    final HashSet<CommandLine.Model.OptionSpec> options =
+        new HashSet<>(spec.options());
 
     // Except for meta-options
     options.remove(spec.optionsMap().get("--config-file"));
@@ -676,7 +740,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     options.remove(spec.optionsMap().get("--version"));
 
     for (final String tomlKey : tomlResult.keySet()) {
-      final CommandLine.Model.OptionSpec optionSpec = spec.optionsMap().get("--" + tomlKey);
+      final CommandLine.Model.OptionSpec optionSpec =
+          spec.optionsMap().get("--" + tomlKey);
       assertThat(optionSpec)
           .describedAs("Option '%s' should be a configurable option.", tomlKey)
           .isNotNull();
@@ -700,33 +765,36 @@ public class BesuCommandTest extends CommandTestAbstract {
       }
       options.remove(optionSpec);
     }
-    assertThat(
-            options.stream()
-                .filter(optionSpec -> !optionSpec.hidden())
-                .map(CommandLine.Model.OptionSpec::longestName))
+    assertThat(options.stream()
+                   .filter(optionSpec -> !optionSpec.hidden())
+                   .map(CommandLine.Model.OptionSpec::longestName))
         .isEmpty();
   }
 
   @Test
-  public void noOverrideDefaultValuesIfKeyIsNotPresentInConfigFile() throws IOException {
-    final String configFile = this.getClass().getResource("/partial_config.toml").getFile();
+  public void noOverrideDefaultValuesIfKeyIsNotPresentInConfigFile()
+      throws IOException {
+    final String configFile =
+        this.getClass().getResource("/partial_config.toml").getFile();
 
     parseCommand("--config-file", configFile);
-    final JsonRpcConfiguration jsonRpcConfiguration = JsonRpcConfiguration.createDefault();
+    final JsonRpcConfiguration jsonRpcConfiguration =
+        JsonRpcConfiguration.createDefault();
 
-    final GraphQLConfiguration graphQLConfiguration = GraphQLConfiguration.createDefault();
+    final GraphQLConfiguration graphQLConfiguration =
+        GraphQLConfiguration.createDefault();
 
-    final WebSocketConfiguration webSocketConfiguration = WebSocketConfiguration.createDefault();
+    final WebSocketConfiguration webSocketConfiguration =
+        WebSocketConfiguration.createDefault();
 
-    final MetricsConfiguration metricsConfiguration = MetricsConfiguration.builder().build();
+    final MetricsConfiguration metricsConfiguration =
+        MetricsConfiguration.builder().build();
 
     verify(mockRunnerBuilder).discovery(eq(true));
     verify(mockRunnerBuilder)
-        .ethNetworkConfig(
-            new EthNetworkConfig(
-                EthNetworkConfig.jsonConfig(MAINNET),
-                EthNetworkConfig.MAINNET_NETWORK_ID,
-                MAINNET_BOOTSTRAP_NODES));
+        .ethNetworkConfig(new EthNetworkConfig(
+            EthNetworkConfig.jsonConfig(MAINNET),
+            EthNetworkConfig.MAINNET_NETWORK_ID, MAINNET_BOOTSTRAP_NODES));
     verify(mockRunnerBuilder).p2pAdvertisedHost(eq("127.0.0.1"));
     verify(mockRunnerBuilder).p2pListenPort(eq(30303));
     verify(mockRunnerBuilder).maxPeers(eq(25));
@@ -734,13 +802,16 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockRunnerBuilder).fractionRemoteConnectionsAllowed(eq(0.6f));
     verify(mockRunnerBuilder).jsonRpcConfiguration(eq(jsonRpcConfiguration));
     verify(mockRunnerBuilder).graphQLConfiguration(eq(graphQLConfiguration));
-    verify(mockRunnerBuilder).webSocketConfiguration(eq(webSocketConfiguration));
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(eq(webSocketConfiguration));
     verify(mockRunnerBuilder).metricsConfiguration(eq(metricsConfiguration));
     verify(mockRunnerBuilder).build();
     verify(mockControllerBuilder).build();
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
+    final SynchronizerConfiguration syncConfig =
+        syncConfigurationCaptor.getValue();
     assertThat(syncConfig.getSyncMode()).isEqualTo(SyncMode.FAST);
     assertThat(syncConfig.getFastSyncMinimumPeerCount()).isEqualTo(5);
 
@@ -752,34 +823,36 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void envVariableOverridesValueFromConfigFile() {
-    final String configFile = this.getClass().getResource("/partial_config.toml").getFile();
-    final String expectedCoinbase = "0x0000000000000000000000000000000000000004";
+    final String configFile =
+        this.getClass().getResource("/partial_config.toml").getFile();
+    final String expectedCoinbase =
+        "0x0000000000000000000000000000000000000004";
     setEnvironmentVariable("BESU_MINER_COINBASE", expectedCoinbase);
     parseCommand("--config-file", configFile);
 
     verify(mockControllerBuilder)
-        .miningParameters(
-            new MiningParameters(
-                Address.fromHexString(expectedCoinbase),
-                DefaultCommandValues.DEFAULT_MIN_TRANSACTION_GAS_PRICE,
-                DefaultCommandValues.DEFAULT_EXTRA_DATA,
-                false));
+        .miningParameters(new MiningParameters(
+            Address.fromHexString(expectedCoinbase),
+            DefaultCommandValues.DEFAULT_MIN_TRANSACTION_GAS_PRICE,
+            DefaultCommandValues.DEFAULT_EXTRA_DATA, false));
   }
 
   @Test
   public void cliOptionOverridesEnvVariableAndConfig() {
-    final String configFile = this.getClass().getResource("/partial_config.toml").getFile();
-    final String expectedCoinbase = "0x0000000000000000000000000000000000000006";
-    setEnvironmentVariable("BESU_MINER_COINBASE", "0x0000000000000000000000000000000000000004");
-    parseCommand("--config-file", configFile, "--miner-coinbase", expectedCoinbase);
+    final String configFile =
+        this.getClass().getResource("/partial_config.toml").getFile();
+    final String expectedCoinbase =
+        "0x0000000000000000000000000000000000000006";
+    setEnvironmentVariable("BESU_MINER_COINBASE",
+                           "0x0000000000000000000000000000000000000004");
+    parseCommand("--config-file", configFile, "--miner-coinbase",
+                 expectedCoinbase);
 
     verify(mockControllerBuilder)
-        .miningParameters(
-            new MiningParameters(
-                Address.fromHexString(expectedCoinbase),
-                DefaultCommandValues.DEFAULT_MIN_TRANSACTION_GAS_PRICE,
-                DefaultCommandValues.DEFAULT_EXTRA_DATA,
-                false));
+        .miningParameters(new MiningParameters(
+            Address.fromHexString(expectedCoinbase),
+            DefaultCommandValues.DEFAULT_MIN_TRANSACTION_GAS_PRICE,
+            DefaultCommandValues.DEFAULT_EXTRA_DATA, false));
   }
 
   @Test
@@ -806,7 +879,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).nodeKey(isNotNull());
     verify(mockControllerBuilder).build();
 
-    assertThat(pathArgumentCaptor.getValue()).isEqualByComparingTo(path.toAbsolutePath());
+    assertThat(pathArgumentCaptor.getValue())
+        .isEqualByComparingTo(path.toAbsolutePath());
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -820,7 +894,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     parseCommand("--genesis-file", genesisFile.toString());
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
@@ -834,17 +909,20 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void genesisAndNetworkMustNotBeUsedTogether() throws Exception {
     final Path genesisFile = createFakeGenesisFile(GENESIS_VALID_JSON);
 
-    parseCommand("--genesis-file", genesisFile.toString(), "--network", "rinkeby");
+    parseCommand("--genesis-file", genesisFile.toString(), "--network",
+                 "rinkeby");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
-        .startsWith("--network option and --genesis-file option can't be used at the same time.");
+        .startsWith(
+            "--network option and --genesis-file option can't be used at the same time.");
   }
 
   @Test
-  public void defaultNetworkIdAndBootnodesForCustomNetworkOptions() throws Exception {
+  public void defaultNetworkIdAndBootnodesForCustomNetworkOptions()
+      throws Exception {
     final Path genesisFile = createFakeGenesisFile(GENESIS_VALID_JSON);
 
     parseCommand("--genesis-file", genesisFile.toString());
@@ -852,20 +930,23 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
         .isEqualTo(encodeJsonGenesis(GENESIS_VALID_JSON));
     assertThat(networkArg.getValue().getBootNodes()).isEmpty();
-    assertThat(networkArg.getValue().getNetworkId()).isEqualTo(GENESIS_CONFIG_TEST_CHAINID);
+    assertThat(networkArg.getValue().getNetworkId())
+        .isEqualTo(GENESIS_CONFIG_TEST_CHAINID);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
 
   @Test
-  public void defaultNetworkIdForInvalidGenesisMustBeMainnetNetworkId() throws Exception {
+  public void defaultNetworkIdForInvalidGenesisMustBeMainnetNetworkId()
+      throws Exception {
     final Path genesisFile = createFakeGenesisFile(GENESIS_INVALID_DATA);
 
     parseCommand("--genesis-file", genesisFile.toString());
@@ -873,7 +954,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
@@ -889,13 +971,13 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void predefinedNetworkIdsMustBeEqualToChainIds() {
     // check the network id against the one in mainnet genesis config
-    // it implies that EthNetworkConfig.mainnet().getNetworkId() returns a value equals to the chain
-    // id
-    // in this network genesis file.
+    // it implies that EthNetworkConfig.mainnet().getNetworkId() returns a value
+    // equals to the chain id in this network genesis file.
 
-    final GenesisConfigFile genesisConfigFile =
-        GenesisConfigFile.fromConfig(EthNetworkConfig.getNetworkConfig(MAINNET).getGenesisConfig());
-    assertThat(genesisConfigFile.getConfigOptions().getChainId().isPresent()).isTrue();
+    final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(
+        EthNetworkConfig.getNetworkConfig(MAINNET).getGenesisConfig());
+    assertThat(genesisConfigFile.getConfigOptions().getChainId().isPresent())
+        .isTrue();
     assertThat(genesisConfigFile.getConfigOptions().getChainId().get())
         .isEqualTo(EthNetworkConfig.getNetworkConfig(MAINNET).getNetworkId());
   }
@@ -933,32 +1015,18 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void p2pOptionsRequiresServiceToBeEnabled() {
     final String[] nodes = {
-      "6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"
-    };
+        "6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"};
 
-    parseCommand(
-        "--p2p-enabled",
-        "false",
-        "--bootnodes",
-        String.join(",", validENodeStrings),
-        "--discovery-enabled",
-        "false",
-        "--max-peers",
-        "42",
-        "--remote-connections-max-percentage",
-        "50",
-        "--banned-node-id",
-        String.join(",", nodes),
-        "--banned-node-ids",
-        String.join(",", nodes));
+    parseCommand("--p2p-enabled", "false", "--bootnodes",
+                 String.join(",", validENodeStrings), "--discovery-enabled",
+                 "false", "--max-peers", "42",
+                 "--remote-connections-max-percentage", "50",
+                 "--banned-node-id", String.join(",", nodes),
+                 "--banned-node-ids", String.join(",", nodes));
 
     verifyOptionsConstraintLoggerCall(
-        "--p2p-enabled",
-        "--discovery-enabled",
-        "--bootnodes",
-        "--max-peers",
-        "--banned-node-ids",
-        "--remote-connections-max-percentage");
+        "--p2p-enabled", "--discovery-enabled", "--bootnodes", "--max-peers",
+        "--banned-node-ids", "--remote-connections-max-percentage");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -988,10 +1056,12 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void callingWithBootnodesOptionButNoValueMustPassEmptyBootnodeList() {
     parseCommand("--bootnodes");
 
-    verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes()).isEmpty();
+    assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes())
+        .isEmpty();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1012,8 +1082,10 @@ public class BesuCommandTest extends CommandTestAbstract {
     assertThat(commandOutput.toString()).isEmpty();
     final String expectedErrorOutputStart =
         "Invalid enode URL syntax. Enode URL should have the following format "
-            + "'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.";
-    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+        +
+        "'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.";
+    assertThat(commandErrorOutput.toString())
+        .startsWith(expectedErrorOutputStart);
   }
 
   @Test
@@ -1026,31 +1098,38 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand("--bootnodes", bootnodesValue);
     assertThat(commandOutput.toString()).isEmpty();
     final String expectedErrorOutputStart =
-        "Bootnodes must have discovery enabled. Invalid bootnodes: " + invalidBootnode + ".";
-    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+        "Bootnodes must have discovery enabled. Invalid bootnodes: " +
+        invalidBootnode + ".";
+    assertThat(commandErrorOutput.toString())
+        .startsWith(expectedErrorOutputStart);
   }
 
-  // This test ensures non regression on https://pegasys1.atlassian.net/browse/PAN-2387
+  // This test ensures non regression on
+  // https://pegasys1.atlassian.net/browse/PAN-2387
   @Test
   public void callingWithInvalidBootnodeAndEqualSignMustDisplayError() {
     parseCommand("--bootnodes=invalid_enode_url");
     assertThat(commandOutput.toString()).isEmpty();
     final String expectedErrorOutputStart =
         "Invalid enode URL syntax. Enode URL should have the following format "
-            + "'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.";
-    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+        +
+        "'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.";
+    assertThat(commandErrorOutput.toString())
+        .startsWith(expectedErrorOutputStart);
   }
 
   @Test
   public void bootnodesOptionMustBeUsed() {
     parseCommand("--bootnodes", String.join(",", validENodeStrings));
 
-    verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes())
-        .isEqualTo(
-            Stream.of(validENodeStrings).map(EnodeURL::fromString).collect(Collectors.toList()));
+        .isEqualTo(Stream.of(validENodeStrings)
+                       .map(EnodeURL::fromString)
+                       .collect(Collectors.toList()));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1059,16 +1138,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void bannedNodeIdsOptionMustBeUsed() {
     final Bytes[] nodes = {
-      Bytes.fromHexString(
-          "6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"),
-      Bytes.fromHexString(
-          "7f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"),
-      Bytes.fromHexString(
-          "0x8f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0")
-    };
+        Bytes.fromHexString(
+            "6f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"),
+        Bytes.fromHexString(
+            "7f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0"),
+        Bytes.fromHexString(
+            "0x8f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0")};
 
-    final String nodeIdsArg =
-        Arrays.stream(nodes).map(Bytes::toShortHexString).collect(Collectors.joining(","));
+    final String nodeIdsArg = Arrays.stream(nodes)
+                                  .map(Bytes::toShortHexString)
+                                  .collect(Collectors.joining(","));
     parseCommand("--banned-node-ids", nodeIdsArg);
 
     verify(mockRunnerBuilder).bannedNodeIds(bytesCollectionCollector.capture());
@@ -1086,16 +1165,19 @@ public class BesuCommandTest extends CommandTestAbstract {
     assertThat(commandOutput.toString()).isEmpty();
     final String expectedErrorOutputStart =
         "Missing required parameter for option '--banned-node-ids' at index 0 (<NODEID>)";
-    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+    assertThat(commandErrorOutput.toString())
+        .startsWith(expectedErrorOutputStart);
   }
 
   @Test
-  public void callingWithBannedNodeidsOptionWithInvalidValuesMustDisplayError() {
+  public void
+  callingWithBannedNodeidsOptionWithInvalidValuesMustDisplayError() {
     parseCommand("--banned-node-ids", "0x10,20,30");
     assertThat(commandOutput.toString()).isEmpty();
     final String expectedErrorOutputStart =
         "Invalid ids supplied to '--banned-node-ids'. Expected 64 bytes in 0x10";
-    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+    assertThat(commandErrorOutput.toString())
+        .startsWith(expectedErrorOutputStart);
   }
 
   @Test
@@ -1125,7 +1207,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    verify(mockRunnerBuilder).p2pListenInterface(stringArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .p2pListenInterface(stringArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(stringArgumentCaptor.getValue()).isEqualTo(ip);
@@ -1180,17 +1263,19 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void remoteConnectionsPercentageOptionMustBeUsed() {
 
     final int remoteConnectionsPercentage = 12;
-    parseCommand(
-        "--remote-connections-limit-enabled",
-        "--remote-connections-max-percentage",
-        String.valueOf(remoteConnectionsPercentage));
+    parseCommand("--remote-connections-limit-enabled",
+                 "--remote-connections-max-percentage",
+                 String.valueOf(remoteConnectionsPercentage));
 
-    verify(mockRunnerBuilder).fractionRemoteConnectionsAllowed(floatCaptor.capture());
+    verify(mockRunnerBuilder)
+        .fractionRemoteConnectionsAllowed(floatCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(floatCaptor.getValue())
         .isEqualTo(
-            Fraction.fromPercentage(Percentage.fromInt(remoteConnectionsPercentage)).getValue());
+            Fraction
+                .fromPercentage(Percentage.fromInt(remoteConnectionsPercentage))
+                .getValue());
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1199,8 +1284,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void remoteConnectionsPercentageWithInvalidFormatMustFail() {
 
-    parseCommand(
-        "--remote-connections-limit-enabled", "--remote-connections-max-percentage", "invalid");
+    parseCommand("--remote-connections-limit-enabled",
+                 "--remote-connections-max-percentage", "invalid");
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1212,8 +1297,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void remoteConnectionsPercentageWithOutOfRangeMustFail() {
 
-    parseCommand(
-        "--remote-connections-limit-enabled", "--remote-connections-max-percentage", "150");
+    parseCommand("--remote-connections-limit-enabled",
+                 "--remote-connections-max-percentage", "150");
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1225,9 +1310,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void syncMode_fast() {
     parseCommand("--sync-mode", "FAST");
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
+    final SynchronizerConfiguration syncConfig =
+        syncConfigurationCaptor.getValue();
     assertThat(syncConfig.getSyncMode()).isEqualTo(SyncMode.FAST);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1237,9 +1324,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void syncMode_full() {
     parseCommand("--sync-mode", "FULL");
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
+    final SynchronizerConfiguration syncConfig =
+        syncConfigurationCaptor.getValue();
     assertThat(syncConfig.getSyncMode()).isEqualTo(SyncMode.FULL);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1249,9 +1338,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void syncMode_full_by_default_for_dev() {
     parseCommand("--network", "dev");
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
+    final SynchronizerConfiguration syncConfig =
+        syncConfigurationCaptor.getValue();
     assertThat(syncConfig.getSyncMode()).isEqualTo(SyncMode.FULL);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1271,9 +1362,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void parsesValidFastSyncMinPeersOption() {
     parseCommand("--sync-mode", "FAST", "--fast-sync-min-peers", "11");
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
+    verify(mockControllerBuilder)
+        .synchronizerConfiguration(syncConfigurationCaptor.capture());
 
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
+    final SynchronizerConfiguration syncConfig =
+        syncConfigurationCaptor.getValue();
     assertThat(syncConfig.getSyncMode()).isEqualTo(SyncMode.FAST);
     assertThat(syncConfig.getFastSyncMinimumPeerCount()).isEqualTo(11);
     assertThat(commandOutput.toString()).isEmpty();
@@ -1287,7 +1380,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
-        .contains("Invalid value for option '--fast-sync-min-peers': 'ten' is not an int");
+        .contains(
+            "Invalid value for option '--fast-sync-min-peers': 'ten' is not an int");
   }
 
   @Test
@@ -1347,7 +1441,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void natManagerPodNamePropertyDefaultIsBesu() {
     parseCommand();
 
-    verify(mockRunnerBuilder).natManagerServiceName(eq(DEFAULT_BESU_SERVICE_NAME_FILTER));
+    verify(mockRunnerBuilder)
+        .natManagerServiceName(eq(DEFAULT_BESU_SERVICE_NAME_FILTER));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1366,7 +1461,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void natManagerPodNameCannotBeUsedWithNatDockerMethod() {
-    parseCommand("--nat-method", "DOCKER", "--Xnat-kube-service-name", "besu-updated");
+    parseCommand("--nat-method", "DOCKER", "--Xnat-kube-service-name",
+                 "besu-updated");
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1376,7 +1472,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void natManagerPodNameCannotBeUsedWithNatNoneMethod() {
-    parseCommand("--nat-method", "NONE", "--Xnat-kube-service-name", "besu-updated");
+    parseCommand("--nat-method", "NONE", "--Xnat-kube-service-name",
+                 "besu-updated");
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1385,11 +1482,14 @@ public class BesuCommandTest extends CommandTestAbstract {
   }
 
   @Test
-  public void natMethodFallbackEnabledPropertyIsCorrectlyUpdatedWithKubernetes() {
+  public void
+  natMethodFallbackEnabledPropertyIsCorrectlyUpdatedWithKubernetes() {
 
-    parseCommand("--nat-method", "KUBERNETES", "--Xnat-method-fallback-enabled", "false");
+    parseCommand("--nat-method", "KUBERNETES", "--Xnat-method-fallback-enabled",
+                 "false");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(false));
-    parseCommand("--nat-method", "KUBERNETES", "--Xnat-method-fallback-enabled", "true");
+    parseCommand("--nat-method", "KUBERNETES", "--Xnat-method-fallback-enabled",
+                 "true");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(true));
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1399,9 +1499,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void natMethodFallbackEnabledPropertyIsCorrectlyUpdatedWithDocker() {
 
-    parseCommand("--nat-method", "DOCKER", "--Xnat-method-fallback-enabled", "false");
+    parseCommand("--nat-method", "DOCKER", "--Xnat-method-fallback-enabled",
+                 "false");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(false));
-    parseCommand("--nat-method", "DOCKER", "--Xnat-method-fallback-enabled", "true");
+    parseCommand("--nat-method", "DOCKER", "--Xnat-method-fallback-enabled",
+                 "true");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(true));
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1411,9 +1513,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void natMethodFallbackEnabledPropertyIsCorrectlyUpdatedWithUpnp() {
 
-    parseCommand("--nat-method", "UPNP", "--Xnat-method-fallback-enabled", "false");
+    parseCommand("--nat-method", "UPNP", "--Xnat-method-fallback-enabled",
+                 "false");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(false));
-    parseCommand("--nat-method", "UPNP", "--Xnat-method-fallback-enabled", "true");
+    parseCommand("--nat-method", "UPNP", "--Xnat-method-fallback-enabled",
+                 "true");
     verify(mockRunnerBuilder).natMethodFallbackEnabled(eq(true));
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1422,7 +1526,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void natMethodFallbackEnabledCannotBeUsedWithAutoMethod() {
-    parseCommand("--nat-method", "AUTO", "--Xnat-method-fallback-enabled", "false");
+    parseCommand("--nat-method", "AUTO", "--Xnat-method-fallback-enabled",
+                 "false");
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1434,7 +1539,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpEnabledPropertyDefaultIsFalse() {
     parseCommand();
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(jsonRpcConfigArgumentCaptor.getValue().isEnabled()).isFalse();
@@ -1447,7 +1553,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpEnabledPropertyMustBeUsed() {
     parseCommand("--rpc-http-enabled");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(jsonRpcConfigArgumentCaptor.getValue().isEnabled()).isTrue();
@@ -1460,7 +1567,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void graphQLHttpEnabledPropertyDefaultIsFalse() {
     parseCommand();
 
-    verify(mockRunnerBuilder).graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(graphQLConfigArgumentCaptor.getValue().isEnabled()).isFalse();
@@ -1473,7 +1581,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void graphQLHttpEnabledPropertyMustBeUsed() {
     parseCommand("--graphql-http-enabled");
 
-    verify(mockRunnerBuilder).graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(graphQLConfigArgumentCaptor.getValue().isEnabled()).isTrue();
@@ -1486,10 +1595,12 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcApisPropertyMustBeUsed() {
     parseCommand("--rpc-http-api", "ETH,NET,PERM", "--rpc-http-enabled");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
     verify(mockLogger)
-        .warn("Permissions are disabled. Cannot enable PERM APIs when not using Permissions.");
+        .warn(
+            "Permissions are disabled. Cannot enable PERM APIs when not using Permissions.");
 
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getRpcApis())
         .containsExactlyInAnyOrder(ETH, NET, PERM);
@@ -1502,7 +1613,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcApisPropertyIgnoresDuplicatesAndMustBeUsed() {
     parseCommand("--rpc-http-api", "ETH,NET,NET", "--rpc-http-enabled");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getRpcApis())
@@ -1514,22 +1626,12 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void rpcHttpOptionsRequiresServiceToBeEnabled() {
-    parseCommand(
-        "--rpc-http-api",
-        "ETH,NET",
-        "--rpc-http-host",
-        "0.0.0.0",
-        "--rpc-http-port",
-        "1234",
-        "--rpc-http-cors-origins",
-        "all");
+    parseCommand("--rpc-http-api", "ETH,NET", "--rpc-http-host", "0.0.0.0",
+                 "--rpc-http-port", "1234", "--rpc-http-cors-origins", "all");
 
     verifyOptionsConstraintLoggerCall(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        "--rpc-http-port",
-        "--rpc-http-cors-origins",
-        "--rpc-http-api");
+        "--rpc-http-enabled", "--rpc-http-host", "--rpc-http-port",
+        "--rpc-http-cors-origins", "--rpc-http-api");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1542,20 +1644,14 @@ public class BesuCommandTest extends CommandTestAbstract {
     final URL configFile = this.getClass().getResource("/orion_publickey.pub");
     final String coinbaseStr = String.format("%040x", 1);
 
-    parseCommand(
-        "--privacy-enabled",
-        "--miner-enabled",
-        "--miner-coinbase=" + coinbaseStr,
-        "--min-gas-price",
-        "0",
-        "--privacy-url",
-        ENCLAVE_URI,
-        "--privacy-public-key-file",
-        configFile.getPath(),
-        "--privacy-tls-keystore-file",
-        "/Users/me/key");
+    parseCommand("--privacy-enabled", "--miner-enabled",
+                 "--miner-coinbase=" + coinbaseStr, "--min-gas-price", "0",
+                 "--privacy-url", ENCLAVE_URI, "--privacy-public-key-file",
+                 configFile.getPath(), "--privacy-tls-keystore-file",
+                 "/Users/me/key");
 
-    verifyOptionsConstraintLoggerCall("--privacy-tls-enabled", "--privacy-tls-keystore-file");
+    verifyOptionsConstraintLoggerCall("--privacy-tls-enabled",
+                                      "--privacy-tls-keystore-file");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1563,9 +1659,11 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void privacyTlsOptionsRequiresPrivacyToBeEnabled() {
-    parseCommand("--privacy-tls-enabled", "--privacy-tls-keystore-file", "/Users/me/key");
+    parseCommand("--privacy-tls-enabled", "--privacy-tls-keystore-file",
+                 "/Users/me/key");
 
-    verifyOptionsConstraintLoggerCall("--privacy-enabled", "--privacy-tls-enabled");
+    verifyOptionsConstraintLoggerCall("--privacy-enabled",
+                                      "--privacy-tls-enabled");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1588,7 +1686,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
     assertThat(commandOutput.toString()).isEmpty();
-    // PicoCLI uses longest option name for message when option has multiple names, so here plural.
+    // PicoCLI uses longest option name for message when option has multiple
+    // names, so here plural.
     assertThat(commandErrorOutput.toString())
         .contains("Invalid value for option '--rpc-http-apis'");
   }
@@ -1598,14 +1697,17 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     final String host = "1.2.3.4";
     final int port = 1234;
-    parseCommand(
-        "--rpc-http-enabled", "--rpc-http-host", host, "--rpc-http-port", String.valueOf(port));
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1617,10 +1719,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--rpc-http-enabled", "--rpc-http-host", host);
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1632,10 +1736,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "2600:DB8::8545";
     parseCommand("--rpc-http-enabled", "--rpc-http-host", host);
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1645,7 +1751,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpTlsRequiresRpcHttpEnabled() {
     parseCommand("--rpc-http-tls-enabled");
 
-    verifyOptionsConstraintLoggerCall("--rpc-http-enabled", "--rpc-http-tls-enabled");
+    verifyOptionsConstraintLoggerCall("--rpc-http-enabled",
+                                      "--rpc-http-tls-enabled");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1657,16 +1764,14 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
-        .contains("Keystore file is required when TLS is enabled for JSON-RPC HTTP endpoint");
+        .contains(
+            "Keystore file is required when TLS is enabled for JSON-RPC HTTP endpoint");
   }
 
   @Test
   public void rpcHttpTlsWithoutPasswordfileReportsError() {
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        "/tmp/test.p12");
+    parseCommand("--rpc-http-enabled", "--rpc-http-tls-enabled",
+                 "--rpc-http-tls-keystore-file", "/tmp/test.p12");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1680,28 +1785,27 @@ public class BesuCommandTest extends CommandTestAbstract {
     final int port = 1234;
     final String keystoreFile = "/tmp/test.p12";
     final String keystorePasswordFile = "/tmp/test.txt";
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        host,
-        "--rpc-http-port",
-        String.valueOf(port),
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        keystoreFile,
-        "--rpc-http-tls-keystore-password-file",
-        keystorePasswordFile);
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port),
+                 "--rpc-http-tls-enabled", "--rpc-http-tls-keystore-file",
+                 keystoreFile, "--rpc-http-tls-keystore-password-file",
+                 keystorePasswordFile);
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
     final Optional<TlsConfiguration> tlsConfiguration =
         jsonRpcConfigArgumentCaptor.getValue().getTlsConfiguration();
     assertThat(tlsConfiguration.isPresent()).isTrue();
-    assertThat(tlsConfiguration.get().getKeyStorePath()).isEqualTo(Path.of(keystoreFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isEmpty()).isTrue();
+    assertThat(tlsConfiguration.get().getKeyStorePath())
+        .isEqualTo(Path.of(keystoreFile));
+    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isEmpty())
+        .isTrue();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1713,18 +1817,11 @@ public class BesuCommandTest extends CommandTestAbstract {
     final int port = 1234;
     final String keystoreFile = "/tmp/test.p12";
     final String keystorePasswordFile = "/tmp/test.txt";
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        host,
-        "--rpc-http-port",
-        String.valueOf(port),
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        keystoreFile,
-        "--rpc-http-tls-keystore-password-file",
-        keystorePasswordFile,
-        "--rpc-http-tls-client-auth-enabled");
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port),
+                 "--rpc-http-tls-enabled", "--rpc-http-tls-keystore-file",
+                 keystoreFile, "--rpc-http-tls-keystore-password-file",
+                 keystorePasswordFile, "--rpc-http-tls-client-auth-enabled");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -1739,35 +1836,38 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String keystoreFile = "/tmp/test.p12";
     final String keystorePasswordFile = "/tmp/test.txt";
     final String knownClientFile = "/tmp/knownClientFile";
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        host,
-        "--rpc-http-port",
-        String.valueOf(port),
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        keystoreFile,
-        "--rpc-http-tls-keystore-password-file",
-        keystorePasswordFile,
-        "--rpc-http-tls-client-auth-enabled",
-        "--rpc-http-tls-known-clients-file",
-        knownClientFile);
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port),
+                 "--rpc-http-tls-enabled", "--rpc-http-tls-keystore-file",
+                 keystoreFile, "--rpc-http-tls-keystore-password-file",
+                 keystorePasswordFile, "--rpc-http-tls-client-auth-enabled",
+                 "--rpc-http-tls-known-clients-file", knownClientFile);
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
     final Optional<TlsConfiguration> tlsConfiguration =
         jsonRpcConfigArgumentCaptor.getValue().getTlsConfiguration();
     assertThat(tlsConfiguration.isPresent()).isTrue();
-    assertThat(tlsConfiguration.get().getKeyStorePath()).isEqualTo(Path.of(keystoreFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent()).isTrue();
-    assertThat(
-            tlsConfiguration.get().getClientAuthConfiguration().get().getKnownClientsFile().get())
+    assertThat(tlsConfiguration.get().getKeyStorePath())
+        .isEqualTo(Path.of(keystoreFile));
+    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent())
+        .isTrue();
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .getKnownClientsFile()
+                   .get())
         .isEqualTo(Path.of(knownClientFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().get().isCaClientsEnabled())
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .isCaClientsEnabled())
         .isFalse();
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1780,39 +1880,38 @@ public class BesuCommandTest extends CommandTestAbstract {
     final int port = 1234;
     final String keystoreFile = "/tmp/test.p12";
     final String keystorePasswordFile = "/tmp/test.txt";
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        host,
-        "--rpc-http-port",
-        String.valueOf(port),
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        keystoreFile,
-        "--rpc-http-tls-keystore-password-file",
-        keystorePasswordFile,
-        "--rpc-http-tls-client-auth-enabled",
-        "--rpc-http-tls-ca-clients-enabled");
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port),
+                 "--rpc-http-tls-enabled", "--rpc-http-tls-keystore-file",
+                 keystoreFile, "--rpc-http-tls-keystore-password-file",
+                 keystorePasswordFile, "--rpc-http-tls-client-auth-enabled",
+                 "--rpc-http-tls-ca-clients-enabled");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
     final Optional<TlsConfiguration> tlsConfiguration =
         jsonRpcConfigArgumentCaptor.getValue().getTlsConfiguration();
     assertThat(tlsConfiguration.isPresent()).isTrue();
-    assertThat(tlsConfiguration.get().getKeyStorePath()).isEqualTo(Path.of(keystoreFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent()).isTrue();
-    assertThat(
-            tlsConfiguration
-                .get()
-                .getClientAuthConfiguration()
-                .get()
-                .getKnownClientsFile()
-                .isEmpty())
+    assertThat(tlsConfiguration.get().getKeyStorePath())
+        .isEqualTo(Path.of(keystoreFile));
+    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent())
         .isTrue();
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().get().isCaClientsEnabled())
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .getKnownClientsFile()
+                   .isEmpty())
+        .isTrue();
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .isCaClientsEnabled())
         .isTrue();
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1826,36 +1925,39 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String keystoreFile = "/tmp/test.p12";
     final String keystorePasswordFile = "/tmp/test.txt";
     final String knownClientFile = "/tmp/knownClientFile";
-    parseCommand(
-        "--rpc-http-enabled",
-        "--rpc-http-host",
-        host,
-        "--rpc-http-port",
-        String.valueOf(port),
-        "--rpc-http-tls-enabled",
-        "--rpc-http-tls-keystore-file",
-        keystoreFile,
-        "--rpc-http-tls-keystore-password-file",
-        keystorePasswordFile,
-        "--rpc-http-tls-client-auth-enabled",
-        "--rpc-http-tls-ca-clients-enabled",
-        "--rpc-http-tls-known-clients-file",
-        knownClientFile);
+    parseCommand("--rpc-http-enabled", "--rpc-http-host", host,
+                 "--rpc-http-port", String.valueOf(port),
+                 "--rpc-http-tls-enabled", "--rpc-http-tls-keystore-file",
+                 keystoreFile, "--rpc-http-tls-keystore-password-file",
+                 keystorePasswordFile, "--rpc-http-tls-client-auth-enabled",
+                 "--rpc-http-tls-ca-clients-enabled",
+                 "--rpc-http-tls-known-clients-file", knownClientFile);
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
     final Optional<TlsConfiguration> tlsConfiguration =
         jsonRpcConfigArgumentCaptor.getValue().getTlsConfiguration();
     assertThat(tlsConfiguration.isPresent()).isTrue();
-    assertThat(tlsConfiguration.get().getKeyStorePath()).isEqualTo(Path.of(keystoreFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent()).isTrue();
-    assertThat(
-            tlsConfiguration.get().getClientAuthConfiguration().get().getKnownClientsFile().get())
+    assertThat(tlsConfiguration.get().getKeyStorePath())
+        .isEqualTo(Path.of(keystoreFile));
+    assertThat(tlsConfiguration.get().getClientAuthConfiguration().isPresent())
+        .isTrue();
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .getKnownClientsFile()
+                   .get())
         .isEqualTo(Path.of(knownClientFile));
-    assertThat(tlsConfiguration.get().getClientAuthConfiguration().get().isCaClientsEnabled())
+    assertThat(tlsConfiguration.get()
+                   .getClientAuthConfiguration()
+                   .get()
+                   .isCaClientsEnabled())
         .isTrue();
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1867,18 +1969,17 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     final String host = "1.2.3.4";
     final int port = 1234;
-    parseCommand(
-        "--graphql-http-enabled",
-        "--graphql-http-host",
-        host,
-        "--graphql-http-port",
-        String.valueOf(port));
+    parseCommand("--graphql-http-enabled", "--graphql-http-host", host,
+                 "--graphql-http-port", String.valueOf(port));
 
-    verify(mockRunnerBuilder).graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(graphQLConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(graphQLConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(graphQLConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(graphQLConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1890,10 +1991,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--graphql-http-enabled", "--graphql-http-host", host);
 
-    verify(mockRunnerBuilder).graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(graphQLConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(graphQLConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1905,10 +2008,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "2600:DB8::8545";
     parseCommand("--graphql-http-enabled", "--graphql-http-host", host);
 
-    verify(mockRunnerBuilder).graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .graphQLConfiguration(graphQLConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(graphQLConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(graphQLConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1917,12 +2022,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void rpcHttpCorsOriginsTwoDomainsMustBuildListWithBothDomains() {
     final String[] origins = {"http://domain1.com", "https://domain2.com"};
-    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins", String.join(",", origins));
+    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins",
+                 String.join(",", origins));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains().toArray())
+    assertThat(jsonRpcConfigArgumentCaptor.getValue()
+                   .getCorsAllowedDomains()
+                   .toArray())
         .isEqualTo(origins);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1932,12 +2041,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void rpcHttpCorsOriginsDoubleCommaFilteredOut() {
     final String[] origins = {"http://domain1.com", "https://domain2.com"};
-    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins", String.join(",,", origins));
+    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins",
+                 String.join(",,", origins));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains().toArray())
+    assertThat(jsonRpcConfigArgumentCaptor.getValue()
+                   .getCorsAllowedDomains()
+                   .toArray())
         .isEqualTo(origins);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1947,12 +2060,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void rpcHttpCorsOriginsWithWildcardMustBuildListWithWildcard() {
     final String[] origins = {"*"};
-    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins", String.join(",", origins));
+    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins",
+                 String.join(",", origins));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains().toArray())
+    assertThat(jsonRpcConfigArgumentCaptor.getValue()
+                   .getCorsAllowedDomains()
+                   .toArray())
         .isEqualTo(origins);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -1963,10 +2080,12 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpCorsOriginsWithAllMustBuildListWithWildcard() {
     parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins", "all");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains()).containsExactly("*");
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains())
+        .containsExactly("*");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -1975,12 +2094,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void rpcHttpCorsOriginsWithNoneMustBuildEmptyList() {
     final String[] origins = {"none"};
-    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins", String.join(",", origins));
+    parseCommand("--rpc-http-enabled", "--rpc-http-cors-origins",
+                 String.join(",", origins));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains()).isEmpty();
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getCorsAllowedDomains())
+        .isEmpty();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2023,7 +2145,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void rpcHttpCorsOriginsAllWithAnotherDomainMustFailAsFlags() {
-    parseCommand("--rpc-http-cors-origins=http://domain1.com", "--rpc-http-cors-origins=all");
+    parseCommand("--rpc-http-cors-origins=http://domain1.com",
+                 "--rpc-http-cors-origins=all");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -2045,7 +2168,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void rpcHttpCorsOriginsWildcardWithAnotherDomainMustFailAsFlags() {
-    parseCommand("--rpc-http-cors-origins=http://domain1.com", "--rpc-http-cors-origins=*");
+    parseCommand("--rpc-http-cors-origins=http://domain1.com",
+                 "--rpc-http-cors-origins=*");
 
     Mockito.verifyZeroInteractions(mockRunnerBuilder);
 
@@ -2083,11 +2207,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostWhitelistAcceptsSingleArgument() {
     parseCommand("--host-whitelist", "a");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(1);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(1);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("localhost");
 
@@ -2099,11 +2227,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostAllowlistAcceptsSingleArgument() {
     parseCommand("--host-allowlist", "a");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(1);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(1);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("localhost");
 
@@ -2115,11 +2247,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostAllowlistAcceptsMultipleArguments() {
     parseCommand("--host-allowlist", "a,b");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(2);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a", "b");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(2);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a", "b");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("*", "localhost");
 
@@ -2131,11 +2267,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostAllowlistAcceptsDoubleComma() {
     parseCommand("--host-allowlist", "a,,b");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(2);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a", "b");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(2);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a", "b");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("*", "localhost");
 
@@ -2148,11 +2288,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostWhitelistAllowlistAcceptsMultipleFlags() {
     parseCommand("--host-whitelist=a", "--host-allowlist=b");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(2);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a", "b");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(2);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a", "b");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("*", "localhost");
 
@@ -2164,11 +2308,15 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcHttpHostAllowlistAcceptsMultipleFlags() {
     parseCommand("--host-allowlist=a", "--host-allowlist=b");
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size()).isEqualTo(2);
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).contains("a", "b");
+    assertThat(
+        jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist().size())
+        .isEqualTo(2);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .contains("a", "b");
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
         .doesNotContain("*", "localhost");
 
@@ -2217,10 +2365,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String[] origins = {"none"};
     parseCommand("--host-allowlist", String.join(",", origins));
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist()).isEmpty();
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHostsAllowlist())
+        .isEmpty();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2265,7 +2415,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcWsRpcEnabledPropertyDefaultIsFalse() {
     parseCommand();
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().isEnabled()).isFalse();
@@ -2278,7 +2429,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcWsRpcEnabledPropertyMustBeUsed() {
     parseCommand("--rpc-ws-enabled");
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().isEnabled()).isTrue();
@@ -2289,10 +2441,11 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void rpcWsOptionsRequiresServiceToBeEnabled() {
-    parseCommand("--rpc-ws-api", "ETH,NET", "--rpc-ws-host", "0.0.0.0", "--rpc-ws-port", "1234");
+    parseCommand("--rpc-ws-api", "ETH,NET", "--rpc-ws-host", "0.0.0.0",
+                 "--rpc-ws-port", "1234");
 
-    verifyOptionsConstraintLoggerCall(
-        "--rpc-ws-enabled", "--rpc-ws-host", "--rpc-ws-port", "--rpc-ws-api");
+    verifyOptionsConstraintLoggerCall("--rpc-ws-enabled", "--rpc-ws-host",
+                                      "--rpc-ws-port", "--rpc-ws-api");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2302,7 +2455,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcWsApiPropertyMustBeUsed() {
     parseCommand("--rpc-ws-enabled", "--rpc-ws-api", "ETH, NET");
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().getRpcApis())
@@ -2316,9 +2470,11 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void rpcWsHostAndPortOptionMustBeUsed() {
     final String host = "1.2.3.4";
     final int port = 1234;
-    parseCommand("--rpc-ws-enabled", "--rpc-ws-host", host, "--rpc-ws-port", String.valueOf(port));
+    parseCommand("--rpc-ws-enabled", "--rpc-ws-host", host, "--rpc-ws-port",
+                 String.valueOf(port));
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
@@ -2333,7 +2489,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--rpc-ws-enabled", "--rpc-ws-host", host);
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
@@ -2347,7 +2504,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "2600:DB8::8545";
     parseCommand("--rpc-ws-enabled", "--rpc-ws-host", host);
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(wsRpcConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
@@ -2360,7 +2518,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsEnabledPropertyDefaultIsFalse() {
     parseCommand();
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(metricsConfigArgumentCaptor.getValue().isEnabled()).isFalse();
@@ -2373,7 +2532,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsEnabledPropertyMustBeUsed() {
     parseCommand("--metrics-enabled");
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(metricsConfigArgumentCaptor.getValue().isEnabled()).isTrue();
@@ -2384,22 +2544,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void metricsPushOptionsRequiresPushToBeEnabled() {
-    parseCommand(
-        "--metrics-push-host",
-        "0.0.0.0",
-        "--metrics-push-port",
-        "1234",
-        "--metrics-push-interval",
-        "2",
-        "--metrics-push-prometheus-job",
-        "job-name");
+    parseCommand("--metrics-push-host", "0.0.0.0", "--metrics-push-port",
+                 "1234", "--metrics-push-interval", "2",
+                 "--metrics-push-prometheus-job", "job-name");
 
     verifyOptionsConstraintLoggerCall(
-        "--metrics-push-enabled",
-        "--metrics-push-host",
-        "--metrics-push-port",
-        "--metrics-push-interval",
-        "--metrics-push-prometheus-job");
+        "--metrics-push-enabled", "--metrics-push-host", "--metrics-push-port",
+        "--metrics-push-interval", "--metrics-push-prometheus-job");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2409,7 +2560,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsOptionsRequiresPullMetricsToBeEnabled() {
     parseCommand("--metrics-host", "0.0.0.0", "--metrics-port", "1234");
 
-    verifyOptionsConstraintLoggerCall("--metrics-enabled", "--metrics-host", "--metrics-port");
+    verifyOptionsConstraintLoggerCall("--metrics-enabled", "--metrics-host",
+                                      "--metrics-port");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2419,14 +2571,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsHostAndPortOptionMustBeUsed() {
     final String host = "1.2.3.4";
     final int port = 1234;
-    parseCommand(
-        "--metrics-enabled", "--metrics-host", host, "--metrics-port", String.valueOf(port));
+    parseCommand("--metrics-enabled", "--metrics-host", host, "--metrics-port",
+                 String.valueOf(port));
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
-    assertThat(metricsConfigArgumentCaptor.getValue().getPort()).isEqualTo(port);
+    assertThat(metricsConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
+    assertThat(metricsConfigArgumentCaptor.getValue().getPort())
+        .isEqualTo(port);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2437,10 +2592,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--metrics-enabled", "--metrics-host", host);
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(metricsConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2451,10 +2608,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "2600:DB8::8545";
     parseCommand("--metrics-enabled", "--metrics-host", host);
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getHost()).isEqualTo(host);
+    assertThat(metricsConfigArgumentCaptor.getValue().getHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2462,9 +2621,11 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void metricsCategoryPropertyMustBeUsed() {
-    parseCommand("--metrics-enabled", "--metrics-category", StandardMetricCategory.JVM.toString());
+    parseCommand("--metrics-enabled", "--metrics-category",
+                 StandardMetricCategory.JVM.toString());
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(metricsConfigArgumentCaptor.getValue().getMetricCategories())
@@ -2478,7 +2639,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsPushEnabledPropertyMustBeUsed() {
     parseCommand("--metrics-push-enabled");
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(metricsConfigArgumentCaptor.getValue().isPushEnabled()).isTrue();
@@ -2491,18 +2653,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsPushHostAndPushPortOptionMustBeUsed() {
     final String host = "1.2.3.4";
     final int port = 1234;
-    parseCommand(
-        "--metrics-push-enabled",
-        "--metrics-push-host",
-        host,
-        "--metrics-push-port",
-        String.valueOf(port));
+    parseCommand("--metrics-push-enabled", "--metrics-push-host", host,
+                 "--metrics-push-port", String.valueOf(port));
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getPushHost()).isEqualTo(host);
-    assertThat(metricsConfigArgumentCaptor.getValue().getPushPort()).isEqualTo(port);
+    assertThat(metricsConfigArgumentCaptor.getValue().getPushHost())
+        .isEqualTo(host);
+    assertThat(metricsConfigArgumentCaptor.getValue().getPushPort())
+        .isEqualTo(port);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2513,10 +2674,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--metrics-push-enabled", "--metrics-push-host", host);
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getPushHost()).isEqualTo(host);
+    assertThat(metricsConfigArgumentCaptor.getValue().getPushHost())
+        .isEqualTo(host);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2526,10 +2689,12 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void metricsPushIntervalMustBeUsed() {
     parseCommand("--metrics-push-enabled", "--metrics-push-interval", "42");
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(metricsConfigArgumentCaptor.getValue().getPushInterval()).isEqualTo(42);
+    assertThat(metricsConfigArgumentCaptor.getValue().getPushInterval())
+        .isEqualTo(42);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2537,9 +2702,11 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void metricsPrometheusJobMustBeUsed() {
-    parseCommand("--metrics-push-enabled", "--metrics-push-prometheus-job", "besu-command-test");
+    parseCommand("--metrics-push-enabled", "--metrics-push-prometheus-job",
+                 "besu-command-test");
 
-    verify(mockRunnerBuilder).metricsConfiguration(metricsConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .metricsConfiguration(metricsConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(metricsConfigArgumentCaptor.getValue().getPrometheusJob())
@@ -2557,7 +2724,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
-        .startsWith("--metrics-enabled option and --metrics-push-enabled option can't be used");
+        .startsWith(
+            "--metrics-enabled option and --metrics-push-enabled option can't be used");
   }
 
   @Test
@@ -2588,7 +2756,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void stratumMiningIsEnabledWhenSpecified() throws Exception {
     final String coinbaseStr = String.format("%040x", 1);
-    parseCommand("--miner-enabled", "--miner-coinbase=" + coinbaseStr, "--miner-stratum-enabled");
+    parseCommand("--miner-enabled", "--miner-coinbase=" + coinbaseStr,
+                 "--miner-stratum-enabled");
 
     final ArgumentCaptor<MiningParameters> miningArg =
         ArgumentCaptor.forClass(MiningParameters.class);
@@ -2607,22 +2776,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void miningOptionsRequiresServiceToBeEnabled() {
 
-    final Address requestedCoinbase = Address.fromHexString("0000011111222223333344444");
+    final Address requestedCoinbase =
+        Address.fromHexString("0000011111222223333344444");
     parseCommand(
-        "--miner-coinbase",
-        requestedCoinbase.toString(),
-        "--min-gas-price",
-        "42",
-        "--miner-extra-data",
+        "--miner-coinbase", requestedCoinbase.toString(), "--min-gas-price",
+        "42", "--miner-extra-data",
         "0x1122334455667788990011223344556677889900112233445566778899001122",
         "--miner-stratum-enabled");
 
-    verifyOptionsConstraintLoggerCall(
-        "--miner-enabled",
-        "--miner-coinbase",
-        "--min-gas-price",
-        "--miner-extra-data",
-        "--miner-stratum-enabled");
+    verifyOptionsConstraintLoggerCall("--miner-enabled", "--miner-coinbase",
+                                      "--min-gas-price", "--miner-extra-data",
+                                      "--miner-stratum-enabled");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -2632,14 +2796,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void miningParametersAreCaptured() throws Exception {
-    final Address requestedCoinbase = Address.fromHexString("0000011111222223333344444");
+    final Address requestedCoinbase =
+        Address.fromHexString("0000011111222223333344444");
     final String extraDataString =
         "0x1122334455667788990011223344556677889900112233445566778899001122";
-    parseCommand(
-        "--miner-enabled",
-        "--miner-coinbase=" + requestedCoinbase.toString(),
-        "--min-gas-price=15",
-        "--miner-extra-data=" + extraDataString);
+    parseCommand("--miner-enabled",
+                 "--miner-coinbase=" + requestedCoinbase.toString(),
+                 "--min-gas-price=15", "--miner-extra-data=" + extraDataString);
 
     final ArgumentCaptor<MiningParameters> miningArg =
         ArgumentCaptor.forClass(MiningParameters.class);
@@ -2649,9 +2812,12 @@ public class BesuCommandTest extends CommandTestAbstract {
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
-    assertThat(miningArg.getValue().getCoinbase()).isEqualTo(Optional.of(requestedCoinbase));
-    assertThat(miningArg.getValue().getMinTransactionGasPrice()).isEqualTo(Wei.of(15));
-    assertThat(miningArg.getValue().getExtraData()).isEqualTo(Bytes.fromHexString(extraDataString));
+    assertThat(miningArg.getValue().getCoinbase())
+        .isEqualTo(Optional.of(requestedCoinbase));
+    assertThat(miningArg.getValue().getMinTransactionGasPrice())
+        .isEqualTo(Wei.of(15));
+    assertThat(miningArg.getValue().getExtraData())
+        .isEqualTo(Bytes.fromHexString(extraDataString));
   }
 
   @Ignore
@@ -2710,8 +2876,8 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void pruningParametersAreCaptured() throws Exception {
-    parseCommand(
-        "--pruning-enabled", "--pruning-blocks-retained=15", "--pruning-block-confirmations=4");
+    parseCommand("--pruning-enabled", "--pruning-blocks-retained=15",
+                 "--pruning-block-confirmations=4");
 
     final ArgumentCaptor<PrunerConfiguration> pruningArg =
         ArgumentCaptor.forClass(PrunerConfiguration.class);
@@ -2732,10 +2898,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(DEV));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(DEV));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2748,10 +2916,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(RINKEBY));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(RINKEBY));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2764,10 +2934,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(ROPSTEN));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(ROPSTEN));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2780,10 +2952,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(GOERLI));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(GOERLI));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2796,10 +2970,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(CLASSIC));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(CLASSIC));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2812,10 +2988,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(KOTTI));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(KOTTI));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2828,10 +3006,12 @@ public class BesuCommandTest extends CommandTestAbstract {
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
-    assertThat(networkArg.getValue()).isEqualTo(EthNetworkConfig.getNetworkConfig(MORDOR));
+    assertThat(networkArg.getValue())
+        .isEqualTo(EthNetworkConfig.getNetworkConfig(MORDOR));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2872,24 +3052,22 @@ public class BesuCommandTest extends CommandTestAbstract {
     networkValuesCanBeOverridden("mordor");
   }
 
-  private void networkValuesCanBeOverridden(final String network) throws Exception {
-    parseCommand(
-        "--network",
-        network,
-        "--network-id",
-        "1234567",
-        "--bootnodes",
-        String.join(",", validENodeStrings));
+  private void networkValuesCanBeOverridden(final String network)
+      throws Exception {
+    parseCommand("--network", network, "--network-id", "1234567", "--bootnodes",
+                 String.join(",", validENodeStrings));
 
     final ArgumentCaptor<EthNetworkConfig> networkArg =
         ArgumentCaptor.forClass(EthNetworkConfig.class);
 
-    verify(mockControllerBuilderFactory).fromEthNetworkConfig(networkArg.capture(), any());
+    verify(mockControllerBuilderFactory)
+        .fromEthNetworkConfig(networkArg.capture(), any());
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getBootNodes())
-        .isEqualTo(
-            Stream.of(validENodeStrings).map(EnodeURL::fromString).collect(Collectors.toList()));
+        .isEqualTo(Stream.of(validENodeStrings)
+                       .map(EnodeURL::fromString)
+                       .collect(Collectors.toList()));
     assertThat(networkArg.getValue().getNetworkId()).isEqualTo(1234567);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -2912,14 +3090,9 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void mustUseEnclaveUriAndOptions() {
     final URL configFile = this.getClass().getResource("/orion_publickey.pub");
 
-    parseCommand(
-        "--privacy-enabled",
-        "--privacy-url",
-        ENCLAVE_URI,
-        "--privacy-public-key-file",
-        configFile.getPath(),
-        "--min-gas-price",
-        "0");
+    parseCommand("--privacy-enabled", "--privacy-url", ENCLAVE_URI,
+                 "--privacy-public-key-file", configFile.getPath(),
+                 "--min-gas-price", "0");
 
     final ArgumentCaptor<PrivacyParameters> enclaveArg =
         ArgumentCaptor.forClass(PrivacyParameters.class);
@@ -2928,8 +3101,10 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(enclaveArg.getValue().isEnabled()).isEqualTo(true);
-    assertThat(enclaveArg.getValue().getEnclaveUri()).isEqualTo(URI.create(ENCLAVE_URI));
-    assertThat(enclaveArg.getValue().getEnclavePublicKey()).isEqualTo(ENCLAVE_PUBLIC_KEY);
+    assertThat(enclaveArg.getValue().getEnclaveUri())
+        .isEqualTo(URI.create(ENCLAVE_URI));
+    assertThat(enclaveArg.getValue().getEnclavePublicKey())
+        .isEqualTo(ENCLAVE_PUBLIC_KEY);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2941,19 +3116,13 @@ public class BesuCommandTest extends CommandTestAbstract {
     final File file = new File("./specific/enclavePublicKey");
     file.deleteOnExit();
 
-    parseCommand(
-        "--privacy-url",
-        ENCLAVE_URI,
-        "--privacy-public-key-file",
-        file.toString(),
-        "--privacy-precompiled-address",
-        String.valueOf(Byte.MAX_VALUE - 1));
+    parseCommand("--privacy-url", ENCLAVE_URI, "--privacy-public-key-file",
+                 file.toString(), "--privacy-precompiled-address",
+                 String.valueOf(Byte.MAX_VALUE - 1));
 
-    verifyOptionsConstraintLoggerCall(
-        "--privacy-enabled",
-        "--privacy-url",
-        "--privacy-precompiled-address",
-        "--privacy-public-key-file");
+    verifyOptionsConstraintLoggerCall("--privacy-enabled", "--privacy-url",
+                                      "--privacy-precompiled-address",
+                                      "--privacy-public-key-file");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2964,7 +3133,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand("--privacy-enabled", "--privacy-url", ENCLAVE_URI);
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Please specify Enclave public key file path to enable privacy");
+        .startsWith(
+            "Please specify Enclave public key file path to enable privacy");
   }
 
   @Test
@@ -2983,32 +3153,30 @@ public class BesuCommandTest extends CommandTestAbstract {
   }
 
   @Test
-  public void privacyMultiTenancyIsConfiguredWhenConfiguredWithNecessaryOptions() {
-    parseCommand(
-        "--privacy-enabled",
-        "--rpc-http-authentication-enabled",
-        "--privacy-multi-tenancy-enabled",
-        "--rpc-http-authentication-jwt-public-key-file",
-        "/non/existent/file",
-        "--min-gas-price",
-        "0");
+  public void
+  privacyMultiTenancyIsConfiguredWhenConfiguredWithNecessaryOptions() {
+    parseCommand("--privacy-enabled", "--rpc-http-authentication-enabled",
+                 "--privacy-multi-tenancy-enabled",
+                 "--rpc-http-authentication-jwt-public-key-file",
+                 "/non/existent/file", "--min-gas-price", "0");
 
     final ArgumentCaptor<PrivacyParameters> privacyParametersArgumentCaptor =
         ArgumentCaptor.forClass(PrivacyParameters.class);
 
-    verify(mockControllerBuilder).privacyParameters(privacyParametersArgumentCaptor.capture());
+    verify(mockControllerBuilder)
+        .privacyParameters(privacyParametersArgumentCaptor.capture());
     verify(mockControllerBuilder).build();
 
-    assertThat(privacyParametersArgumentCaptor.getValue().isMultiTenancyEnabled()).isTrue();
+    assertThat(
+        privacyParametersArgumentCaptor.getValue().isMultiTenancyEnabled())
+        .isTrue();
   }
 
   @Test
   public void privacyMultiTenancyWithoutAuthenticationFails() {
-    parseCommand(
-        "--privacy-enabled",
-        "--privacy-multi-tenancy-enabled",
-        "--rpc-http-authentication-jwt-public-key-file",
-        "/non/existent/file");
+    parseCommand("--privacy-enabled", "--privacy-multi-tenancy-enabled",
+                 "--rpc-http-authentication-jwt-public-key-file",
+                 "/non/existent/file");
 
     assertThat(commandErrorOutput.toString())
         .startsWith(
@@ -3017,102 +3185,101 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void privacyMultiTenancyWithPrivacyPublicKeyFileFails() {
-    parseCommand(
-        "--privacy-enabled",
-        "--rpc-http-authentication-enabled",
-        "--privacy-multi-tenancy-enabled",
-        "--rpc-http-authentication-jwt-public-key-file",
-        "/non/existent/file",
-        "--privacy-public-key-file",
-        ENCLAVE_PUBLIC_KEY_PATH);
+    parseCommand("--privacy-enabled", "--rpc-http-authentication-enabled",
+                 "--privacy-multi-tenancy-enabled",
+                 "--rpc-http-authentication-jwt-public-key-file",
+                 "/non/existent/file", "--privacy-public-key-file",
+                 ENCLAVE_PUBLIC_KEY_PATH);
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Privacy multi-tenancy and privacy public key cannot be used together");
+        .startsWith(
+            "Privacy multi-tenancy and privacy public key cannot be used together");
   }
 
   @Test
   public void onChainPrivacyGroupEnabledFlagDefaultValueIsFalse() {
-    parseCommand(
-        "--privacy-enabled",
-        "--privacy-public-key-file",
-        ENCLAVE_PUBLIC_KEY_PATH,
-        "--min-gas-price",
-        "0");
+    parseCommand("--privacy-enabled", "--privacy-public-key-file",
+                 ENCLAVE_PUBLIC_KEY_PATH, "--min-gas-price", "0");
 
     final ArgumentCaptor<PrivacyParameters> privacyParametersArgumentCaptor =
         ArgumentCaptor.forClass(PrivacyParameters.class);
 
-    verify(mockControllerBuilder).privacyParameters(privacyParametersArgumentCaptor.capture());
+    verify(mockControllerBuilder)
+        .privacyParameters(privacyParametersArgumentCaptor.capture());
     verify(mockControllerBuilder).build();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    final PrivacyParameters privacyParameters = privacyParametersArgumentCaptor.getValue();
-    assertThat(privacyParameters.isOnchainPrivacyGroupsEnabled()).isEqualTo(false);
+    final PrivacyParameters privacyParameters =
+        privacyParametersArgumentCaptor.getValue();
+    assertThat(privacyParameters.isOnchainPrivacyGroupsEnabled())
+        .isEqualTo(false);
   }
 
   @Test
   public void onChainPrivacyGroupEnabledFlagValueIsSet() {
-    parseCommand(
-        "--privacy-enabled",
-        "--privacy-public-key-file",
-        ENCLAVE_PUBLIC_KEY_PATH,
-        "--privacy-onchain-groups-enabled",
-        "--min-gas-price",
-        "0");
+    parseCommand("--privacy-enabled", "--privacy-public-key-file",
+                 ENCLAVE_PUBLIC_KEY_PATH, "--privacy-onchain-groups-enabled",
+                 "--min-gas-price", "0");
 
     final ArgumentCaptor<PrivacyParameters> privacyParametersArgumentCaptor =
         ArgumentCaptor.forClass(PrivacyParameters.class);
 
-    verify(mockControllerBuilder).privacyParameters(privacyParametersArgumentCaptor.capture());
+    verify(mockControllerBuilder)
+        .privacyParameters(privacyParametersArgumentCaptor.capture());
     verify(mockControllerBuilder).build();
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    final PrivacyParameters privacyParameters = privacyParametersArgumentCaptor.getValue();
-    assertThat(privacyParameters.isOnchainPrivacyGroupsEnabled()).isEqualTo(true);
+    final PrivacyParameters privacyParameters =
+        privacyParametersArgumentCaptor.getValue();
+    assertThat(privacyParameters.isOnchainPrivacyGroupsEnabled())
+        .isEqualTo(true);
   }
 
   @Test
   public void onchainPrivacyAndMultiTenancyCannotBeUsedTogether() {
-    parseCommand(
-        "--privacy-enabled",
-        "--privacy-onchain-groups-enabled",
-        "--privacy-multi-tenancy-enabled",
-        "--rpc-http-authentication-jwt-public-key-file",
-        "/non/existent/file",
-        "--rpc-http-authentication-enabled");
+    parseCommand("--privacy-enabled", "--privacy-onchain-groups-enabled",
+                 "--privacy-multi-tenancy-enabled",
+                 "--rpc-http-authentication-jwt-public-key-file",
+                 "/non/existent/file", "--rpc-http-authentication-enabled");
 
     assertThat(commandErrorOutput.toString())
-        .startsWith("Privacy multi-tenancy and onchain privacy groups cannot be used together");
+        .startsWith(
+            "Privacy multi-tenancy and onchain privacy groups cannot be used together");
   }
 
   @Test
-  public void privacyMarkerTransactionSigningKeyFileRequiredIfMinGasPriceNonZero() {
-    parseCommand("--privacy-enabled", "--privacy-public-key-file", ENCLAVE_PUBLIC_KEY_PATH);
+  public void
+  privacyMarkerTransactionSigningKeyFileRequiredIfMinGasPriceNonZero() {
+    parseCommand("--privacy-enabled", "--privacy-public-key-file",
+                 ENCLAVE_PUBLIC_KEY_PATH);
 
     assertThat(commandErrorOutput.toString())
         .startsWith(
             "Not a free gas network. --privacy-marker-transaction-signing-key-file must be specified");
   }
 
-  private Path createFakeGenesisFile(final JsonObject jsonGenesis) throws IOException {
+  private Path createFakeGenesisFile(final JsonObject jsonGenesis)
+      throws IOException {
     final Path genesisFile = Files.createTempFile("genesisFile", "");
     Files.write(genesisFile, encodeJsonGenesis(jsonGenesis).getBytes(UTF_8));
     genesisFile.toFile().deleteOnExit();
     return genesisFile;
   }
 
-  private Path createTempFile(final String filename, final String contents) throws IOException {
+  private Path createTempFile(final String filename, final String contents)
+      throws IOException {
     final Path file = Files.createTempFile(filename, "");
     Files.write(file, contents.getBytes(UTF_8));
     file.toFile().deleteOnExit();
     return file;
   }
 
-  private Path createTempFile(final String filename, final byte[] contents) throws IOException {
+  private Path createTempFile(final String filename, final byte[] contents)
+      throws IOException {
     final Path file = Files.createTempFile(filename, "");
     Files.write(file, contents);
     file.toFile().deleteOnExit();
@@ -3130,33 +3297,36 @@ public class BesuCommandTest extends CommandTestAbstract {
   /**
    * Check logger calls
    *
-   * <p>Here we check the calls to logger and not the result of the log line as we don't test the
-   * logger itself but the fact that we call it.
+   * <p>Here we check the calls to logger and not the result of the log line as
+   * we don't test the logger itself but the fact that we call it.
    *
-   * @param dependentOptions the string representing the list of dependent options names
+   * @param dependentOptions the string representing the list of dependent
+   *     options names
    * @param mainOption the main option name
    */
-  private void verifyOptionsConstraintLoggerCall(
-      final String mainOption, final String... dependentOptions) {
+  private void
+  verifyOptionsConstraintLoggerCall(final String mainOption,
+                                    final String... dependentOptions) {
     verify(mockLogger, atLeast(1))
-        .warn(
-            stringArgumentCaptor.capture(),
-            stringArgumentCaptor.capture(),
-            stringArgumentCaptor.capture());
-    assertThat(stringArgumentCaptor.getAllValues().get(0)).isEqualTo(DEPENDENCY_WARNING_MSG);
+        .warn(stringArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+              stringArgumentCaptor.capture());
+    assertThat(stringArgumentCaptor.getAllValues().get(0))
+        .isEqualTo(DEPENDENCY_WARNING_MSG);
 
     for (final String option : dependentOptions) {
       assertThat(stringArgumentCaptor.getAllValues().get(1)).contains(option);
     }
 
-    assertThat(stringArgumentCaptor.getAllValues().get(2)).isEqualTo(mainOption);
+    assertThat(stringArgumentCaptor.getAllValues().get(2))
+        .isEqualTo(mainOption);
   }
 
   @Test
   public void privacyWithFastSyncMustError() {
     parseCommand("--sync-mode=FAST", "--privacy-enabled");
 
-    assertThat(commandErrorOutput.toString()).contains("Fast sync cannot be enabled with privacy.");
+    assertThat(commandErrorOutput.toString())
+        .contains("Fast sync cannot be enabled with privacy.");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
@@ -3164,7 +3334,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void privacyWithPruningMustError() {
     parseCommand("--pruning-enabled", "--privacy-enabled");
 
-    assertThat(commandErrorOutput.toString()).contains("Pruning cannot be enabled with privacy.");
+    assertThat(commandErrorOutput.toString())
+        .contains("Pruning cannot be enabled with privacy.");
     assertThat(commandOutput.toString()).isEmpty();
   }
 
@@ -3194,17 +3365,16 @@ public class BesuCommandTest extends CommandTestAbstract {
             .listeningPort(30304)
             .build();
 
-    Files.write(
-        staticNodesFile.toPath(), ("[\"" + staticNodeURI.toString() + "\"]").getBytes(UTF_8));
-    Files.write(
-        permissioningConfig.toPath(),
-        ("nodes-allowlist=[\"" + allowedNode.toString() + "\"]").getBytes(UTF_8));
+    Files.write(staticNodesFile.toPath(),
+                ("[\"" + staticNodeURI.toString() + "\"]").getBytes(UTF_8));
+    Files.write(permissioningConfig.toPath(),
+                ("nodes-allowlist=[\"" + allowedNode.toString() + "\"]")
+                    .getBytes(UTF_8));
 
-    parseCommand(
-        "--data-path=" + testFolder.getRoot().getPath(),
-        "--bootnodes",
-        "--permissions-nodes-config-file-enabled=true",
-        "--permissions-nodes-config-file=" + permissioningConfig.getPath());
+    parseCommand("--data-path=" + testFolder.getRoot().getPath(), "--bootnodes",
+                 "--permissions-nodes-config-file-enabled=true",
+                 "--permissions-nodes-config-file=" +
+                     permissioningConfig.getPath());
     assertThat(commandErrorOutput.toString())
         .contains(staticNodeURI.toString(), "not in nodes-allowlist");
   }
@@ -3212,10 +3382,12 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void pendingTransactionRetentionPeriod() {
     final int pendingTxRetentionHours = 999;
-    parseCommand("--tx-pool-retention-hours", String.valueOf(pendingTxRetentionHours));
+    parseCommand("--tx-pool-retention-hours",
+                 String.valueOf(pendingTxRetentionHours));
     verify(mockControllerBuilder)
         .transactionPoolConfiguration(transactionPoolConfigCaptor.capture());
-    assertThat(transactionPoolConfigCaptor.getValue().getPendingTxRetentionPeriod())
+    assertThat(
+        transactionPoolConfigCaptor.getValue().getPendingTxRetentionPeriod())
         .isEqualTo(pendingTxRetentionHours);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -3227,7 +3399,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand("--tx-pool-price-bump", priceBump.toString());
     verify(mockControllerBuilder)
         .transactionPoolConfiguration(transactionPoolConfigCaptor.capture());
-    assertThat(transactionPoolConfigCaptor.getValue().getPriceBump()).isEqualTo(priceBump);
+    assertThat(transactionPoolConfigCaptor.getValue().getPriceBump())
+        .isEqualTo(priceBump);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
@@ -3236,9 +3409,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void invalidTansactionPoolPriceBumpShouldFail() {
     parseCommand("--tx-pool-price-bump", "101");
     assertThat(commandErrorOutput.toString())
-        .contains(
-            "Invalid value for option '--tx-pool-price-bump'",
-            "should be a number between 0 and 100 inclusive");
+        .contains("Invalid value for option '--tx-pool-price-bump'",
+                  "should be a number between 0 and 100 inclusive");
   }
 
   @Test
@@ -3247,7 +3419,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand("--rpc-tx-feecap", txFeeCap.toString());
     verify(mockControllerBuilder)
         .transactionPoolConfiguration(transactionPoolConfigCaptor.capture());
-    assertThat(transactionPoolConfigCaptor.getValue().getTxFeeCap()).isEqualTo(txFeeCap);
+    assertThat(transactionPoolConfigCaptor.getValue().getTxFeeCap())
+        .isEqualTo(txFeeCap);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
@@ -3256,7 +3429,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void invalidTansactionPoolTxFeeCapShouldFail() {
     parseCommand("--rpc-tx-feecap", "abcd");
     assertThat(commandErrorOutput.toString())
-        .contains("Invalid value for option '--rpc-tx-feecap'", "cannot convert 'abcd' to Wei");
+        .contains("Invalid value for option '--rpc-tx-feecap'",
+                  "cannot convert 'abcd' to Wei");
   }
 
   @Test
@@ -3278,12 +3452,11 @@ public class BesuCommandTest extends CommandTestAbstract {
     final Path genesisFile = createFakeGenesisFile(GENESIS_VALID_JSON);
     final String updatedConfig =
         Resources.toString(configFile, UTF_8)
-                .replace("/opt/besu/genesis.json", escapeTomlString(genesisFile.toString()))
-                .replace("rpc-http-api", "rpc-http-apis")
-            + System.lineSeparator()
-            + "invalid_option=true"
-            + System.lineSeparator()
-            + "invalid_option2=true";
+            .replace("/opt/besu/genesis.json",
+                     escapeTomlString(genesisFile.toString()))
+            .replace("rpc-http-api", "rpc-http-apis") +
+        System.lineSeparator() + "invalid_option=true" +
+        System.lineSeparator() + "invalid_option2=true";
 
     final Path toml = createTempFile("toml", updatedConfig.getBytes(UTF_8));
 
@@ -3291,7 +3464,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand("--config-file", toml.toString());
 
     assertThat(commandErrorOutput.toString())
-        .contains("Unknown options in TOML configuration file: invalid_option, invalid_option2");
+        .contains(
+            "Unknown options in TOML configuration file: invalid_option, invalid_option2");
   }
 
   @Test
@@ -3308,7 +3482,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    assertThat(targetGasLimitArg.getValue()).isEqualTo(Optional.of(10_000_000L));
+    assertThat(targetGasLimitArg.getValue())
+        .isEqualTo(Optional.of(10_000_000L));
   }
 
   @Test
@@ -3331,12 +3506,14 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void requiredBlocksSetWhenSpecified() {
     final long blockNumber = 8675309L;
-    final String hash = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    final String hash =
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
 
     parseCommand("--required-block=" + blockNumber + "=" + hash);
 
     @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg =
+        ArgumentCaptor.forClass(Map.class);
 
     verify(mockControllerBuilder).requiredBlocks(requiredBlocksArg.capture());
     verify(mockControllerBuilder).build();
@@ -3354,7 +3531,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     parseCommand();
 
     @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg =
+        ArgumentCaptor.forClass(Map.class);
 
     verify(mockControllerBuilder).requiredBlocks(requiredBlocksArg.capture());
     verify(mockControllerBuilder).build();
@@ -3369,13 +3547,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void requiredBlocksMulpleBlocksOneArg() {
     final long block1 = 8675309L;
     final long block2 = 5551212L;
-    final String hash1 = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-    final String hash2 = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    final String hash1 =
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    final String hash2 =
+        "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-    parseCommand("--required-block=" + block1 + "=" + hash1 + "," + block2 + "=" + hash2);
+    parseCommand("--required-block=" + block1 + "=" + hash1 + "," + block2 +
+                 "=" + hash2);
 
     @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg =
+        ArgumentCaptor.forClass(Map.class);
 
     verify(mockControllerBuilder).requiredBlocks(requiredBlocksArg.capture());
     verify(mockControllerBuilder).build();
@@ -3394,14 +3576,17 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void requiredBlocksMultipleBlocksTwoArgs() {
     final long block1 = 8675309L;
     final long block2 = 5551212L;
-    final String hash1 = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-    final String hash2 = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    final String hash1 =
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    final String hash2 =
+        "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-    parseCommand(
-        "--required-block=" + block1 + "=" + hash1, "--required-block=" + block2 + "=" + hash2);
+    parseCommand("--required-block=" + block1 + "=" + hash1,
+                 "--required-block=" + block2 + "=" + hash2);
 
     @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<Long, Hash>> requiredBlocksArg =
+        ArgumentCaptor.forClass(Map.class);
 
     verify(mockControllerBuilder).requiredBlocks(requiredBlocksArg.capture());
     verify(mockControllerBuilder).build();
@@ -3419,12 +3604,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void httpAuthenticationPublicKeyIsConfigured() throws IOException {
     final Path publicKey = Files.createTempFile("public_key", "");
-    parseCommand("--rpc-http-authentication-jwt-public-key-file", publicKey.toString());
+    parseCommand("--rpc-http-authentication-jwt-public-key-file",
+                 publicKey.toString());
 
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getAuthenticationPublicKeyFile().getPath())
+    assertThat(jsonRpcConfigArgumentCaptor.getValue()
+                   .getAuthenticationPublicKeyFile()
+                   .getPath())
         .isEqualTo(publicKey.toString());
   }
 
@@ -3442,12 +3631,16 @@ public class BesuCommandTest extends CommandTestAbstract {
   @Test
   public void wsAuthenticationPublicKeyIsConfigured() throws IOException {
     final Path publicKey = Files.createTempFile("public_key", "");
-    parseCommand("--rpc-ws-authentication-jwt-public-key-file", publicKey.toString());
+    parseCommand("--rpc-ws-authentication-jwt-public-key-file",
+                 publicKey.toString());
 
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    assertThat(wsRpcConfigArgumentCaptor.getValue().getAuthenticationPublicKeyFile().getPath())
+    assertThat(wsRpcConfigArgumentCaptor.getValue()
+                   .getAuthenticationPublicKeyFile()
+                   .getPath())
         .isEqualTo(publicKey.toString());
   }
 
@@ -3464,11 +3657,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void privHttpApisWithPrivacyDisabledLogsWarning() {
-    parseCommand("--privacy-enabled=false", "--rpc-http-api", "PRIV", "--rpc-http-enabled");
+    parseCommand("--privacy-enabled=false", "--rpc-http-api", "PRIV",
+                 "--rpc-http-enabled");
 
     verify(mockRunnerBuilder).build();
     verify(mockLogger)
-        .warn("Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
+        .warn(
+            "Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -3476,11 +3671,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void privWsApisWithPrivacyDisabledLogsWarning() {
-    parseCommand("--privacy-enabled=false", "--rpc-ws-api", "PRIV", "--rpc-ws-enabled");
+    parseCommand("--privacy-enabled=false", "--rpc-ws-api", "PRIV",
+                 "--rpc-ws-enabled");
 
     verify(mockRunnerBuilder).build();
     verify(mockLogger)
-        .warn("Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
+        .warn(
+            "Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -3488,11 +3685,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void eeaHttpApisWithPrivacyDisabledLogsWarning() {
-    parseCommand("--privacy-enabled=false", "--rpc-http-api", "EEA", "--rpc-http-enabled");
+    parseCommand("--privacy-enabled=false", "--rpc-http-api", "EEA",
+                 "--rpc-http-enabled");
 
     verify(mockRunnerBuilder).build();
     verify(mockLogger)
-        .warn("Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
+        .warn(
+            "Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -3500,11 +3699,13 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void eeaWsApisWithPrivacyDisabledLogsWarning() {
-    parseCommand("--privacy-enabled=false", "--rpc-ws-api", "EEA", "--rpc-ws-enabled");
+    parseCommand("--privacy-enabled=false", "--rpc-ws-api", "EEA",
+                 "--rpc-ws-enabled");
 
     verify(mockRunnerBuilder).build();
     verify(mockLogger)
-        .warn("Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
+        .warn(
+            "Privacy is disabled. Cannot use EEA/PRIV API methods when not using Privacy.");
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -3512,33 +3713,41 @@ public class BesuCommandTest extends CommandTestAbstract {
 
   @Test
   public void privEnclaveKeyFileDoesNotExist() {
-    parseCommand("--privacy-enabled=true", "--privacy-public-key-file", "/non/existent/file");
+    parseCommand("--privacy-enabled=true", "--privacy-public-key-file",
+                 "/non/existent/file");
 
     assertThat(commandOutput.toString()).isEmpty();
-    assertThat(commandErrorOutput.toString()).startsWith("Problem with privacy-public-key-file");
+    assertThat(commandErrorOutput.toString())
+        .startsWith("Problem with privacy-public-key-file");
     assertThat(commandErrorOutput.toString()).contains("No such file");
   }
 
   @Test
   public void privEnclaveKeyFileInvalidContentTooShort() throws IOException {
     final Path file = createTempFile("privacy.key", "lkjashdfiluhwelrk");
-    parseCommand("--privacy-enabled=true", "--privacy-public-key-file", file.toString());
+    parseCommand("--privacy-enabled=true", "--privacy-public-key-file",
+                 file.toString());
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
         .startsWith("Contents of privacy-public-key-file invalid");
-    assertThat(commandErrorOutput.toString()).contains("needs to be 44 characters long");
+    assertThat(commandErrorOutput.toString())
+        .contains("needs to be 44 characters long");
   }
 
   @Test
-  public void privEnclaveKeyFileInvalidContentNotValidBase64() throws IOException {
-    final Path file = createTempFile("privacy.key", "l*jashdfillk9ashdfillkjashdfillkjashdfilrtg=");
-    parseCommand("--privacy-enabled=true", "--privacy-public-key-file", file.toString());
+  public void privEnclaveKeyFileInvalidContentNotValidBase64()
+      throws IOException {
+    final Path file = createTempFile(
+        "privacy.key", "l*jashdfillk9ashdfillkjashdfillkjashdfilrtg=");
+    parseCommand("--privacy-enabled=true", "--privacy-public-key-file",
+                 file.toString());
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
         .startsWith("Contents of privacy-public-key-file invalid");
-    assertThat(commandErrorOutput.toString()).contains("Illegal base64 character");
+    assertThat(commandErrorOutput.toString())
+        .contains("Illegal base64 character");
   }
 
   @Test
@@ -3573,7 +3782,8 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void assertThatDefaultHttpTimeoutSecondsWorks() {
     parseCommand();
     assertThat(commandErrorOutput.toString()).isEmpty();
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
     assertThat(jsonRpcConfigArgumentCaptor.getValue().getHttpTimeoutSec())
         .isEqualTo(TimeoutOptions.defaultOptions().getTimeoutSeconds());
@@ -3583,23 +3793,27 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void assertThatHttpTimeoutSecondsWorks() {
     parseCommand("--Xhttp-timeout-seconds=513");
     assertThat(commandErrorOutput.toString()).isEmpty();
-    verify(mockRunnerBuilder).jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .jsonRpcConfiguration(jsonRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
-    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHttpTimeoutSec()).isEqualTo(513);
+    assertThat(jsonRpcConfigArgumentCaptor.getValue().getHttpTimeoutSec())
+        .isEqualTo(513);
   }
 
   @Test
   public void assertThatInvalidHttpTimeoutSecondsFails() {
     parseCommand("--Xhttp-timeout-seconds=abc");
     assertThat(commandErrorOutput.toString())
-        .contains("Invalid value for option", "--Xhttp-timeout-seconds", "abc", "is not a long");
+        .contains("Invalid value for option", "--Xhttp-timeout-seconds", "abc",
+                  "is not a long");
   }
 
   @Test
   public void assertThatDefaultWsTimeoutSecondsWorks() {
     parseCommand();
     assertThat(commandErrorOutput.toString()).isEmpty();
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
     assertThat(wsRpcConfigArgumentCaptor.getValue().getTimeoutSec())
         .isEqualTo(TimeoutOptions.defaultOptions().getTimeoutSeconds());
@@ -3609,15 +3823,18 @@ public class BesuCommandTest extends CommandTestAbstract {
   public void assertThatWsTimeoutSecondsWorks() {
     parseCommand("--Xws-timeout-seconds=11112018");
     assertThat(commandErrorOutput.toString()).isEmpty();
-    verify(mockRunnerBuilder).webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
+    verify(mockRunnerBuilder)
+        .webSocketConfiguration(wsRpcConfigArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
-    assertThat(wsRpcConfigArgumentCaptor.getValue().getTimeoutSec()).isEqualTo(11112018);
+    assertThat(wsRpcConfigArgumentCaptor.getValue().getTimeoutSec())
+        .isEqualTo(11112018);
   }
 
   @Test
   public void assertThatInvalidWsTimeoutSecondsFails() {
     parseCommand("--Xws-timeout-seconds=abc");
     assertThat(commandErrorOutput.toString())
-        .contains("Invalid value for option", "--Xws-timeout-seconds", "abc", "is not a long");
+        .contains("Invalid value for option", "--Xws-timeout-seconds", "abc",
+                  "is not a long");
   }
 }

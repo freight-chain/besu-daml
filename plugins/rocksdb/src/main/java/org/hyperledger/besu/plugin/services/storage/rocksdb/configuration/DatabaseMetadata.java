@@ -1,24 +1,21 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.plugin.services.storage.rocksdb.configuration;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
@@ -27,6 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -44,7 +46,8 @@ public class DatabaseMetadata {
     this(version, Optional.empty());
   }
 
-  public DatabaseMetadata(final int version, final Optional<Integer> privacyVersion) {
+  public DatabaseMetadata(final int version,
+                          final Optional<Integer> privacyVersion) {
     this.version = version;
     this.privacyVersion = privacyVersion;
   }
@@ -53,9 +56,7 @@ public class DatabaseMetadata {
     this(version, Optional.of(privacyVersion));
   }
 
-  public int getVersion() {
-    return version;
-  }
+  public int getVersion() { return version; }
 
   @JsonSetter("privacyVersion")
   public void setPrivacyVersion(final int privacyVersion) {
@@ -68,19 +69,19 @@ public class DatabaseMetadata {
     return privacyVersion.orElse(null);
   }
 
-  public Optional<Integer> maybePrivacyVersion() {
-    return privacyVersion;
-  }
+  public Optional<Integer> maybePrivacyVersion() { return privacyVersion; }
 
-  public static DatabaseMetadata lookUpFrom(final Path dataDir) throws IOException {
-    LOG.info("Lookup database metadata file in data directory: {}", dataDir.toString());
+  public static DatabaseMetadata lookUpFrom(final Path dataDir)
+      throws IOException {
+    LOG.info("Lookup database metadata file in data directory: {}",
+             dataDir.toString());
     return resolveDatabaseMetadata(getDefaultMetadataFile(dataDir));
   }
 
   public void writeToDirectory(final Path dataDir) throws IOException {
     try {
-      final DatabaseMetadata currentMetadata =
-          MAPPER.readValue(getDefaultMetadataFile(dataDir), DatabaseMetadata.class);
+      final DatabaseMetadata currentMetadata = MAPPER.readValue(
+          getDefaultMetadataFile(dataDir), DatabaseMetadata.class);
       if (currentMetadata.maybePrivacyVersion().isPresent()) {
         setPrivacyVersion(currentMetadata.getPrivacyVersion());
       }
@@ -94,8 +95,8 @@ public class DatabaseMetadata {
     return dataDir.resolve(METADATA_FILENAME).toFile();
   }
 
-  private static DatabaseMetadata resolveDatabaseMetadata(final File metadataFile)
-      throws IOException {
+  private static DatabaseMetadata
+  resolveDatabaseMetadata(final File metadataFile) throws IOException {
     DatabaseMetadata databaseMetadata;
     try {
       databaseMetadata = MAPPER.readValue(metadataFile, DatabaseMetadata.class);
@@ -103,7 +104,9 @@ public class DatabaseMetadata {
       databaseMetadata = new DatabaseMetadata(0, 0);
     } catch (JsonProcessingException jpe) {
       throw new IllegalStateException(
-          String.format("Invalid metadata file %s", metadataFile.getAbsolutePath()), jpe);
+          String.format("Invalid metadata file %s",
+                        metadataFile.getAbsolutePath()),
+          jpe);
     }
     return databaseMetadata;
   }

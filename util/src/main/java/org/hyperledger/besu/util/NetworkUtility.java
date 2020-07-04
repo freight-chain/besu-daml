@@ -1,19 +1,23 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.util;
 
+import com.google.common.base.Suppliers;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -21,8 +25,6 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.function.Supplier;
-
-import com.google.common.base.Suppliers;
 
 public class NetworkUtility {
   public static final String INADDR_ANY = "0.0.0.0";
@@ -38,14 +40,14 @@ public class NetworkUtility {
    *
    * @return Returns true if the machine reports having any IPv6 addresses.
    */
-  public static boolean isIPv6Available() {
-    return ipv6Available.get();
-  }
+  public static boolean isIPv6Available() { return ipv6Available.get(); }
 
   /**
-   * The standard for IPv6 availability is if the machine has any IPv6 addresses.
+   * The standard for IPv6 availability is if the machine has any IPv6
+   * addresses.
    *
-   * @return Returns true if any IPv6 addresses are iterable via {@link NetworkInterface}.
+   * @return Returns true if any IPv6 addresses are iterable via {@link
+   *     NetworkInterface}.
    */
   private static Boolean checkIpv6Availability() {
     try {
@@ -68,7 +70,8 @@ public class NetworkUtility {
     return port > 0 && port < 65536;
   }
 
-  public static String urlForSocketAddress(final String scheme, final InetSocketAddress address) {
+  public static String urlForSocketAddress(final String scheme,
+                                           final InetSocketAddress address) {
     String hostName = address.getHostName();
     if (isUnspecifiedAddress(hostName)) {
       hostName = InetAddress.getLoopbackAddress().getHostName();
@@ -84,7 +87,8 @@ public class NetworkUtility {
     if (isUnspecifiedAddress(ipAddress)) {
       return true;
     }
-    return NetworkInterface.getByInetAddress(InetAddress.getByName(ipAddress)) != null;
+    return NetworkInterface.getByInetAddress(
+               InetAddress.getByName(ipAddress)) != null;
   }
 
   public static boolean isUnspecifiedAddress(final String ipAddress) {

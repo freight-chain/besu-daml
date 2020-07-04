@@ -1,19 +1,27 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -26,19 +34,12 @@ import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.core.fees.TransactionGasBudgetCalculator;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 public abstract class AbstractBlockProcessor implements BlockProcessor {
   @FunctionalInterface
   public interface TransactionReceiptFactory {
 
-    TransactionReceipt create(
-        TransactionProcessor.Result result, WorldState worldState, long gasUsed);
+    TransactionReceipt create(TransactionProcessor.Result result,
+                              WorldState worldState, long gasUsed);
   }
 
   private static final Logger LOG = LogManager.getLogger();
@@ -54,14 +55,13 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
 
     private final List<TransactionReceipt> receipts;
 
-    public static AbstractBlockProcessor.Result successful(
-        final List<TransactionReceipt> receipts) {
-      return new AbstractBlockProcessor.Result(true, ImmutableList.copyOf(receipts));
+    public static AbstractBlockProcessor.Result
+    successful(final List<TransactionReceipt> receipts) {
+      return new AbstractBlockProcessor.Result(true,
+                                               ImmutableList.copyOf(receipts));
     }
 
-    public static AbstractBlockProcessor.Result failed() {
-      return FAILED;
-    }
+    public static AbstractBlockProcessor.Result failed() { return FAILED; }
 
     Result(final boolean successful, final List<TransactionReceipt> receipts) {
       this.successful = successful;
@@ -81,7 +81,8 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
 
   private final TransactionProcessor transactionProcessor;
 
-  private final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private final AbstractBlockProcessor
+      .TransactionReceiptFactory transactionReceiptFactory;
 
   final Wei blockReward;
 
@@ -107,12 +108,11 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
   }
 
   @Override
-  public AbstractBlockProcessor.Result processBlock(
-      final Blockchain blockchain,
-      final MutableWorldState worldState,
-      final BlockHeader blockHeader,
-      final List<Transaction> transactions,
-      final List<BlockHeader> ommers) {
+  public AbstractBlockProcessor.Result
+  processBlock(final Blockchain blockchain, final MutableWorldState worldState,
+               final BlockHeader blockHeader,
+               final List<Transaction> transactions,
+               final List<BlockHeader> ommers) {
 
     long gasUsed = 0;
     final List<TransactionReceipt> receipts = new ArrayList<>();
@@ -122,25 +122,20 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
       if (!gasBudgetCalculator.hasBudget(transaction, blockHeader, gasUsed)) {
         LOG.warn(
             "Transaction processing error: transaction gas limit {} exceeds available block budget remaining {}",
-            transaction.getGasLimit(),
-            remainingGasBudget);
+            transaction.getGasLimit(), remainingGasBudget);
         return AbstractBlockProcessor.Result.failed();
       }
 
       final WorldUpdater worldStateUpdater = worldState.updater();
-      final BlockHashLookup blockHashLookup = new BlockHashLookup(blockHeader, blockchain);
+      final BlockHashLookup blockHashLookup =
+          new BlockHashLookup(blockHeader, blockchain);
       final Address miningBeneficiary =
           miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
 
       final TransactionProcessor.Result result =
           transactionProcessor.processTransaction(
-              blockchain,
-              worldStateUpdater,
-              blockHeader,
-              transaction,
-              miningBeneficiary,
-              blockHashLookup,
-              true,
+              blockchain, worldStateUpdater, blockHeader, transaction,
+              miningBeneficiary, blockHashLookup, true,
               TransactionValidationParams.processingBlock());
       if (result.isInvalid()) {
         return AbstractBlockProcessor.Result.failed();
@@ -153,7 +148,8 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
       receipts.add(transactionReceipt);
     }
 
-    if (!rewardCoinbase(worldState, blockHeader, ommers, skipZeroBlockRewards)) {
+    if (!rewardCoinbase(worldState, blockHeader, ommers,
+                        skipZeroBlockRewards)) {
       return AbstractBlockProcessor.Result.failed();
     }
 
@@ -165,9 +161,8 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
     return miningBeneficiaryCalculator;
   }
 
-  abstract boolean rewardCoinbase(
-      final MutableWorldState worldState,
-      final BlockHeader header,
-      final List<BlockHeader> ommers,
-      final boolean skipZeroBlockRewards);
+  abstract boolean rewardCoinbase(final MutableWorldState worldState,
+                                  final BlockHeader header,
+                                  final List<BlockHeader> ommers,
+                                  final boolean skipZeroBlockRewards);
 }

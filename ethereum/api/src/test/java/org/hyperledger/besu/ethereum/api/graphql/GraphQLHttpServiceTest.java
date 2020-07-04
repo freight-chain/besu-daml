@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +19,24 @@ package org.hyperledger.besu.ethereum.api.graphql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import graphql.GraphQL;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import java.net.InetSocketAddress;
+import java.net.URL;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.apache.tuweni.bytes.Bytes;
+import org.assertj.core.api.Assertions;
 import org.hyperledger.besu.ethereum.api.query.BlockWithMetadata;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.api.query.TransactionWithMetadata;
@@ -28,26 +49,6 @@ import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.testutil.BlockTestUtil;
-
-import java.net.InetSocketAddress;
-import java.net.URL;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import graphql.GraphQL;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import org.apache.tuweni.bytes.Bytes;
-import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -65,8 +66,10 @@ public class GraphQLHttpServiceTest {
   private static GraphQLHttpService service;
   private static OkHttpClient client;
   private static String baseUrl;
-  protected static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-  protected static final MediaType GRAPHQL = MediaType.parse("application/graphql; charset=utf-8");
+  protected static final MediaType JSON =
+      MediaType.parse("application/json; charset=utf-8");
+  protected static final MediaType GRAPHQL =
+      MediaType.parse("application/graphql; charset=utf-8");
   private static BlockchainQueries blockchainQueries;
   private static GraphQL graphQL;
   private static GraphQLDataFetcherContextImpl dataFetcherContext;
@@ -83,8 +86,10 @@ public class GraphQLHttpServiceTest {
     miningCoordinatorMock = Mockito.mock(EthHashMiningCoordinator.class);
 
     dataFetcherContext = Mockito.mock(GraphQLDataFetcherContextImpl.class);
-    Mockito.when(dataFetcherContext.getBlockchainQueries()).thenReturn(blockchainQueries);
-    Mockito.when(dataFetcherContext.getMiningCoordinator()).thenReturn(miningCoordinatorMock);
+    Mockito.when(dataFetcherContext.getBlockchainQueries())
+        .thenReturn(blockchainQueries);
+    Mockito.when(dataFetcherContext.getMiningCoordinator())
+        .thenReturn(miningCoordinatorMock);
 
     Mockito.when(dataFetcherContext.getTransactionPool())
         .thenReturn(Mockito.mock(TransactionPool.class));
@@ -93,7 +98,8 @@ public class GraphQLHttpServiceTest {
     final Set<Capability> supportedCapabilities = new HashSet<>();
     supportedCapabilities.add(EthProtocol.ETH62);
     supportedCapabilities.add(EthProtocol.ETH63);
-    final GraphQLDataFetchers dataFetchers = new GraphQLDataFetchers(supportedCapabilities);
+    final GraphQLDataFetchers dataFetchers =
+        new GraphQLDataFetchers(supportedCapabilities);
     graphQL = GraphQLProvider.buildGraphQL(dataFetchers);
     service = createGraphQLHttpService();
     service.start().join();
@@ -103,25 +109,18 @@ public class GraphQLHttpServiceTest {
     baseUrl = service.url() + "/graphql/";
   }
 
-  private static GraphQLHttpService createGraphQLHttpService(final GraphQLConfiguration config)
-      throws Exception {
-    return new GraphQLHttpService(
-        vertx,
-        folder.newFolder().toPath(),
-        config,
-        graphQL,
-        dataFetcherContext,
-        Mockito.mock(EthScheduler.class));
+  private static GraphQLHttpService
+  createGraphQLHttpService(final GraphQLConfiguration config) throws Exception {
+    return new GraphQLHttpService(vertx, folder.newFolder().toPath(), config,
+                                  graphQL, dataFetcherContext,
+                                  Mockito.mock(EthScheduler.class));
   }
 
-  private static GraphQLHttpService createGraphQLHttpService() throws Exception {
+  private static GraphQLHttpService createGraphQLHttpService()
+      throws Exception {
     return new GraphQLHttpService(
-        vertx,
-        folder.newFolder().toPath(),
-        createGraphQLConfig(),
-        graphQL,
-        dataFetcherContext,
-        Mockito.mock(EthScheduler.class));
+        vertx, folder.newFolder().toPath(), createGraphQLConfig(), graphQL,
+        dataFetcherContext, Mockito.mock(EthScheduler.class));
   }
 
   private static GraphQLConfiguration createGraphQLConfig() {
@@ -151,15 +150,15 @@ public class GraphQLHttpServiceTest {
 
   @Test
   public void invalidCallToStart() {
-    service
-        .start()
-        .whenComplete(
-            (unused, exception) -> assertThat(exception).isInstanceOf(IllegalStateException.class));
+    service.start().whenComplete(
+        (unused, exception)
+            -> assertThat(exception).isInstanceOf(IllegalStateException.class));
   }
 
   @Test
   public void http404() throws Exception {
-    try (final Response resp = client.newCall(buildGetRequest("/foo")).execute()) {
+    try (final Response resp =
+             client.newCall(buildGetRequest("/foo")).execute()) {
       Assertions.assertThat(resp.code()).isEqualTo(404);
     }
   }
@@ -167,9 +166,14 @@ public class GraphQLHttpServiceTest {
   @Test
   public void handleEmptyRequestAndRedirect_post() throws Exception {
     final RequestBody body = RequestBody.create("", null);
-    try (final Response resp =
-        client.newCall(new Request.Builder().post(body).url(service.url()).build()).execute()) {
-      Assertions.assertThat(resp.code()).isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT.code());
+    try (
+        final Response resp =
+            client
+                .newCall(
+                    new Request.Builder().post(body).url(service.url()).build())
+                .execute()) {
+      Assertions.assertThat(resp.code())
+          .isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT.code());
       final String location = resp.header("Location");
       Assertions.assertThat(location).isNotEmpty().isNotNull();
       final HttpUrl redirectUrl = resp.request().url().resolve(location);
@@ -178,17 +182,23 @@ public class GraphQLHttpServiceTest {
       redirectBuilder.post(resp.request().body());
       resp.body().close();
       try (final Response redirectResp =
-          client.newCall(redirectBuilder.url(redirectUrl).build()).execute()) {
-        Assertions.assertThat(redirectResp.code()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+               client.newCall(redirectBuilder.url(redirectUrl).build())
+                   .execute()) {
+        Assertions.assertThat(redirectResp.code())
+            .isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
       }
     }
   }
 
   @Test
   public void handleEmptyRequestAndRedirect_get() throws Exception {
-    try (final Response resp =
-        client.newCall(new Request.Builder().get().url(service.url()).build()).execute()) {
-      Assertions.assertThat(resp.code()).isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT.code());
+    try (
+        final Response resp =
+            client
+                .newCall(new Request.Builder().get().url(service.url()).build())
+                .execute()) {
+      Assertions.assertThat(resp.code())
+          .isEqualTo(HttpResponseStatus.PERMANENT_REDIRECT.code());
       final String location = resp.header("Location");
       Assertions.assertThat(location).isNotEmpty().isNotNull();
       final HttpUrl redirectUrl = resp.request().url().resolve(location);
@@ -197,8 +207,10 @@ public class GraphQLHttpServiceTest {
       redirectBuilder.get();
       // resp.body().close();
       try (final Response redirectResp =
-          client.newCall(redirectBuilder.url(redirectUrl).build()).execute()) {
-        Assertions.assertThat(redirectResp.code()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+               client.newCall(redirectBuilder.url(redirectUrl).build())
+                   .execute()) {
+        Assertions.assertThat(redirectResp.code())
+            .isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
       }
     }
   }
@@ -207,7 +219,8 @@ public class GraphQLHttpServiceTest {
   public void handleInvalidQuerySchema() throws Exception {
     final RequestBody body = RequestBody.create("{gasPrice1}", GRAPHQL);
 
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
       final JsonObject json = new JsonObject(resp.body().string());
       testHelper.assertValidGraphQLError(json);
       Assertions.assertThat(resp.code()).isEqualTo(400);
@@ -217,9 +230,11 @@ public class GraphQLHttpServiceTest {
   @Test
   public void query_get() throws Exception {
     final Wei price = Wei.of(16);
-    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice()).thenReturn(price);
+    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice())
+        .thenReturn(price);
 
-    try (final Response resp = client.newCall(buildGetRequest("?query={gasPrice}")).execute()) {
+    try (final Response resp =
+             client.newCall(buildGetRequest("?query={gasPrice}")).execute()) {
       Assertions.assertThat(resp.code()).isEqualTo(200);
       final JsonObject json = new JsonObject(resp.body().string());
       testHelper.assertValidGraphQLResult(json);
@@ -230,12 +245,16 @@ public class GraphQLHttpServiceTest {
 
   @Test
   public void query_jsonPost() throws Exception {
-    final RequestBody body = RequestBody.create("{\"query\":\"{gasPrice}\"}", JSON);
+    final RequestBody body =
+        RequestBody.create("{\"query\":\"{gasPrice}\"}", JSON);
     final Wei price = Wei.of(16);
-    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice()).thenReturn(price);
+    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice())
+        .thenReturn(price);
 
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
-      Assertions.assertThat(resp.code()).isEqualTo(200); // Check general format of result
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
+      Assertions.assertThat(resp.code())
+          .isEqualTo(200); // Check general format of result
       final JsonObject json = new JsonObject(resp.body().string());
       testHelper.assertValidGraphQLResult(json);
       final String result = json.getJsonObject("data").getString("gasPrice");
@@ -247,10 +266,13 @@ public class GraphQLHttpServiceTest {
   public void query_graphqlPost() throws Exception {
     final RequestBody body = RequestBody.create("{gasPrice}", GRAPHQL);
     final Wei price = Wei.of(16);
-    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice()).thenReturn(price);
+    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice())
+        .thenReturn(price);
 
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
-      Assertions.assertThat(resp.code()).isEqualTo(200); // Check general format of result
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
+      Assertions.assertThat(resp.code())
+          .isEqualTo(200); // Check general format of result
       final JsonObject json = new JsonObject(resp.body().string());
       testHelper.assertValidGraphQLResult(json);
       final String result = json.getJsonObject("data").getString("gasPrice");
@@ -262,10 +284,13 @@ public class GraphQLHttpServiceTest {
   public void query_untypedPost() throws Exception {
     final RequestBody body = RequestBody.create("{gasPrice}", null);
     final Wei price = Wei.of(16);
-    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice()).thenReturn(price);
+    Mockito.when(miningCoordinatorMock.getMinTransactionGasPrice())
+        .thenReturn(price);
 
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
-      Assertions.assertThat(resp.code()).isEqualTo(200); // Check general format of result
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
+      Assertions.assertThat(resp.code())
+          .isEqualTo(200); // Check general format of result
       final JsonObject json = new JsonObject(resp.body().string());
       testHelper.assertValidGraphQLResult(json);
       final String result = json.getJsonObject("data").getString("gasPrice");
@@ -276,7 +301,8 @@ public class GraphQLHttpServiceTest {
   @Test
   public void getSocketAddressWhenActive() {
     final InetSocketAddress socketAddress = service.socketAddress();
-    Assertions.assertThat("127.0.0.1").isEqualTo(socketAddress.getAddress().getHostAddress());
+    Assertions.assertThat("127.0.0.1")
+        .isEqualTo(socketAddress.getAddress().getHostAddress());
     Assertions.assertThat(socketAddress.getPort() > 0).isTrue();
   }
 
@@ -285,7 +311,8 @@ public class GraphQLHttpServiceTest {
     final GraphQLHttpService service = createGraphQLHttpService();
 
     final InetSocketAddress socketAddress = service.socketAddress();
-    Assertions.assertThat("0.0.0.0").isEqualTo(socketAddress.getAddress().getHostAddress());
+    Assertions.assertThat("0.0.0.0").isEqualTo(
+        socketAddress.getAddress().getHostAddress());
     Assertions.assertThat(0).isEqualTo(socketAddress.getPort());
     Assertions.assertThat("").isEqualTo(service.url());
   }
@@ -299,7 +326,8 @@ public class GraphQLHttpServiceTest {
 
     try {
       final InetSocketAddress socketAddress = service.socketAddress();
-      Assertions.assertThat("0.0.0.0").isEqualTo(socketAddress.getAddress().getHostAddress());
+      Assertions.assertThat("0.0.0.0").isEqualTo(
+          socketAddress.getAddress().getHostAddress());
       Assertions.assertThat(socketAddress.getPort() > 0).isTrue();
       Assertions.assertThat(!service.url().contains("0.0.0.0")).isTrue();
     } finally {
@@ -312,8 +340,10 @@ public class GraphQLHttpServiceTest {
 
     final RequestBody body = RequestBody.create("{gasPrice}", GRAPHQL);
 
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
-      Assertions.assertThat(resp.header("Content-Type")).isEqualTo(JSON.toString());
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
+      Assertions.assertThat(resp.header("Content-Type"))
+          .isEqualTo(JSON.toString());
     }
   }
 
@@ -332,15 +362,19 @@ public class GraphQLHttpServiceTest {
     Mockito.when(block.getOmmers()).thenReturn(list);
     Mockito.when(list.size()).thenReturn(uncleCount);
 
-    final String query = "{block(hash:\"" + blockHash.toString() + "\") {ommerCount}}";
+    final String query =
+        "{block(hash:\"" + blockHash.toString() + "\") {ommerCount}}";
 
     final RequestBody body = RequestBody.create(query, GRAPHQL);
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
       Assertions.assertThat(resp.code()).isEqualTo(200);
       final String jsonStr = resp.body().string();
       final JsonObject json = new JsonObject(jsonStr);
       testHelper.assertValidGraphQLResult(json);
-      final int result = json.getJsonObject("data").getJsonObject("block").getInteger("ommerCount");
+      final int result =
+          json.getJsonObject("data").getJsonObject("block").getInteger(
+              "ommerCount");
       Assertions.assertThat(result).isEqualTo(uncleCount);
     }
   }
@@ -361,12 +395,15 @@ public class GraphQLHttpServiceTest {
     final String query = "{block(number:\"3\") {ommerCount}}";
 
     final RequestBody body = RequestBody.create(query, GRAPHQL);
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
       Assertions.assertThat(resp.code()).isEqualTo(200);
       final String jsonStr = resp.body().string();
       final JsonObject json = new JsonObject(jsonStr);
       testHelper.assertValidGraphQLResult(json);
-      final int result = json.getJsonObject("data").getJsonObject("block").getInteger("ommerCount");
+      final int result =
+          json.getJsonObject("data").getJsonObject("block").getInteger(
+              "ommerCount");
       Assertions.assertThat(result).isEqualTo(uncleCount);
     }
   }
@@ -379,19 +416,23 @@ public class GraphQLHttpServiceTest {
         Mockito.mock(BlockWithMetadata.class);
     @SuppressWarnings("unchecked")
     final List<Hash> list = Mockito.mock(List.class);
-    Mockito.when(blockchainQueries.latestBlock()).thenReturn(Optional.of(block));
+    Mockito.when(blockchainQueries.latestBlock())
+        .thenReturn(Optional.of(block));
     Mockito.when(block.getOmmers()).thenReturn(list);
     Mockito.when(list.size()).thenReturn(uncleCount);
 
     final String query = "{block {ommerCount}}";
 
     final RequestBody body = RequestBody.create(query, GRAPHQL);
-    try (final Response resp = client.newCall(buildPostRequest(body)).execute()) {
+    try (final Response resp =
+             client.newCall(buildPostRequest(body)).execute()) {
       Assertions.assertThat(resp.code()).isEqualTo(200);
       final String jsonStr = resp.body().string();
       final JsonObject json = new JsonObject(jsonStr);
       testHelper.assertValidGraphQLResult(json);
-      final int result = json.getJsonObject("data").getJsonObject("block").getInteger("ommerCount");
+      final int result =
+          json.getJsonObject("data").getJsonObject("block").getInteger(
+              "ommerCount");
       Assertions.assertThat(result).isEqualTo(uncleCount);
     }
   }

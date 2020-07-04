@@ -1,14 +1,17 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
@@ -29,11 +35,6 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcRespon
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.permissioning.AccountLocalConfigPermissioningController;
 import org.hyperledger.besu.ethereum.permissioning.AllowlistOperationResult;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,7 +50,8 @@ public class PermRemoveAccountsFromWhitelistTest {
 
   @Before
   public void before() {
-    method = new PermRemoveAccountsFromWhitelist(java.util.Optional.of(accountWhitelist));
+    method = new PermRemoveAccountsFromWhitelist(
+        java.util.Optional.of(accountWhitelist));
   }
 
   @Test
@@ -71,49 +73,54 @@ public class PermRemoveAccountsFromWhitelistTest {
 
   @Test
   public void whenAccountIsInvalidShouldReturnInvalidAccountErrorResponse() {
-    JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(null, JsonRpcError.ACCOUNT_ALLOWLIST_INVALID_ENTRY);
+    JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        null, JsonRpcError.ACCOUNT_ALLOWLIST_INVALID_ENTRY);
     when(accountWhitelist.removeAccounts(any()))
         .thenReturn(AllowlistOperationResult.ERROR_INVALID_ENTRY);
 
-    JsonRpcResponse actualResponse = method.response(request(new ArrayList<>()));
+    JsonRpcResponse actualResponse =
+        method.response(request(new ArrayList<>()));
 
     assertThat(actualResponse).isEqualToComparingFieldByField(expectedResponse);
   }
 
   @Test
   public void whenAccountIsAbsentShouldReturnAbsentAccountErrorResponse() {
-    JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(null, JsonRpcError.ACCOUNT_ALLOWLIST_ABSENT_ENTRY);
+    JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        null, JsonRpcError.ACCOUNT_ALLOWLIST_ABSENT_ENTRY);
     when(accountWhitelist.removeAccounts(any()))
         .thenReturn(AllowlistOperationResult.ERROR_ABSENT_ENTRY);
 
-    JsonRpcResponse actualResponse = method.response(request(new ArrayList<>()));
+    JsonRpcResponse actualResponse =
+        method.response(request(new ArrayList<>()));
 
     assertThat(actualResponse).isEqualToComparingFieldByField(expectedResponse);
   }
 
   @Test
-  public void whenInputHasDuplicatedAccountsShouldReturnDuplicatedEntryErrorResponse() {
-    JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(null, JsonRpcError.ACCOUNT_ALLOWLIST_DUPLICATED_ENTRY);
+  public void
+  whenInputHasDuplicatedAccountsShouldReturnDuplicatedEntryErrorResponse() {
+    JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        null, JsonRpcError.ACCOUNT_ALLOWLIST_DUPLICATED_ENTRY);
     when(accountWhitelist.removeAccounts(any()))
         .thenReturn(AllowlistOperationResult.ERROR_DUPLICATED_ENTRY);
 
-    JsonRpcResponse actualResponse = method.response(request(new ArrayList<>()));
+    JsonRpcResponse actualResponse =
+        method.response(request(new ArrayList<>()));
 
     assertThat(actualResponse).isEqualToComparingFieldByField(expectedResponse);
   }
 
   @Test
   public void whenEmptyListOnRequestShouldReturnEmptyEntryErrorResponse() {
-    JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(null, JsonRpcError.ACCOUNT_ALLOWLIST_EMPTY_ENTRY);
+    JsonRpcResponse expectedResponse = new JsonRpcErrorResponse(
+        null, JsonRpcError.ACCOUNT_ALLOWLIST_EMPTY_ENTRY);
 
     when(accountWhitelist.removeAccounts(eq(new ArrayList<>())))
         .thenReturn(AllowlistOperationResult.ERROR_EMPTY_ENTRY);
 
-    JsonRpcResponse actualResponse = method.response(request(new ArrayList<>()));
+    JsonRpcResponse actualResponse =
+        method.response(request(new ArrayList<>()));
 
     assertThat(actualResponse).isEqualToComparingFieldByField(expectedResponse);
   }
@@ -121,8 +128,8 @@ public class PermRemoveAccountsFromWhitelistTest {
   @Test
   public void whenEmptyParamOnRequestShouldThrowInvalidJsonRpcException() {
     JsonRpcRequestContext request =
-        new JsonRpcRequestContext(
-            new JsonRpcRequest("2.0", "perm_removeAccountsFromWhitelist", new Object[] {}));
+        new JsonRpcRequestContext(new JsonRpcRequest(
+            "2.0", "perm_removeAccountsFromWhitelist", new Object[] {}));
 
     final Throwable thrown = catchThrowable(() -> method.response(request));
     assertThat(thrown)
@@ -132,7 +139,7 @@ public class PermRemoveAccountsFromWhitelistTest {
   }
 
   private JsonRpcRequestContext request(final List<String> accounts) {
-    return new JsonRpcRequestContext(
-        new JsonRpcRequest("2.0", "perm_removeAccountsFromWhitelist", new Object[] {accounts}));
+    return new JsonRpcRequestContext(new JsonRpcRequest(
+        "2.0", "perm_removeAccountsFromWhitelist", new Object[] {accounts}));
   }
 }

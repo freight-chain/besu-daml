@@ -1,31 +1,32 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket;
 
-import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
-import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
-
+import com.google.common.base.MoreObjects;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import com.google.common.base.MoreObjects;
+import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
+import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
 
 public class WebSocketConfiguration {
   public static final String DEFAULT_WEBSOCKET_HOST = "127.0.0.1";
@@ -55,47 +56,30 @@ public class WebSocketConfiguration {
 
   private WebSocketConfiguration() {}
 
-  public boolean isEnabled() {
-    return enabled;
-  }
+  public boolean isEnabled() { return enabled; }
 
-  public void setEnabled(final boolean enabled) {
-    this.enabled = enabled;
-  }
+  public void setEnabled(final boolean enabled) { this.enabled = enabled; }
 
-  public void setHost(final String host) {
-    this.host = host;
-  }
+  public void setHost(final String host) { this.host = host; }
 
-  public String getHost() {
-    return host;
-  }
+  public String getHost() { return host; }
 
-  public void setPort(final int port) {
-    this.port = port;
-  }
+  public void setPort(final int port) { this.port = port; }
 
-  public int getPort() {
-    return port;
-  }
+  public int getPort() { return port; }
 
-  public Collection<RpcApi> getRpcApis() {
-    return rpcApis;
-  }
+  public Collection<RpcApi> getRpcApis() { return rpcApis; }
 
-  public void setRpcApis(final List<RpcApi> rpcApis) {
-    this.rpcApis = rpcApis;
-  }
+  public void setRpcApis(final List<RpcApi> rpcApis) { this.rpcApis = rpcApis; }
 
-  public boolean isAuthenticationEnabled() {
-    return authenticationEnabled;
-  }
+  public boolean isAuthenticationEnabled() { return authenticationEnabled; }
 
   public void setAuthenticationEnabled(final boolean authenticationEnabled) {
     this.authenticationEnabled = authenticationEnabled;
   }
 
-  public void setAuthenticationCredentialsFile(final String authenticationCredentialsFile) {
+  public void
+  setAuthenticationCredentialsFile(final String authenticationCredentialsFile) {
     this.authenticationCredentialsFile = authenticationCredentialsFile;
   }
 
@@ -115,13 +99,12 @@ public class WebSocketConfiguration {
     return authenticationPublicKeyFile;
   }
 
-  public void setAuthenticationPublicKeyFile(final File authenticationPublicKeyFile) {
+  public void
+  setAuthenticationPublicKeyFile(final File authenticationPublicKeyFile) {
     this.authenticationPublicKeyFile = authenticationPublicKeyFile;
   }
 
-  public long getTimeoutSec() {
-    return timeoutSec;
-  }
+  public long getTimeoutSec() { return timeoutSec; }
 
   public void setTimeoutSec(final long timeoutSec) {
     this.timeoutSec = timeoutSec;
@@ -135,30 +118,24 @@ public class WebSocketConfiguration {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final WebSocketConfiguration that = (WebSocketConfiguration) o;
-    return enabled == that.enabled
-        && port == that.port
-        && authenticationEnabled == that.authenticationEnabled
-        && Objects.equals(host, that.host)
-        && Objects.equals(rpcApis, that.rpcApis)
-        && Objects.equals(authenticationCredentialsFile, that.authenticationCredentialsFile)
-        && Objects.equals(hostsAllowlist, that.hostsAllowlist)
-        && Objects.equals(authenticationPublicKeyFile, that.authenticationPublicKeyFile)
-        && timeoutSec == that.timeoutSec;
+    final WebSocketConfiguration that = (WebSocketConfiguration)o;
+    return enabled == that.enabled && port == that.port &&
+        authenticationEnabled == that.authenticationEnabled &&
+        Objects.equals(host, that.host) &&
+        Objects.equals(rpcApis, that.rpcApis) &&
+        Objects.equals(authenticationCredentialsFile,
+                       that.authenticationCredentialsFile) &&
+        Objects.equals(hostsAllowlist, that.hostsAllowlist) &&
+        Objects.equals(authenticationPublicKeyFile,
+                       that.authenticationPublicKeyFile) &&
+        timeoutSec == that.timeoutSec;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        enabled,
-        port,
-        host,
-        rpcApis,
-        authenticationEnabled,
-        authenticationCredentialsFile,
-        hostsAllowlist,
-        authenticationPublicKeyFile,
-        timeoutSec);
+    return Objects.hash(enabled, port, host, rpcApis, authenticationEnabled,
+                        authenticationCredentialsFile, hostsAllowlist,
+                        authenticationPublicKeyFile, timeoutSec);
   }
 
   @Override

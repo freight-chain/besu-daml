@@ -1,19 +1,26 @@
 /*
  * Copyright ConsenSys AG.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods;
 
+import java.math.BigInteger;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Set;
 import org.hyperledger.besu.ethereum.api.jsonrpc.LatestNonceProvider;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.EnclavePublicKeyProvider;
@@ -33,11 +40,6 @@ import org.hyperledger.besu.ethereum.privacy.PrivateTransactionSimulator;
 import org.hyperledger.besu.ethereum.privacy.markertransaction.FixedKeySigningPrivateMarkerTransactionFactory;
 import org.hyperledger.besu.ethereum.privacy.markertransaction.PrivateMarkerTransactionFactory;
 import org.hyperledger.besu.ethereum.privacy.markertransaction.RandomSigningPrivateMarkerTransactionFactory;
-
-import java.math.BigInteger;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Set;
 
 public class PrivateWebSocketMethodsFactory {
 
@@ -61,25 +63,21 @@ public class PrivateWebSocketMethodsFactory {
   }
 
   public Collection<JsonRpcMethod> methods() {
-    final SubscriptionRequestMapper subscriptionRequestMapper = new SubscriptionRequestMapper();
+    final SubscriptionRequestMapper subscriptionRequestMapper =
+        new SubscriptionRequestMapper();
     final EnclavePublicKeyProvider enclavePublicKeyProvider =
         EnclavePublicKeyProvider.build(privacyParameters);
     final PrivacyController privacyController = createPrivacyController();
 
     return Set.of(
-        new PrivSubscribe(
-            subscriptionManager,
-            subscriptionRequestMapper,
-            privacyController,
-            enclavePublicKeyProvider),
-        new PrivUnsubscribe(
-            subscriptionManager,
-            subscriptionRequestMapper,
-            privacyController,
-            enclavePublicKeyProvider));
+        new PrivSubscribe(subscriptionManager, subscriptionRequestMapper,
+                          privacyController, enclavePublicKeyProvider),
+        new PrivUnsubscribe(subscriptionManager, subscriptionRequestMapper,
+                            privacyController, enclavePublicKeyProvider));
   }
 
-  private PrivateMarkerTransactionFactory createPrivateMarkerTransactionFactory() {
+  private PrivateMarkerTransactionFactory
+  createPrivateMarkerTransactionFactory() {
 
     final Address privateContractAddress =
         Address.privacyPrecompiled(privacyParameters.getPrivacyAddress());
@@ -87,34 +85,32 @@ public class PrivateWebSocketMethodsFactory {
     if (privacyParameters.getSigningKeyPair().isPresent()) {
       return new FixedKeySigningPrivateMarkerTransactionFactory(
           privateContractAddress,
-          new LatestNonceProvider(blockchainQueries, transactionPool.getPendingTransactions()),
+          new LatestNonceProvider(blockchainQueries,
+                                  transactionPool.getPendingTransactions()),
           privacyParameters.getSigningKeyPair().get());
     }
-    return new RandomSigningPrivateMarkerTransactionFactory(privateContractAddress);
+    return new RandomSigningPrivateMarkerTransactionFactory(
+        privateContractAddress);
   }
 
   private PrivacyController createPrivacyController() {
     final Optional<BigInteger> chainId = protocolSchedule.getChainId();
     final DefaultPrivacyController defaultPrivacyController =
         new DefaultPrivacyController(
-            blockchainQueries.getBlockchain(),
-            privacyParameters,
-            chainId,
+            blockchainQueries.getBlockchain(), privacyParameters, chainId,
             createPrivateMarkerTransactionFactory(),
-            createPrivateTransactionSimulator(),
-            createPrivateNonceProvider(),
+            createPrivateTransactionSimulator(), createPrivateNonceProvider(),
             privacyParameters.getPrivateWorldStateReader());
     return privacyParameters.isMultiTenancyEnabled()
-        ? new MultiTenancyPrivacyController(
-            defaultPrivacyController, chainId, privacyParameters.getEnclave())
+        ? new MultiTenancyPrivacyController(defaultPrivacyController, chainId,
+                                            privacyParameters.getEnclave())
         : defaultPrivacyController;
   }
 
   private PrivateTransactionSimulator createPrivateTransactionSimulator() {
     return new PrivateTransactionSimulator(
         blockchainQueries.getBlockchain(),
-        blockchainQueries.getWorldStateArchive(),
-        protocolSchedule,
+        blockchainQueries.getWorldStateArchive(), protocolSchedule,
         privacyParameters);
   }
 
