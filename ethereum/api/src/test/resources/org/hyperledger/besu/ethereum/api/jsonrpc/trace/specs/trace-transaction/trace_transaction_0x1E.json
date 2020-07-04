@@ -47,9 +47,7 @@
           "blockNumber": 30,
           "error": "Out of gas",
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xbc7cedf9a139bc6a16959e1463a56ef5bdc07731e384d2a1c27e7828b563d594",
           "transactionPosition": 0,
           "type": "call"
@@ -67,9 +65,7 @@
           "blockNumber": 30,
           "error": "Out of gas",
           "subtraces": 0,
-          "traceAddress": [
-            1
-          ],
+          "traceAddress": [1],
           "transactionHash": "0xbc7cedf9a139bc6a16959e1463a56ef5bdc07731e384d2a1c27e7828b563d594",
           "transactionPosition": 0,
           "type": "call"

@@ -2,9 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_block",
-    "params": [
-      "0x6"
-    ],
+    "params": ["0x6"],
     "id": 415
   },
   "response": {
@@ -41,9 +39,7 @@
         "blockNumber": 6,
         "result": null,
         "subtraces": 0,
-        "traceAddress": [
-          0
-        ],
+        "traceAddress": [0],
         "transactionHash": "0x91eeabc671e2dd2b1c8ddebb46ba59e8cb3e7d189f80bcc868a9787728c6e59e",
         "transactionPosition": 0,
         "type": "suicide"

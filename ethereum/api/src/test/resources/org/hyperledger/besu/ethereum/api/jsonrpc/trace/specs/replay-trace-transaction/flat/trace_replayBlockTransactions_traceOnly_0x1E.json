@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x1E",
-      [
-        "trace"
-      ]
-    ],
+    "params": ["0x1E", ["trace"]],
     "id": 415
   },
   "response": {
@@ -45,9 +40,7 @@
             },
             "error": "Out of gas",
             "subtraces": 0,
-            "traceAddress": [
-              0
-            ],
+            "traceAddress": [0],
             "type": "call"
           },
           {
@@ -61,9 +54,7 @@
             },
             "error": "Out of gas",
             "subtraces": 0,
-            "traceAddress": [
-              1
-            ],
+            "traceAddress": [1],
             "type": "call"
           }
         ],

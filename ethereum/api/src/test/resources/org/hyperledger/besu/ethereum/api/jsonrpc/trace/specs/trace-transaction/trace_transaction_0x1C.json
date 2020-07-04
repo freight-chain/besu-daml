@@ -44,9 +44,7 @@
           "blockNumber": 28,
           "result": null,
           "subtraces": 0,
-          "traceAddress": [
-            0
-          ],
+          "traceAddress": [0],
           "transactionHash": "0xbe1b55619f540ea8a7d7e9330ea642a195afe0d6d60ced6f463da67b46d3f503",
           "transactionPosition": 0,
           "type": "suicide"
