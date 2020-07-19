@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x8",
-      [
-        "trace"
-      ]
-    ],
+    "params": ["0x8", ["trace"]],
     "id": 415
   },
   "response": {
@@ -48,9 +43,7 @@
               "output": "0xf000000000000000000000000000000000000000000000000000000000000002"
             },
             "subtraces": 0,
-            "traceAddress": [
-              0
-            ],
+            "traceAddress": [0],
             "type": "call"
           }
         ],

@@ -2,14 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x10",
-      [
-        "trace",
-        "vmTrace",
-        "stateDiff"
-      ]
-    ],
+    "params": ["0x10", ["trace", "vmTrace", "stateDiff"]],
     "id": 415
   },
   "response": {
@@ -70,9 +63,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16756199
               },
@@ -137,9 +128,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0x1"
-                ],
+                "push": ["0x1"],
                 "store": null,
                 "used": 16756199
               },
@@ -204,9 +193,7 @@
               "cost": 3,
               "ex": {
                 "mem": null,
-                "push": [
-                  "0xff"
-                ],
+                "push": ["0xff"],
                 "store": null,
                 "used": 16756199
               },

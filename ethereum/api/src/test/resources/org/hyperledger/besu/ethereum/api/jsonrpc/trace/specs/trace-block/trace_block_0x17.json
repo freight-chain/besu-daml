@@ -2,9 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_block",
-    "params": [
-      "0x17"
-    ],
+    "params": ["0x17"],
     "id": 415
   },
   "response": {
@@ -47,9 +45,7 @@
           "output": "0x"
         },
         "subtraces": 0,
-        "traceAddress": [
-          0
-        ],
+        "traceAddress": [0],
         "transactionHash": "0xea357b8947f2aa968eba99ac995f07dbd5d006dc2eb4c2f1a2d4f4278a150373",
         "transactionPosition": 0,
         "type": "call"

@@ -2,12 +2,7 @@
   "request": {
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
-    "params": [
-      "0x14",
-      [
-        "trace"
-      ]
-    ],
+    "params": ["0x14", ["trace"]],
     "id": 415
   },
   "response": {
@@ -48,9 +43,7 @@
               "gasUsed": "0xa10e"
             },
             "subtraces": 0,
-            "traceAddress": [
-              0
-            ],
+            "traceAddress": [0],
             "type": "create"
           }
         ],
@@ -92,9 +85,7 @@
               "gasUsed": "0xa046"
             },
             "subtraces": 0,
-            "traceAddress": [
-              0
-            ],
+            "traceAddress": [0],
             "type": "create"
           }
         ],
