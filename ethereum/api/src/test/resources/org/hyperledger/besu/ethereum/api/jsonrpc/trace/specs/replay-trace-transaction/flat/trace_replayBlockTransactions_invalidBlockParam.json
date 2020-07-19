@@ -5,7 +5,9 @@
     "method": "trace_replayBlockTransactions",
     "params": [
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      ["trace"]
+      [
+        "trace"
+      ]
     ]
   },
   "response": {
