@@ -25,12 +25,12 @@ import org.junit.Test;
 public final class MainnetBlockHeaderValidatorTest {
 
   @SuppressWarnings("unchecked")
-  private final ProtocolContext<Void> protocolContext = mock(ProtocolContext.class);
+  private final ProtocolContext protocolContext = mock(ProtocolContext.class);
 
   @Test
   public void validHeaderFrontier() throws Exception {
-    final BlockHeaderValidator<Void> headerValidator =
-        MainnetBlockHeaderValidator.create()
+    final BlockHeaderValidator headerValidator =
+        MainnetBlockHeaderValidator.create(PoWHasher.ETHASH_LIGHT)
             .difficultyCalculator(MainnetDifficultyCalculators.FRONTIER)
             .build();
     assertThat(
@@ -44,8 +44,8 @@ public final class MainnetBlockHeaderValidatorTest {
 
   @Test
   public void validHeaderHomestead() throws Exception {
-    final BlockHeaderValidator<Void> headerValidator =
-        MainnetBlockHeaderValidator.create()
+    final BlockHeaderValidator headerValidator =
+        MainnetBlockHeaderValidator.create(PoWHasher.ETHASH_LIGHT)
             .difficultyCalculator(MainnetDifficultyCalculators.HOMESTEAD)
             .build();
     assertThat(
@@ -59,8 +59,8 @@ public final class MainnetBlockHeaderValidatorTest {
 
   @Test
   public void invalidParentHash() throws Exception {
-    final BlockHeaderValidator<Void> headerValidator =
-        MainnetBlockHeaderValidator.create()
+    final BlockHeaderValidator headerValidator =
+        MainnetBlockHeaderValidator.create(PoWHasher.ETHASH_LIGHT)
             .difficultyCalculator(MainnetDifficultyCalculators.FRONTIER)
             .build();
     assertThat(
@@ -74,8 +74,8 @@ public final class MainnetBlockHeaderValidatorTest {
 
   @Test
   public void validHeaderByzantium() throws Exception {
-    final BlockHeaderValidator<Void> headerValidator =
-        MainnetBlockHeaderValidator.create()
+    final BlockHeaderValidator headerValidator =
+        MainnetBlockHeaderValidator.create(PoWHasher.ETHASH_LIGHT)
             .difficultyCalculator(MainnetDifficultyCalculators.BYZANTIUM)
             .build();
     assertThat(

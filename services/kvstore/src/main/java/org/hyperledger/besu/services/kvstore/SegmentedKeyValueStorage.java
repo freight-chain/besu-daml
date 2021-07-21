@@ -33,6 +33,8 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
   S getSegmentIdentifierByName(SegmentIdentifier segment);
 
   /**
+   * Get the value from the associated segment and key.
+   *
    * @param segment the segment
    * @param key Index into persistent data repository.
    * @return The value persisted at the key index.
@@ -57,18 +59,6 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
    * @return A stream of all keys in the specified segment.
    */
   Stream<byte[]> streamKeys(final S segmentHandle);
-
-  /**
-   * Performs an evaluation against each key in the store, keeping the entries that pass, removing
-   * those that fail.
-   *
-   * @param segmentHandle The segment handle whose keys we want to stream.
-   * @param retainCondition predicate to evaluate each key against, unless the result is {@code
-   *     null}, both the key and associated value must be removed.
-   * @return the number of keys removed.
-   */
-  long removeAllKeysUnless(final S segmentHandle, Predicate<byte[]> retainCondition)
-      throws StorageException;
 
   /**
    * Delete the value corresponding to the given key in the given segment if a write lock can be

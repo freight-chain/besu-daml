@@ -19,8 +19,6 @@ import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
-
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,16 +36,29 @@ public class GenesisConfigOptionsTest {
   }
 
   @Test
+  public void shouldUseKeccak256WhenKeccak256InConfig() {
+    final GenesisConfigOptions config = fromConfigOptions(singletonMap("keccak256", emptyMap()));
+    assertThat(config.isKeccak256()).isTrue();
+    assertThat(config.getConsensusEngine()).isEqualTo("keccak256");
+  }
+
+  @Test
   public void shouldNotUseEthHashIfEthHashNotPresent() {
     final GenesisConfigOptions config = fromConfigOptions(emptyMap());
     assertThat(config.isEthHash()).isFalse();
   }
 
   @Test
+  public void shouldNotUseKeccak256IfEthHashNotPresent() {
+    final GenesisConfigOptions config = fromConfigOptions(emptyMap());
+    assertThat(config.isKeccak256()).isFalse();
+  }
+
+  @Test
   public void shouldUseIbftLegacyWhenIbftInConfig() {
     final GenesisConfigOptions config = fromConfigOptions(singletonMap("ibft", emptyMap()));
     assertThat(config.isIbftLegacy()).isTrue();
-    assertThat(config.getIbftLegacyConfigOptions()).isNotSameAs(IbftConfigOptions.DEFAULT);
+    assertThat(config.getIbftLegacyConfigOptions()).isNotSameAs(BftConfigOptions.DEFAULT);
     assertThat(config.getConsensusEngine()).isEqualTo("ibft");
   }
 
@@ -55,7 +66,7 @@ public class GenesisConfigOptionsTest {
   public void shouldNotUseIbftLegacyIfIbftNotPresent() {
     final GenesisConfigOptions config = fromConfigOptions(emptyMap());
     assertThat(config.isIbftLegacy()).isFalse();
-    assertThat(config.getIbftLegacyConfigOptions()).isSameAs(IbftConfigOptions.DEFAULT);
+    assertThat(config.getIbftLegacyConfigOptions()).isSameAs(IbftLegacyConfigOptions.DEFAULT);
   }
 
   @Test
@@ -128,13 +139,13 @@ public class GenesisConfigOptionsTest {
   public void shouldGetConstantinopleFixBlockNumber() {
     final GenesisConfigOptions config =
         fromConfigOptions(singletonMap("constantinopleFixBlock", 1000));
-    assertThat(config.getConstantinopleFixBlockNumber()).hasValue(1000);
+    assertThat(config.getPetersburgBlockNumber()).hasValue(1000);
   }
 
   @Test
   public void shouldGetPetersburgBlockNumber() {
     final GenesisConfigOptions config = fromConfigOptions(singletonMap("petersburgBlock", 1000));
-    assertThat(config.getConstantinopleFixBlockNumber()).hasValue(1000);
+    assertThat(config.getPetersburgBlockNumber()).hasValue(1000);
   }
 
   @Test
@@ -144,7 +155,7 @@ public class GenesisConfigOptionsTest {
     configMap.put("petersburgBlock", 1000);
     final GenesisConfigOptions config = fromConfigOptions(configMap);
     assertThatExceptionOfType(RuntimeException.class)
-        .isThrownBy(config::getConstantinopleFixBlockNumber)
+        .isThrownBy(config::getPetersburgBlockNumber)
         .withMessage(
             "Genesis files cannot specify both petersburgBlock and constantinopleFixBlock.");
   }
@@ -163,25 +174,29 @@ public class GenesisConfigOptionsTest {
 
   @Test
   public void shouldGetBerlinBlockNumber() {
-    try {
-      ExperimentalEIPs.berlinEnabled = true;
-      final GenesisConfigOptions config = fromConfigOptions(singletonMap("berlinBlock", 1000));
-      assertThat(config.getBerlinBlockNumber()).hasValue(1000);
-    } finally {
-      ExperimentalEIPs.berlinEnabled = ExperimentalEIPs.BERLIN_ENABLED_DEFAULT_VALUE;
-    }
+    final GenesisConfigOptions config = fromConfigOptions(singletonMap("berlinBlock", 1000));
+    assertThat(config.getBerlinBlockNumber()).hasValue(1000);
   }
 
   @Test
-  // TODO EIP-1559 change for the actual fork name when known
-  public void shouldGetEIP1559BlockNumber() {
-    try {
-      ExperimentalEIPs.eip1559Enabled = true;
-      final GenesisConfigOptions config = fromConfigOptions(singletonMap("eip1559block", 1000));
-      assertThat(config.getEIP1559BlockNumber()).hasValue(1000);
-    } finally {
-      ExperimentalEIPs.eip1559Enabled = ExperimentalEIPs.EIP1559_ENABLED_DEFAULT_VALUE;
-    }
+  public void shouldGetLondonBlockNumber() {
+    final GenesisConfigOptions config = fromConfigOptions(singletonMap("londonblock", 1000));
+    assertThat(config.getEIP1559BlockNumber()).hasValue(1000);
+    assertThat(config.getLondonBlockNumber()).hasValue(1000);
+  }
+
+  @Test
+  public void shouldGetBaikalBlockNumber() {
+    final GenesisConfigOptions config = fromConfigOptions(singletonMap("calaverasblock", 1000));
+    assertThat(config.getEIP1559BlockNumber()).hasValue(1000);
+    assertThat(config.getLondonBlockNumber()).hasValue(1000);
+  }
+
+  @Test
+  // TODO ECIP-1049 change for the actual fork name when known
+  public void shouldGetECIP1049BlockNumber() {
+    final GenesisConfigOptions config = fromConfigOptions(singletonMap("ecip1049block", 1000));
+    assertThat(config.getEcip1049BlockNumber()).hasValue(1000);
   }
 
   @Test
@@ -193,10 +208,13 @@ public class GenesisConfigOptionsTest {
     assertThat(config.getSpuriousDragonBlockNumber()).isEmpty();
     assertThat(config.getByzantiumBlockNumber()).isEmpty();
     assertThat(config.getConstantinopleBlockNumber()).isEmpty();
-    assertThat(config.getConstantinopleFixBlockNumber()).isEmpty();
+    assertThat(config.getPetersburgBlockNumber()).isEmpty();
     assertThat(config.getIstanbulBlockNumber()).isEmpty();
     assertThat(config.getMuirGlacierBlockNumber()).isEmpty();
     assertThat(config.getBerlinBlockNumber()).isEmpty();
+    assertThat(config.getLondonBlockNumber()).isEmpty();
+    assertThat(config.getAleutBlockNumber()).isEmpty();
+    assertThat(config.getEcip1049BlockNumber()).isEmpty();
   }
 
   @Test
@@ -213,6 +231,23 @@ public class GenesisConfigOptionsTest {
     assertThat(config.isIbftLegacy()).isFalse();
     assertThat(config.isClique()).isFalse();
     assertThat(config.getHomesteadBlockNumber()).isEmpty();
+  }
+
+  @Test
+  public void isQuorumShouldDefaultToFalse() {
+    final GenesisConfigOptions config = GenesisConfigFile.fromConfig("{}").getConfigOptions();
+
+    assertThat(config.isQuorum()).isFalse();
+    assertThat(config.getQip714BlockNumber()).isEmpty();
+  }
+
+  @Test
+  public void isQuorumConfigParsedCorrectly() {
+    final GenesisConfigOptions config =
+        fromConfigOptions(Map.of("isQuorum", true, "qip714block", 99999L));
+
+    assertThat(config.isQuorum()).isTrue();
+    assertThat(config.getQip714BlockNumber()).hasValue(99999L);
   }
 
   private GenesisConfigOptions fromConfigOptions(final Map<String, Object> configOptions) {

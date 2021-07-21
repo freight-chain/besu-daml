@@ -37,12 +37,10 @@ import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.debug.TraceFrame;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
-import org.hyperledger.besu.ethereum.vm.ExceptionalHaltReason;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -82,12 +80,12 @@ public class DebugTraceBlockTest {
     final TraceFrame traceFrame =
         new TraceFrame(
             12,
-            "NONE",
+            Optional.of("NONE"),
             Gas.of(45),
             Optional.of(Gas.of(56)),
             Gas.ZERO,
             2,
-            EnumSet.noneOf(ExceptionalHaltReason.class),
+            Optional.empty(),
             null,
             Wei.ZERO,
             Bytes.EMPTY,
@@ -105,8 +103,8 @@ public class DebugTraceBlockTest {
             Optional.empty(),
             Optional.empty());
 
-    final TransactionProcessor.Result transaction1Result = mock(TransactionProcessor.Result.class);
-    final TransactionProcessor.Result transaction2Result = mock(TransactionProcessor.Result.class);
+    final TransactionProcessingResult transaction1Result = mock(TransactionProcessingResult.class);
+    final TransactionProcessingResult transaction2Result = mock(TransactionProcessingResult.class);
 
     final TransactionTrace transaction1Trace = mock(TransactionTrace.class);
     final TransactionTrace transaction2Trace = mock(TransactionTrace.class);

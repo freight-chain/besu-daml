@@ -19,7 +19,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
@@ -108,7 +109,7 @@ public class EthGetUncleByBlockNumberAndIndexTest {
   public void shouldReturnExpectedBlockResult() {
     final JsonRpcRequestContext request =
         getUncleByBlockNumberAndIndex(new Object[] {"0x1", "0x0"});
-    final BlockHeader header = blockHeaderTestFixture.buildHeader();
+    final BlockHeader header = blockHeaderTestFixture.baseFeePerGas(7L).buildHeader();
     final BlockResult expectedBlockResult = blockResult(header);
     final JsonRpcResponse expectedResponse = new JsonRpcSuccessResponse(null, expectedBlockResult);
 
@@ -116,7 +117,7 @@ public class EthGetUncleByBlockNumberAndIndexTest {
 
     final JsonRpcResponse response = method.response(request);
 
-    assertThat(response).isEqualToComparingFieldByFieldRecursively(expectedResponse);
+    assertThat(response).usingRecursiveComparison().isEqualTo(expectedResponse);
   }
 
   private BlockResult blockResult(final BlockHeader header) {
@@ -137,7 +138,7 @@ public class EthGetUncleByBlockNumberAndIndexTest {
 
   public BlockWithMetadata<TransactionWithMetadata, Hash> blockWithMetadata(
       final BlockHeader header) {
-    final KeyPair keyPair = KeyPair.generate();
+    final KeyPair keyPair = SignatureAlgorithmFactory.getInstance().generateKeyPair();
     final List<TransactionWithMetadata> transactions = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       final Transaction transaction = transactionTestFixture.createTransaction(keyPair);

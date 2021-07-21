@@ -19,8 +19,8 @@ import org.hyperledger.besu.consensus.common.EpochManager;
 import org.hyperledger.besu.consensus.common.VoteProposer;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
 import org.hyperledger.besu.consensus.common.VoteTallyUpdater;
-import org.hyperledger.besu.consensus.ibft.IbftBlockInterface;
-import org.hyperledger.besu.consensus.ibft.IbftContext;
+import org.hyperledger.besu.consensus.common.bft.BftBlockInterface;
+import org.hyperledger.besu.consensus.common.bft.BftContext;
 import org.hyperledger.besu.consensus.ibft.jsonrpc.methods.IbftDiscardValidatorVote;
 import org.hyperledger.besu.consensus.ibft.jsonrpc.methods.IbftGetPendingVotes;
 import org.hyperledger.besu.consensus.ibft.jsonrpc.methods.IbftGetSignerMetrics;
@@ -38,9 +38,9 @@ import java.util.Map;
 
 public class IbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
 
-  private final ProtocolContext<IbftContext> context;
+  private final ProtocolContext context;
 
-  public IbftJsonRpcMethods(final ProtocolContext<IbftContext> context) {
+  public IbftJsonRpcMethods(final ProtocolContext context) {
     this.context = context;
   }
 
@@ -51,13 +51,13 @@ public class IbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
 
   @Override
   protected Map<String, JsonRpcMethod> create() {
-    final MutableBlockchain mutableBlockchain = context.getBlockchain();
     final BlockchainQueries blockchainQueries =
         new BlockchainQueries(context.getBlockchain(), context.getWorldStateArchive());
-    final VoteProposer voteProposer = context.getConsensusState().getVoteProposer();
-    final BlockInterface blockInterface = new IbftBlockInterface();
+    final BftContext bftContext = context.getConsensusState(BftContext.class);
+    final VoteProposer voteProposer = bftContext.getVoteProposer();
+    final BlockInterface blockInterface = bftContext.getBlockInterface();
 
-    final VoteTallyCache voteTallyCache = createVoteTallyCache(context, mutableBlockchain);
+    final VoteTallyCache voteTallyCache = createVoteTallyCache(context);
 
     return mapOf(
         new IbftProposeValidatorVote(voteProposer),
@@ -68,12 +68,12 @@ public class IbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
         new IbftGetPendingVotes(voteProposer));
   }
 
-  private VoteTallyCache createVoteTallyCache(
-      final ProtocolContext<IbftContext> context, final MutableBlockchain blockchain) {
-    final EpochManager epochManager = context.getConsensusState().getEpochManager();
-    final IbftBlockInterface ibftBlockInterface = new IbftBlockInterface();
-    final VoteTallyUpdater voteTallyUpdater =
-        new VoteTallyUpdater(epochManager, ibftBlockInterface);
-    return new VoteTallyCache(blockchain, voteTallyUpdater, epochManager, ibftBlockInterface);
+  private VoteTallyCache createVoteTallyCache(final ProtocolContext context) {
+    final BftContext bftContext = context.getConsensusState(BftContext.class);
+    final EpochManager epochManager = bftContext.getEpochManager();
+    final BftBlockInterface bftBlockInterface = bftContext.getBlockInterface();
+    final VoteTallyUpdater voteTallyUpdater = new VoteTallyUpdater(epochManager, bftBlockInterface);
+    final MutableBlockchain blockchain = context.getBlockchain();
+    return new VoteTallyCache(blockchain, voteTallyUpdater, epochManager, bftBlockInterface);
   }
 }

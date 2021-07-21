@@ -15,7 +15,7 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 
 public class JsonRpcErrorConverter {
 
@@ -47,12 +47,20 @@ public class JsonRpcErrorConverter {
         return JsonRpcError.CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE;
       case GAS_PRICE_TOO_LOW:
         return JsonRpcError.GAS_PRICE_TOO_LOW;
+      case TX_FEECAP_EXCEEDED:
+        return JsonRpcError.TX_FEECAP_EXCEEDED;
+      case MAX_PRIORITY_FEE_PER_GAS_EXCEEDS_MAX_FEE_PER_GAS:
+        return JsonRpcError.MAX_PRIORITY_FEE_PER_GAS_EXCEEDS_MAX_FEE_PER_GAS;
       case OFFCHAIN_PRIVACY_GROUP_DOES_NOT_EXIST:
         return JsonRpcError.OFFCHAIN_PRIVACY_GROUP_DOES_NOT_EXIST;
       case TRANSACTION_ALREADY_KNOWN:
         return JsonRpcError.ETH_SEND_TX_ALREADY_KNOWN;
       case TRANSACTION_REPLACEMENT_UNDERPRICED:
         return JsonRpcError.ETH_SEND_TX_REPLACEMENT_UNDERPRICED;
+      case GAS_PRICE_MUST_BE_ZERO:
+        return JsonRpcError.GAS_PRICE_MUST_BE_ZERO;
+      case ETHER_VALUE_NOT_SUPPORTED:
+        return JsonRpcError.ETHER_VALUE_NOT_SUPPORTED;
       default:
         return JsonRpcError.INVALID_PARAMS;
     }

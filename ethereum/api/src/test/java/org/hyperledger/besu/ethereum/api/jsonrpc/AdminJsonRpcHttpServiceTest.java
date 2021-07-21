@@ -17,13 +17,15 @@ package org.hyperledger.besu.ethereum.api.jsonrpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.PeerInfo;
+import org.hyperledger.besu.testutil.TestClock;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -36,34 +38,64 @@ import okhttp3.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class AdminJsonRpcHttpServiceTest extends JsonRpcHttpServiceTest {
+public class AdminJsonRpcHttpServiceTest extends JsonRpcHttpServiceTestBase {
   private static final Logger LOG = LogManager.getLogger();
+
+  @BeforeClass
+  public static void setup() throws Exception {
+    initServerAndClient();
+  }
 
   @Test
   public void getPeers() throws Exception {
     final List<Capability> caps = new ArrayList<>();
     caps.add(Capability.create("eth", 61));
     caps.add(Capability.create("eth", 62));
-    final List<PeerConnection> peerList = new ArrayList<>();
+    final List<EthPeer> peerList = new ArrayList<>();
     final PeerInfo info1 =
-        new PeerInfo(4, CLIENT_VERSION, caps, 30302, Bytes.fromHexString("0001"));
+        new PeerInfo(
+            4, CLIENT_VERSION, caps, 30302, Bytes.fromHexString(String.format("%0128x", 1)));
     final PeerInfo info2 =
-        new PeerInfo(4, CLIENT_VERSION, caps, 60302, Bytes.fromHexString("0002"));
+        new PeerInfo(
+            4, CLIENT_VERSION, caps, 60302, Bytes.fromHexString(String.format("%0128x", 2)));
     final PeerInfo info3 =
-        new PeerInfo(4, CLIENT_VERSION, caps, 60303, Bytes.fromHexString("0003"));
+        new PeerInfo(
+            4, CLIENT_VERSION, caps, 60303, Bytes.fromHexString(String.format("%0128x", 3)));
     final InetSocketAddress addr30301 = new InetSocketAddress("localhost", 30301);
     final InetSocketAddress addr30302 = new InetSocketAddress("localhost", 30302);
     final InetSocketAddress addr60301 = new InetSocketAddress("localhost", 60301);
     final InetSocketAddress addr60302 = new InetSocketAddress("localhost", 60302);
     final InetSocketAddress addr60303 = new InetSocketAddress("localhost", 60303);
 
-    peerList.add(MockPeerConnection.create(info1, addr60301, addr30302));
-    peerList.add(MockPeerConnection.create(info2, addr30301, addr60302));
-    peerList.add(MockPeerConnection.create(info3, addr30301, addr60303));
+    peerList.add(
+        new EthPeer(
+            MockPeerConnection.create(info1, addr60301, addr30302),
+            "eth",
+            c -> {},
+            List.of(),
+            TestClock.fixed(),
+            Collections.emptyList()));
+    peerList.add(
+        new EthPeer(
+            MockPeerConnection.create(info2, addr30301, addr60302),
+            "eth",
+            c -> {},
+            List.of(),
+            TestClock.fixed(),
+            Collections.emptyList()));
+    peerList.add(
+        new EthPeer(
+            MockPeerConnection.create(info3, addr30301, addr60303),
+            "eth",
+            c -> {},
+            List.of(),
+            TestClock.fixed(),
+            Collections.emptyList()));
 
-    when(peerDiscoveryMock.getPeers()).thenReturn(peerList);
+    when(ethPeersMock.streamAllPeers()).thenReturn(peerList.stream());
     when(peerDiscoveryMock.getPeerCount()).thenReturn(peerList.size());
 
     final String id = "123";
@@ -88,10 +120,10 @@ public class AdminJsonRpcHttpServiceTest extends JsonRpcHttpServiceTest {
     }
   }
 
-  protected void assertPeerResultMatchesPeer(
-      final JsonArray result, final Collection<PeerConnection> peerList) {
+  private void assertPeerResultMatchesPeer(
+      final JsonArray result, final Collection<EthPeer> peerList) {
     int i = -1;
-    for (final PeerConnection peerConn : peerList) {
+    for (final EthPeer ethPeer : peerList) {
       final JsonObject peerJson = result.getJsonObject(++i);
       final int jsonVersion = Integer.decode(peerJson.getString("version"));
       final String jsonClient = peerJson.getString("name");
@@ -100,7 +132,7 @@ public class AdminJsonRpcHttpServiceTest extends JsonRpcHttpServiceTest {
       final Bytes jsonNodeId = Bytes.fromHexString(peerJson.getString("id"));
 
       final PeerInfo jsonPeer = new PeerInfo(jsonVersion, jsonClient, caps, jsonPort, jsonNodeId);
-      assertThat(peerConn.getPeerInfo()).isEqualTo(jsonPeer);
+      assertThat(ethPeer.getConnection().getPeerInfo()).isEqualTo(jsonPeer);
     }
   }
 
@@ -108,7 +140,7 @@ public class AdminJsonRpcHttpServiceTest extends JsonRpcHttpServiceTest {
     final List<Capability> caps = new ArrayList<>();
     for (final Object jsonCap : jsonCaps) {
       final StringTokenizer st = new StringTokenizer(jsonCap.toString(), "/");
-      caps.add(Capability.create(st.nextToken(), Integer.valueOf(st.nextToken())));
+      caps.add(Capability.create(st.nextToken(), Integer.parseInt(st.nextToken())));
     }
     return caps;
   }

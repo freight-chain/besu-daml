@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
-import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.difficulty.fixed.FixedDifficultyCalculators;
@@ -28,11 +27,6 @@ public class MainnetProtocolSchedule {
 
   public static final BigInteger DEFAULT_CHAIN_ID = BigInteger.ONE;
 
-  public static ProtocolSchedule<Void> create() {
-    return fromConfig(
-        GenesisConfigFile.mainnet().getConfigOptions(), PrivacyParameters.DEFAULT, false);
-  }
-
   /**
    * Create a Mainnet protocol schedule from a config object
    *
@@ -42,7 +36,7 @@ public class MainnetProtocolSchedule {
    * @param isRevertReasonEnabled whether storing the revert reason is for failed transactions
    * @return A configured mainnet protocol schedule
    */
-  public static ProtocolSchedule<Void> fromConfig(
+  public static ProtocolSchedule fromConfig(
       final GenesisConfigOptions config,
       final PrivacyParameters privacyParameters,
       final boolean isRevertReasonEnabled) {
@@ -50,8 +44,13 @@ public class MainnetProtocolSchedule {
       return FixedDifficultyProtocolSchedule.create(
           config, privacyParameters, isRevertReasonEnabled);
     }
-    return new ProtocolScheduleBuilder<>(
-            config, DEFAULT_CHAIN_ID, Function.identity(), privacyParameters, isRevertReasonEnabled)
+    return new ProtocolScheduleBuilder(
+            config,
+            DEFAULT_CHAIN_ID,
+            ProtocolSpecAdapters.create(0, Function.identity()),
+            privacyParameters,
+            isRevertReasonEnabled,
+            config.isQuorum())
         .createProtocolSchedule();
   }
 
@@ -63,7 +62,7 @@ public class MainnetProtocolSchedule {
    * @param isRevertReasonEnabled whether storing the revert reason is for failed transactions
    * @return A configured mainnet protocol schedule
    */
-  public static ProtocolSchedule<Void> fromConfig(
+  public static ProtocolSchedule fromConfig(
       final GenesisConfigOptions config, final boolean isRevertReasonEnabled) {
     return fromConfig(config, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
   }
@@ -75,7 +74,7 @@ public class MainnetProtocolSchedule {
    *     starting points
    * @return A configured mainnet protocol schedule
    */
-  public static ProtocolSchedule<Void> fromConfig(final GenesisConfigOptions config) {
+  public static ProtocolSchedule fromConfig(final GenesisConfigOptions config) {
     return fromConfig(config, PrivacyParameters.DEFAULT, false);
   }
 }

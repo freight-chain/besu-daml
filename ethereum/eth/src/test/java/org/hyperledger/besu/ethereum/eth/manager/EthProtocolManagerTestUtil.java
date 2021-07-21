@@ -15,7 +15,7 @@
 package org.hyperledger.besu.ethereum.eth.manager;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 import static org.mockito.Mockito.mock;
 
 import org.hyperledger.besu.config.GenesisConfigFile;
@@ -24,15 +24,16 @@ import org.hyperledger.besu.ethereum.chain.ChainHead;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
 import org.hyperledger.besu.ethereum.core.Difficulty;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
 import org.hyperledger.besu.ethereum.eth.manager.DeterministicEthScheduler.TimeoutPolicy;
 import org.hyperledger.besu.ethereum.eth.peervalidation.PeerValidator;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.DefaultMessage;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
@@ -79,7 +80,7 @@ public class EthProtocolManagerTestUtil {
         Collections.emptyList(),
         false,
         ethScheduler,
-        new ForkIdManager(blockchain, Collections.emptyList()));
+        new ForkIdManager(blockchain, Collections.emptyList(), false));
   }
 
   public static EthProtocolManager create(final Blockchain blockchain) {
@@ -100,7 +101,7 @@ public class EthProtocolManagerTestUtil {
   }
 
   public static EthProtocolManager create(final EthScheduler ethScheduler) {
-    final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
+    final ProtocolSchedule protocolSchedule = ProtocolScheduleFixture.MAINNET;
     final GenesisConfigFile config = GenesisConfigFile.mainnet();
     final GenesisState genesisState = GenesisState.fromConfig(config, protocolSchedule);
     final Blockchain blockchain = createInMemoryBlockchain(genesisState.getBlock());
@@ -135,7 +136,7 @@ public class EthProtocolManagerTestUtil {
     return create(
         blockchain,
         ethScheduler,
-        BlockchainSetupUtil.forTesting().getWorldArchive(),
+        BlockchainSetupUtil.forTesting(DataStorageFormat.FOREST).getWorldArchive(),
         mock(TransactionPool.class),
         EthProtocolConfiguration.defaultConfig(),
         peers,

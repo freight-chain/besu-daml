@@ -15,35 +15,91 @@
 package org.hyperledger.besu.tests.web3j.privacy;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.web3j.utils.Restriction.RESTRICTED;
 
 import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyAcceptanceTestBase;
 import org.hyperledger.besu.tests.acceptance.dsl.privacy.PrivacyNode;
+import org.hyperledger.besu.tests.web3j.generated.EventEmitter;
+import org.hyperledger.enclave.testutil.EnclaveType;
 
-import org.junit.Before;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import org.testcontainers.containers.Network;
 import org.web3j.protocol.besu.response.privacy.PrivacyGroup;
+import org.web3j.protocol.besu.response.privacy.PrivateTransactionReceipt;
 import org.web3j.utils.Base64String;
 
+@RunWith(Parameterized.class)
 public class PrivacyGroupAcceptanceTest extends PrivacyAcceptanceTestBase {
 
-  private PrivacyNode alice;
-  private PrivacyNode bob;
-  private PrivacyNode charlie;
+  private final PrivacyNode alice;
+  private final PrivacyNode bob;
+  private final PrivacyNode charlie;
 
-  @Before
-  public void setUp() throws Exception {
+  @Parameters(name = "{0}")
+  public static Collection<EnclaveType> enclaveTypes() {
+    return Arrays.stream(EnclaveType.values())
+        .filter(enclaveType -> enclaveType != EnclaveType.NOOP)
+        .collect(Collectors.toList());
+  }
+
+  public PrivacyGroupAcceptanceTest(final EnclaveType enclaveType) throws IOException {
+
+    final Network containerNetwork = Network.newNetwork();
+
     alice =
         privacyBesu.createPrivateTransactionEnabledMinerNode(
-            "node1", privacyAccountResolver.resolve(0));
+            "node1",
+            privacyAccountResolver.resolve(0),
+            enclaveType,
+            Optional.of(containerNetwork),
+            false,
+            false,
+            false);
     bob =
-        privacyBesu.createPrivateTransactionEnabledNode("node2", privacyAccountResolver.resolve(1));
+        privacyBesu.createPrivateTransactionEnabledNode(
+            "node2",
+            privacyAccountResolver.resolve(1),
+            enclaveType,
+            Optional.of(containerNetwork),
+            false,
+            false,
+            false);
+
     charlie =
-        privacyBesu.createPrivateTransactionEnabledNode("node3", privacyAccountResolver.resolve(2));
+        privacyBesu.createPrivateTransactionEnabledNode(
+            "node3",
+            privacyAccountResolver.resolve(2),
+            enclaveType,
+            Optional.of(containerNetwork),
+            false,
+            false,
+            false);
     privacyCluster.start(alice, bob, charlie);
   }
 
   @Test
   public void nodeCanCreatePrivacyGroup() {
+
+    final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+    final Configuration config = ctx.getConfiguration();
+    final LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+    loggerConfig.setLevel(Level.DEBUG);
+    ctx.updateLoggers();
     final String privacyGroupId =
         alice.execute(
             privacyTransactions.createPrivacyGroup(
@@ -108,7 +164,7 @@ public class PrivacyGroupAcceptanceTest extends PrivacyAcceptanceTestBase {
   @Test
   public void nodeCanCreatePrivacyGroupWithoutOptionalParams() {
     final String privacyGroupId =
-        alice.execute(privacyTransactions.createPrivacyGroup(null, null, alice, bob));
+        alice.execute(privacyTransactions.createPrivacyGroup(null, null, alice));
 
     assertThat(privacyGroupId).isNotNull();
 
@@ -118,10 +174,79 @@ public class PrivacyGroupAcceptanceTest extends PrivacyAcceptanceTestBase {
             PrivacyGroup.Type.PANTHEON,
             "",
             "",
-            Base64String.wrapList(alice.getEnclaveKey(), bob.getEnclaveKey()));
+            Base64String.wrapList(alice.getEnclaveKey()));
 
     alice.verify(privateTransactionVerifier.validPrivacyGroupCreated(expected));
+  }
 
-    bob.verify(privateTransactionVerifier.validPrivacyGroupCreated(expected));
+  @Test
+  public void canInteractWithMultiplePrivacyGroups() {
+    final String privacyGroupIdABC =
+        alice.execute(privacyTransactions.createPrivacyGroup(null, null, alice, bob, charlie));
+
+    final EventEmitter firstEventEmitter =
+        alice.execute(
+            privateContractTransactions.createSmartContractWithPrivacyGroupId(
+                EventEmitter.class,
+                alice.getTransactionSigningKey(),
+                alice.getEnclaveKey(),
+                privacyGroupIdABC));
+
+    // charlie interacts with contract
+    final String firstTransactionHash =
+        charlie.execute(
+            privateContractTransactions.callSmartContractWithPrivacyGroupId(
+                firstEventEmitter.getContractAddress(),
+                firstEventEmitter.store(BigInteger.ONE).encodeFunctionCall(),
+                charlie.getTransactionSigningKey(),
+                RESTRICTED,
+                charlie.getEnclaveKey(),
+                privacyGroupIdABC));
+
+    // alice gets receipt from charlie's interaction
+    final PrivateTransactionReceipt firstExpectedReceipt =
+        alice.execute(privacyTransactions.getPrivateTransactionReceipt(firstTransactionHash));
+
+    // verify bob and charlie have access to the same receipt
+    bob.verify(
+        privateTransactionVerifier.validPrivateTransactionReceipt(
+            firstTransactionHash, firstExpectedReceipt));
+    charlie.verify(
+        privateTransactionVerifier.validPrivateTransactionReceipt(
+            firstTransactionHash, firstExpectedReceipt));
+
+    // alice deploys second contract
+    final String privacyGroupIdAB =
+        alice.execute(privacyTransactions.createPrivacyGroup(null, null, alice, bob));
+
+    final EventEmitter secondEventEmitter =
+        alice.execute(
+            privateContractTransactions.createSmartContractWithPrivacyGroupId(
+                EventEmitter.class,
+                alice.getTransactionSigningKey(),
+                alice.getEnclaveKey(),
+                privacyGroupIdAB));
+
+    // bob interacts with contract
+    final String secondTransactionHash =
+        bob.execute(
+            privateContractTransactions.callSmartContractWithPrivacyGroupId(
+                secondEventEmitter.getContractAddress(),
+                secondEventEmitter.store(BigInteger.ONE).encodeFunctionCall(),
+                bob.getTransactionSigningKey(),
+                RESTRICTED,
+                bob.getEnclaveKey(),
+                privacyGroupIdAB));
+
+    // alice gets receipt from bob's interaction
+    final PrivateTransactionReceipt secondExpectedReceipt =
+        alice.execute(privacyTransactions.getPrivateTransactionReceipt(secondTransactionHash));
+
+    bob.verify(
+        privateTransactionVerifier.validPrivateTransactionReceipt(
+            secondTransactionHash, secondExpectedReceipt));
+
+    // charlie cannot see the receipt
+    charlie.verify(privateTransactionVerifier.noPrivateTransactionReceipt(secondTransactionHash));
   }
 }

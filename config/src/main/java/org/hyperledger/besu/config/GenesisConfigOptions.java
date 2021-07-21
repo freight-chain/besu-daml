@@ -15,6 +15,7 @@
 package org.hyperledger.besu.config;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -24,21 +25,27 @@ public interface GenesisConfigOptions {
 
   boolean isEthHash();
 
+  boolean isKeccak256();
+
   boolean isIbftLegacy();
 
   boolean isIbft2();
+
+  boolean isQbft();
 
   boolean isClique();
 
   String getConsensusEngine();
 
-  IbftConfigOptions getIbftLegacyConfigOptions();
+  IbftLegacyConfigOptions getIbftLegacyConfigOptions();
 
   CliqueConfigOptions getCliqueConfigOptions();
 
-  IbftConfigOptions getIbft2ConfigOptions();
+  BftConfigOptions getBftConfigOptions();
 
   EthashConfigOptions getEthashConfigOptions();
+
+  Keccak256ConfigOptions getKeccak256ConfigOptions();
 
   OptionalLong getHomesteadBlockNumber();
 
@@ -52,7 +59,7 @@ public interface GenesisConfigOptions {
 
   OptionalLong getConstantinopleBlockNumber();
 
-  OptionalLong getConstantinopleFixBlockNumber();
+  OptionalLong getPetersburgBlockNumber();
 
   OptionalLong getIstanbulBlockNumber();
 
@@ -60,8 +67,14 @@ public interface GenesisConfigOptions {
 
   OptionalLong getBerlinBlockNumber();
 
+  OptionalLong getLondonBlockNumber();
+
   // TODO EIP-1559 change for the actual fork name when known
+  OptionalLong getAleutBlockNumber();
+
   OptionalLong getEIP1559BlockNumber();
+
+  List<Long> getForks();
 
   /**
    * Block number for the Dao Fork, this value is used to tell node to connect with peer that did
@@ -129,6 +142,8 @@ public interface GenesisConfigOptions {
    * @see <a
    *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1054">https://ecips.ethereumclassic.org/ECIPs/ecip-1054</a>
    * @return block number for Atlantis fork on Classic network
+   * @see <a
+   *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1054">https://ecips.ethereumclassic.org/ECIPs/ecip-1054</a>
    */
   OptionalLong getAtlantisBlockNumber();
 
@@ -140,6 +155,8 @@ public interface GenesisConfigOptions {
    * @see <a
    *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1056">https://ecips.ethereumclassic.org/ECIPs/ecip-1056</a>
    * @return block number for Agharta fork on Classic network
+   * @see <a
+   *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1056">https://ecips.ethereumclassic.org/ECIPs/ecip-1056</a>
    */
   OptionalLong getAghartaBlockNumber();
 
@@ -148,11 +165,40 @@ public interface GenesisConfigOptions {
    * Istanbul network protocol upgrades on the Ethereum Classic network in a hard-fork code-named
    * Phoenix to enable maximum compatibility across these networks.
    *
+   * @return block number of Phoenix fork on Classic networks
    * @see <a
    *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1088">https://ecips.ethereumclassic.org/ECIPs/ecip-1088</a>
-   * @return block number of Phoenix fork on Classic networks
    */
   OptionalLong getPhoenixBlockNumber();
+
+  /**
+   * Block number to activate ECIP-1099 (Thanos) on Classic networks. Doubles the length of the
+   * Ethash epoch, with the impact being a reduced DAG size.
+   *
+   * @return block number of ECIP-1099 fork on Classic networks
+   * @see <a
+   *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1099">https://ecips.ethereumclassic.org/ECIPs/ecip-1099</a>
+   */
+  OptionalLong getThanosBlockNumber();
+
+  /**
+   * Block number to activate Magneto on Classic networks.
+   *
+   * @return block number of Magneto fork on Classic networks
+   * @see <a
+   *     href="https://github.com/ethereumclassic/ECIPs/issues/424">https://github.com/ethereumclassic/ECIPs/issues/424</a>
+   */
+  OptionalLong getMagnetoBlockNumber();
+
+  /**
+   * Block number to activate ECIP-1049 on Classic networks. Changes the hashing algorithm to
+   * keccak-256.
+   *
+   * @return block number of ECIP-1049 fork on Classic networks
+   * @see <a
+   *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1049">https://ecips.ethereumclassic.org/ECIPs/ecip-1049</a>
+   */
+  OptionalLong getEcip1049BlockNumber();
 
   Optional<BigInteger> getChainId();
 
@@ -160,7 +206,48 @@ public interface GenesisConfigOptions {
 
   OptionalInt getEvmStackSize();
 
+  /**
+   * Number of rounds contained within an Era for calculating Ethereum Classic Emission Schedule,
+   * ECIP defines this as 5,000,000 however this config option allows for adjusting (for using with
+   * other networks, for example Mordor testnet uses 2,000,000). The values defaults to 5,000,000 if
+   * not set.
+   *
+   * @return number of rounds pre Era
+   * @see <a
+   *     href="https://ecips.ethereumclassic.org/ECIPs/ecip-1017">https://ecips.ethereumclassic.org/ECIPs/ecip-1017</a>
+   */
+  OptionalLong getEcip1017EraRounds();
+
   Map<String, Object> asMap();
 
   TransitionsConfigOptions getTransitions();
+
+  /**
+   * Set Besu in Quorum-compatibility mode
+   *
+   * @return true, if Besu is running on Quorum-compatibility mode, false, otherwise.
+   */
+  boolean isQuorum();
+
+  /**
+   * Block number to activate Quorum Permissioning. This options is used on Quorum-compatibility
+   * mode.
+   *
+   * @return block number to activate Quorum Permissioning
+   */
+  OptionalLong getQip714BlockNumber();
+
+  /**
+   * The PoW algorithm associated with the genesis file.
+   *
+   * @return the PoW algorithm in use.
+   */
+  PowAlgorithm getPowAlgorithm();
+
+  /**
+   * The elliptic curve which should be used in SignatureAlgorithm.
+   *
+   * @return the name of the elliptic curve.
+   */
+  Optional<String> getEcCurve();
 }

@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.consensus.clique.headervalidationrules;
 
-import org.hyperledger.besu.consensus.clique.CliqueContext;
 import org.hyperledger.besu.consensus.clique.CliqueDifficultyCalculator;
 import org.hyperledger.besu.consensus.clique.CliqueHelpers;
 import org.hyperledger.besu.ethereum.ProtocolContext;
@@ -24,14 +23,16 @@ import org.hyperledger.besu.ethereum.mainnet.AttachedBlockHeaderValidationRule;
 
 import java.math.BigInteger;
 
-public class CliqueDifficultyValidationRule
-    implements AttachedBlockHeaderValidationRule<CliqueContext> {
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class CliqueDifficultyValidationRule implements AttachedBlockHeaderValidationRule {
+
+  private static final Logger LOG = LogManager.getLogger();
 
   @Override
   public boolean validate(
-      final BlockHeader header,
-      final BlockHeader parent,
-      final ProtocolContext<CliqueContext> protocolContext) {
+      final BlockHeader header, final BlockHeader parent, final ProtocolContext protocolContext) {
     final Address actualBlockCreator = CliqueHelpers.getProposerOfBlock(header);
 
     final CliqueDifficultyCalculator diffCalculator =
@@ -40,7 +41,15 @@ public class CliqueDifficultyValidationRule
 
     final BigInteger actualDifficulty = header.getDifficulty().toBigInteger();
 
-    return expectedDifficulty.equals(actualDifficulty);
+    if (!expectedDifficulty.equals(actualDifficulty)) {
+      LOG.info(
+          "Invalid block header: difficulty {} does not equal expected difficulty {}",
+          actualDifficulty,
+          expectedDifficulty);
+      return false;
+    }
+
+    return true;
   }
 
   @Override

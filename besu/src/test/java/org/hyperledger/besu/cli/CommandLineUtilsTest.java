@@ -15,14 +15,17 @@
 package org.hyperledger.besu.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hyperledger.besu.cli.util.CommandLineUtils.DEPENDENCY_WARNING_MSG;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static picocli.CommandLine.defaultExceptionHandler;
 
 import org.hyperledger.besu.cli.util.CommandLineUtils;
+import org.hyperledger.besu.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.logging.log4j.Logger;
 import org.junit.Test;
@@ -60,6 +63,11 @@ public class CommandLineUtilsTest {
         names = {"--option-enabled"},
         arity = "1")
     final Boolean optionEnabled = true;
+
+    @Option(
+        names = {"--other-option-enabled"},
+        arity = "1")
+    final Boolean otherOptionEnabled = true;
 
     @Option(names = {"--option2"})
     final Integer option2 = 2;
@@ -100,6 +108,22 @@ public class CommandLineUtilsTest {
       // Check that mining options are able top work or send an error
       CommandLineUtils.checkOptionDependencies(
           logger, commandLine, "--option-enabled", !optionEnabled, new ArrayList<>());
+    }
+  }
+
+  private static class TestMultiCommandWithDeps extends AbstractTestCommand {
+    TestMultiCommandWithDeps(final Logger logger) {
+      super(logger);
+    }
+
+    @Override
+    public void run() {
+      CommandLineUtils.checkMultiOptionDependencies(
+          logger,
+          commandLine,
+          "--option2 and/or --option3 ignored because none of --option-enabled or --other-option-enabled was defined.",
+          List.of(!optionEnabled, !otherOptionEnabled),
+          Arrays.asList("--option2", "--option3"));
     }
   }
 
@@ -185,6 +209,27 @@ public class CommandLineUtilsTest {
     assertThat(testCommand.option4).isEqualTo(40);
   }
 
+  @Test
+  public void multipleMainOptions() {
+    final AbstractTestCommand testCommand = new TestMultiCommandWithDeps(mockLogger);
+    testCommand.commandLine.parseWithHandlers(
+        new RunLast(),
+        defaultExceptionHandler(),
+        "--option-enabled",
+        "false",
+        "--other-option-enabled",
+        "false",
+        "--option2",
+        "20");
+    verifyMultiOptionsConstraintLoggerCall(
+        mockLogger,
+        "--option2 and/or --option3 ignored because none of --option-enabled or --other-option-enabled was defined.");
+
+    assertThat(testCommand.optionEnabled).isFalse();
+    assertThat(testCommand.otherOptionEnabled).isFalse();
+    assertThat(testCommand.option2).isEqualTo(20);
+  }
+
   /**
    * Check logger calls
    *
@@ -192,10 +237,18 @@ public class CommandLineUtilsTest {
    * logger itself but the fact that we call it.
    *
    * @param dependentOptions the string representing the list of dependent options names
-   * @param mainOption the main option name
+   * @param mainOptions the main option name
    */
   private void verifyOptionsConstraintLoggerCall(
-      final Logger logger, final String dependentOptions, final String mainOption) {
+      final Logger logger, final String dependentOptions, final String... mainOptions) {
+    verifyCall(logger, dependentOptions, DEPENDENCY_WARNING_MSG, mainOptions);
+  }
+
+  private void verifyCall(
+      final Logger logger,
+      final String dependentOptions,
+      final String dependencyWarningMsg,
+      final String... mainOptions) {
 
     final ArgumentCaptor<String> stringArgumentCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -204,9 +257,25 @@ public class CommandLineUtilsTest {
             stringArgumentCaptor.capture(),
             stringArgumentCaptor.capture(),
             stringArgumentCaptor.capture());
-    assertThat(stringArgumentCaptor.getAllValues().get(0))
-        .isEqualTo("{} will have no effect unless {} is defined on the command line.");
+    assertThat(stringArgumentCaptor.getAllValues().get(0)).isEqualTo(dependencyWarningMsg);
     assertThat(stringArgumentCaptor.getAllValues().get(1)).isEqualTo(dependentOptions);
-    assertThat(stringArgumentCaptor.getAllValues().get(2)).isEqualTo(mainOption);
+
+    final String joinedMainOptions =
+        StringUtils.joiningWithLastDelimiter(", ", " or ").apply(Arrays.asList(mainOptions));
+    assertThat(stringArgumentCaptor.getAllValues().get(2)).isEqualTo(joinedMainOptions);
+  }
+
+  /**
+   * Check logger calls, where multiple main options have been specified
+   *
+   * <p>Here we check the calls to logger and not the result of the log line as we don't test the
+   * logger itself but the fact that we call it.
+   *
+   * @param stringToLog the string representing the list of dependent options names
+   */
+  private void verifyMultiOptionsConstraintLoggerCall(
+      final Logger logger, final String stringToLog) {
+
+    verify(logger).warn(stringToLog);
   }
 }

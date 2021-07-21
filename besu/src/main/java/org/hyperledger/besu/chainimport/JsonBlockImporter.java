@@ -17,6 +17,7 @@ package org.hyperledger.besu.chainimport;
 import org.hyperledger.besu.chainimport.internal.BlockData;
 import org.hyperledger.besu.chainimport.internal.ChainData;
 import org.hyperledger.besu.config.GenesisConfigOptions;
+import org.hyperledger.besu.config.PowAlgorithm;
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.ethereum.blockcreation.MiningCoordinator;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -43,18 +44,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 
-/**
- * Tool for importing blocks with transactions from human-readable json.
- *
- * @param <C> The consensus algorithm context
- */
-public class JsonBlockImporter<C> {
+/** Tool for importing blocks with transactions from human-readable json. */
+public class JsonBlockImporter {
   private static final Logger LOG = LogManager.getLogger();
 
   private final ObjectMapper mapper;
-  private final BesuController<C> controller;
+  private final BesuController controller;
 
-  public JsonBlockImporter(final BesuController<C> controller) {
+  public JsonBlockImporter(final BesuController controller) {
     this.controller = controller;
     mapper = new ObjectMapper();
     // Jdk8Module allows us to easily parse {@code Optional} values from json
@@ -88,7 +85,7 @@ public class JsonBlockImporter<C> {
         controller
             .getProtocolContext()
             .getWorldStateArchive()
-            .get(parentHeader.getStateRoot())
+            .get(parentHeader.getStateRoot(), parentHeader.getHash())
             .get();
     final List<Transaction> transactions =
         blockData.streamTransactions(worldState).collect(Collectors.toList());
@@ -123,9 +120,9 @@ public class JsonBlockImporter<C> {
       final BlockData blockData,
       final GenesisConfigOptions genesisConfig) {
     // Some fields can only be configured for ethash
-    if (genesisConfig.isEthHash()) {
-      // For simplicity only set these for ethash.  Other consensus algorithms use these fields for
-      // special purposes or ignore them
+    if (genesisConfig.getPowAlgorithm() != PowAlgorithm.UNSUPPORTED) {
+      // For simplicity only set these for PoW consensus algorithms.
+      // Other consensus algorithms use these fields for special purposes or ignore them.
       miner.setCoinbase(blockData.getCoinbase().orElse(Address.ZERO));
       miner.setExtraData(blockData.getExtraData().orElse(Bytes.EMPTY));
     } else if (blockData.getCoinbase().isPresent() || blockData.getExtraData().isPresent()) {
@@ -143,7 +140,7 @@ public class JsonBlockImporter<C> {
   }
 
   private void importBlock(final Block block) {
-    final BlockImporter<C> importer =
+    final BlockImporter importer =
         controller
             .getProtocolSchedule()
             .getByBlockNumber(block.getHeader().getNumber())

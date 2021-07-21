@@ -25,6 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,6 +34,8 @@ import org.apache.tuweni.bytes.Bytes32;
 
 public class KeyPairUtil {
   private static final Logger LOG = LogManager.getLogger();
+  private static final Supplier<SignatureAlgorithm> SIGNATURE_ALGORITHM =
+      Suppliers.memoize(SignatureAlgorithmFactory::getInstance);
 
   public static String loadResourceFile(final String resourcePath) {
     try {
@@ -42,34 +46,32 @@ public class KeyPairUtil {
     }
   }
 
-  public static SECP256K1.KeyPair loadKeyPairFromResource(final String resourcePath) {
-    final SECP256K1.KeyPair keyPair;
+  public static KeyPair loadKeyPairFromResource(final String resourcePath) {
+    final KeyPair keyPair;
     String keyData = loadResourceFile(resourcePath);
     if (keyData == null || keyData.isEmpty()) {
       throw new IllegalArgumentException("Unable to load resource: " + resourcePath);
     }
-    SECP256K1.PrivateKey privateKey = SECP256K1.PrivateKey.create(Bytes32.fromHexString((keyData)));
-    keyPair = SECP256K1.KeyPair.create(privateKey);
+    SECPPrivateKey privateKey =
+        SIGNATURE_ALGORITHM.get().createPrivateKey(Bytes32.fromHexString((keyData)));
+    keyPair = SIGNATURE_ALGORITHM.get().createKeyPair(privateKey);
 
     LOG.info("Loaded keyPair {} from {}", keyPair.getPublicKey().toString(), resourcePath);
     return keyPair;
   }
 
-  public static SECP256K1.KeyPair loadKeyPair(final File keyFile) {
+  public static KeyPair loadKeyPair(final File keyFile) {
 
-    final SECP256K1.KeyPair key;
+    final KeyPair key;
     if (keyFile.exists()) {
 
       key = load(keyFile);
       LOG.info(
           "Loaded public key {} from {}", key.getPublicKey().toString(), keyFile.getAbsolutePath());
     } else {
-      key = SECP256K1.KeyPair.generate();
-      try {
-        storeKeyPair(key, keyFile);
-      } catch (IOException e) {
-        throw new IllegalArgumentException("Cannot store generated private key.");
-      }
+      key = SIGNATURE_ALGORITHM.get().generateKeyPair();
+      storeKeyFile(key, keyFile.getParentFile().toPath());
+
       LOG.info(
           "Generated new public key {} and stored it to {}",
           key.getPublicKey().toString(),
@@ -78,37 +80,45 @@ public class KeyPairUtil {
     return key;
   }
 
-  public static SECP256K1.KeyPair loadKeyPair(final Path homeDirectory) {
-    return loadKeyPair(getDefaultKeyFile(homeDirectory));
+  public static KeyPair loadKeyPair(final Path directory) {
+    return loadKeyPair(getDefaultKeyFile(directory));
   }
 
-  public static File getDefaultKeyFile(final Path homeDirectory) {
-    return homeDirectory.resolve("key").toFile();
+  public static void storeKeyFile(final KeyPair keyPair, final Path homeDirectory) {
+    try {
+      storeKeyPair(keyPair, getDefaultKeyFile(homeDirectory));
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Cannot store generated private key.");
+    }
   }
 
-  public static SECP256K1.KeyPair load(final File file) {
-    return SECP256K1.KeyPair.create(loadPrivateKey(file));
+  public static File getDefaultKeyFile(final Path directory) {
+    return directory.resolve("key").toFile();
   }
 
-  static SECP256K1.PrivateKey loadPrivateKey(final File file) {
+  public static KeyPair load(final File file) {
+    return SIGNATURE_ALGORITHM.get().createKeyPair(loadPrivateKey(file));
+  }
+
+  static SECPPrivateKey loadPrivateKey(final File file) {
     try {
       final List<String> info = Files.readAllLines(file.toPath());
       if (info.size() != 1) {
         throw new IllegalArgumentException("Supplied file does not contain valid keyPair pair.");
       }
-      return SECP256K1.PrivateKey.create(Bytes32.fromHexString((info.get(0))));
+      return SIGNATURE_ALGORITHM.get().createPrivateKey(Bytes32.fromHexString((info.get(0))));
     } catch (IOException ex) {
       throw new IllegalArgumentException("Supplied file does not contain valid keyPair pair.");
     }
   }
 
-  static void storeKeyPair(final SECP256K1.KeyPair keyKair, final File file) throws IOException {
+  static void storeKeyPair(final KeyPair keyPair, final File file) throws IOException {
     final File privateKeyDir = file.getParentFile();
     privateKeyDir.mkdirs();
     final Path tempPath = Files.createTempFile(privateKeyDir.toPath(), ".tmp", "");
     Files.write(
         tempPath,
-        keyKair.getPrivateKey().getEncodedBytes().toString().getBytes(StandardCharsets.UTF_8));
+        keyPair.getPrivateKey().getEncodedBytes().toString().getBytes(StandardCharsets.UTF_8));
     Files.move(tempPath, file.toPath(), REPLACE_EXISTING, ATOMIC_MOVE);
   }
 }

@@ -19,8 +19,10 @@ import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.AccountState;
 import org.hyperledger.besu.ethereum.core.AccountStorageEntry;
 import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
+import org.hyperledger.besu.ethereum.core.UpdateTrackingAccount;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.core.WorldState;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
@@ -32,12 +34,15 @@ import org.hyperledger.besu.ethereum.trie.StoredMerklePatriciaTrie;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
@@ -91,12 +96,20 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
   private MerklePatriciaTrie<Bytes32, Bytes> newAccountStorageTrie(final Bytes32 rootHash) {
     return new StoredMerklePatriciaTrie<>(
-        worldStateStorage::getAccountStorageTrieNode, rootHash, b -> b, b -> b);
+        (location, hash) -> worldStateStorage.getAccountStorageTrieNode(null, location, hash),
+        rootHash,
+        b -> b,
+        b -> b);
   }
 
   @Override
   public Hash rootHash() {
     return Hash.wrap(accountStateTrie.getRootHash());
+  }
+
+  @Override
+  public Hash frontierRootHash() {
+    return rootHash();
   }
 
   @Override
@@ -165,15 +178,17 @@ public class DefaultMutableWorldState implements MutableWorldState {
   }
 
   @Override
-  public void persist() {
+  public void persist(final BlockHeader blockHeader) {
     final WorldStateStorage.Updater stateUpdater = worldStateStorage.updater();
     // Store updated code
     for (final Bytes code : updatedAccountCode.values()) {
-      stateUpdater.putCode(code);
+      stateUpdater.putCode(null, code);
     }
     // Commit account storage tries
     for (final MerklePatriciaTrie<Bytes32, Bytes> updatedStorage : updatedStorageTries.values()) {
-      updatedStorage.commit(stateUpdater::putAccountStorageTrieNode);
+      updatedStorage.commit(
+          (location, hash, value) ->
+              stateUpdater.putAccountStorageTrieNode(null, location, hash, value));
     }
     // Commit account updates
     accountStateTrie.commit(stateUpdater::putAccountStateTrieNode);
@@ -198,11 +213,17 @@ public class DefaultMutableWorldState implements MutableWorldState {
         .or(() -> preimageStorage.getStorageTrieKeyPreimage(trieKey));
   }
 
+  private static UInt256 convertToUInt256(final Bytes value) {
+    // TODO: we could probably have an optimized method to decode a single scalar since it's used
+    // pretty often.
+    final RLPInput in = RLP.input(value);
+    return in.readUInt256Scalar();
+  }
+
   private Optional<Address> getAccountTrieKeyPreimage(final Bytes32 trieKey) {
     return Optional.ofNullable(newAccountKeyPreimages.get(trieKey))
         .or(() -> preimageStorage.getAccountTrieKeyPreimage(trieKey));
   }
-
   // An immutable class that represents an individual account as stored in
   // in the world state's underlying merkle patricia trie.
   protected class WorldStateAccount implements Account {
@@ -269,7 +290,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
       if (codeHash.equals(Hash.EMPTY)) {
         return Bytes.EMPTY;
       }
-      return worldStateStorage.getCode(codeHash).orElse(Bytes.EMPTY);
+      return worldStateStorage.getCode(codeHash, null).orElse(Bytes.EMPTY);
     }
 
     @Override
@@ -289,11 +310,10 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
     @Override
     public UInt256 getStorageValue(final UInt256 key) {
-      final Optional<Bytes> val = storageTrie().get(Hash.hash(key.toBytes()));
-      if (!val.isPresent()) {
-        return UInt256.ZERO;
-      }
-      return convertToUInt256(val.get());
+      return storageTrie()
+          .get(Hash.hash(key))
+          .map(DefaultMutableWorldState::convertToUInt256)
+          .orElse(UInt256.ZERO);
     }
 
     @Override
@@ -317,13 +337,6 @@ public class DefaultMutableWorldState implements MutableWorldState {
       return storageEntries;
     }
 
-    private UInt256 convertToUInt256(final Bytes value) {
-      // TODO: we could probably have an optimized method to decode a single scalar since it's used
-      // pretty often.
-      final RLPInput in = RLP.input(value);
-      return in.readUInt256Scalar();
-    }
-
     @Override
     public String toString() {
       final StringBuilder builder = new StringBuilder();
@@ -332,7 +345,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
       builder.append("nonce=").append(getNonce()).append(", ");
       builder.append("balance=").append(getBalance()).append(", ");
       builder.append("storageRoot=").append(getStorageRoot()).append(", ");
-      builder.append("codeHash=").append(getCodeHash());
+      builder.append("codeHash=").append(getCodeHash()).append(", ");
       builder.append("version=").append(getVersion());
       return builder.append("}").toString();
     }
@@ -357,33 +370,33 @@ public class DefaultMutableWorldState implements MutableWorldState {
     }
 
     @Override
-    public Collection<UpdateTrackingAccount<? extends Account>> getTouchedAccounts() {
-      return new ArrayList<>(updatedAccounts());
+    public Collection<? extends Account> getTouchedAccounts() {
+      return new ArrayList<>(getUpdatedAccounts());
     }
 
     @Override
     public Collection<Address> getDeletedAccountAddresses() {
-      return new ArrayList<>(deletedAccounts());
+      return new ArrayList<>(getDeletedAccounts());
     }
 
     @Override
     public void revert() {
-      deletedAccounts().clear();
-      updatedAccounts().clear();
+      getDeletedAccounts().clear();
+      getUpdatedAccounts().clear();
     }
 
     @Override
     public void commit() {
       final DefaultMutableWorldState wrapped = wrappedWorldView();
 
-      for (final Address address : deletedAccounts()) {
+      for (final Address address : getDeletedAccounts()) {
         final Hash addressHash = Hash.hash(address);
         wrapped.accountStateTrie.remove(addressHash);
         wrapped.updatedStorageTries.remove(address);
         wrapped.updatedAccountCode.remove(address);
       }
 
-      for (final UpdateTrackingAccount<WorldStateAccount> updated : updatedAccounts()) {
+      for (final UpdateTrackingAccount<WorldStateAccount> updated : getUpdatedAccounts()) {
         final WorldStateAccount origin = updated.getWrappedAccount();
 
         // Save the code in key-value storage ...
@@ -406,9 +419,15 @@ public class DefaultMutableWorldState implements MutableWorldState {
                   ? wrapped.newAccountStorageTrie(Hash.EMPTY_TRIE_HASH)
                   : origin.storageTrie();
           wrapped.updatedStorageTries.put(updated.getAddress(), storageTrie);
-          for (final Map.Entry<UInt256, UInt256> entry : updatedStorage.entrySet()) {
+          final TreeSet<Map.Entry<UInt256, UInt256>> entries =
+              new TreeSet<>(
+                  Comparator.comparing(
+                      (Function<Map.Entry<UInt256, UInt256>, UInt256>) Map.Entry::getKey));
+          entries.addAll(updatedStorage.entrySet());
+
+          for (final Map.Entry<UInt256, UInt256> entry : entries) {
             final UInt256 value = entry.getValue();
-            final Hash keyHash = Hash.hash(entry.getKey().toBytes());
+            final Hash keyHash = Hash.hash(entry.getKey());
             if (value.isZero()) {
               storageTrie.remove(keyHash);
             } else {

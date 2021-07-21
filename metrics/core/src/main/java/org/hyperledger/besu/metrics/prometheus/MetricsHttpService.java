@@ -17,6 +17,7 @@ package org.hyperledger.besu.metrics.prometheus;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Streams.stream;
 
+import org.hyperledger.besu.metrics.MetricsService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.io.ByteArrayOutputStream;
@@ -45,7 +46,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-class MetricsHttpService implements MetricsService {
+public class MetricsHttpService implements MetricsService {
   private static final Logger LOG = LogManager.getLogger();
 
   private static final InetSocketAddress EMPTY_SOCKET_ADDRESS = new InetSocketAddress("0.0.0.0", 0);
@@ -56,7 +57,7 @@ class MetricsHttpService implements MetricsService {
 
   private HttpServer httpServer;
 
-  MetricsHttpService(
+  public MetricsHttpService(
       final Vertx vertx,
       final MetricsConfiguration configuration,
       final MetricsSystem metricsSystem) {
@@ -80,22 +81,22 @@ class MetricsHttpService implements MetricsService {
     // Create the HTTP server and a router object.
     httpServer =
         vertx.createHttpServer(
-            new HttpServerOptions().setHost(config.getHost()).setPort(config.getPort()));
+            new HttpServerOptions()
+                .setHost(config.getHost())
+                .setPort(config.getPort())
+                .setHandle100ContinueAutomatically(true)
+                .setCompressionSupported(true));
 
     final Router router = Router.router(vertx);
 
     // Verify Host header.
-    router.route().handler(checkWhitelistHostHeader());
+    router.route().handler(checkAllowlistHostHeader());
 
     // Endpoint for AWS health check.
     router.route("/").method(HttpMethod.GET).handler(this::handleEmptyRequest);
 
     // Endpoint for Prometheus metrics monitoring.
-    router
-        .route("/metrics")
-        .method(HttpMethod.GET)
-        .produces(TextFormat.CONTENT_TYPE_004)
-        .handler(this::metricsRequest);
+    router.route("/metrics").method(HttpMethod.GET).handler(this::metricsRequest);
 
     final CompletableFuture<?> resultFuture = new CompletableFuture<>();
     httpServer
@@ -130,11 +131,11 @@ class MetricsHttpService implements MetricsService {
     return resultFuture;
   }
 
-  private Handler<RoutingContext> checkWhitelistHostHeader() {
+  private Handler<RoutingContext> checkAllowlistHostHeader() {
     return event -> {
       final Optional<String> hostHeader = getAndValidateHostHeader(event);
-      if (config.getHostsWhitelist().contains("*")
-          || (hostHeader.isPresent() && hostIsInWhitelist(hostHeader.get()))) {
+      if (config.getHostsAllowlist().contains("*")
+          || (hostHeader.isPresent() && hostIsInAllowlist(hostHeader.get()))) {
         event.next();
       } else {
         final HttpServerResponse response = event.response();
@@ -164,13 +165,13 @@ class MetricsHttpService implements MetricsService {
     return Optional.ofNullable(Iterables.get(splitHostHeader, 0));
   }
 
-  private boolean hostIsInWhitelist(final String hostHeader) {
-    if (config.getHostsWhitelist().stream()
+  private boolean hostIsInAllowlist(final String hostHeader) {
+    if (config.getHostsAllowlist().stream()
         .anyMatch(
-            whitelistEntry -> whitelistEntry.toLowerCase().equals(hostHeader.toLowerCase()))) {
+            allowlistEntry -> allowlistEntry.toLowerCase().equals(hostHeader.toLowerCase()))) {
       return true;
     } else {
-      LOG.trace("Host not in whitelist: '{}'", hostHeader);
+      LOG.trace("Host not in allowlist: '{}'", hostHeader);
       return false;
     }
   }

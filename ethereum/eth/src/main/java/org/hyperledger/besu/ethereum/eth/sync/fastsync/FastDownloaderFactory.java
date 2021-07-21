@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.eth.sync.fastsync;
 
 import org.hyperledger.besu.ethereum.ProtocolContext;
+import org.hyperledger.besu.ethereum.bonsai.BonsaiPersistedWorldState;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.sync.SyncMode;
@@ -39,25 +40,37 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class FastDownloaderFactory {
+
+  private static final String FAST_SYNC_FOLDER = "fastsync";
+
   private static final Logger LOG = LogManager.getLogger();
 
-  public static <C> Optional<FastSyncDownloader<C>> create(
+  public static Optional<FastSyncDownloader> create(
       final SynchronizerConfiguration syncConfig,
       final Path dataDirectory,
-      final ProtocolSchedule<C> protocolSchedule,
-      final ProtocolContext<C> protocolContext,
+      final ProtocolSchedule protocolSchedule,
+      final ProtocolContext protocolContext,
       final MetricsSystem metricsSystem,
       final EthContext ethContext,
       final WorldStateStorage worldStateStorage,
       final SyncState syncState,
       final Clock clock) {
-    if (syncConfig.getSyncMode() != SyncMode.FAST) {
-      return Optional.empty();
-    }
 
-    final Path fastSyncDataDirectory = getFastSyncDataDirectory(dataDirectory);
+    final Path fastSyncDataDirectory = dataDirectory.resolve(FAST_SYNC_FOLDER);
     final FastSyncStateStorage fastSyncStateStorage =
         new FastSyncStateStorage(fastSyncDataDirectory);
+
+    if (syncConfig.getSyncMode() != SyncMode.FAST) {
+      if (fastSyncStateStorage.isFastSyncInProgress()) {
+        throw new IllegalStateException(
+            "Unable to change the sync mode when fast sync is incomplete, please restart with fast sync mode");
+      } else {
+        return Optional.empty();
+      }
+    }
+
+    ensureDirectoryExists(fastSyncDataDirectory.toFile());
+
     final FastSyncState fastSyncState =
         fastSyncStateStorage.loadState(ScheduleBasedBlockHeaderFunctions.create(protocolSchedule));
     if (fastSyncState.getPivotBlockHeader().isEmpty()
@@ -67,7 +80,9 @@ public class FastDownloaderFactory {
           "Fast sync was requested, but cannot be enabled because the local blockchain is not empty.");
       return Optional.empty();
     }
-
+    if (worldStateStorage instanceof BonsaiPersistedWorldState) {
+      worldStateStorage.clear();
+    }
     final CachingTaskCollection<NodeDataRequest> taskCollection =
         createWorldStateDownloaderTaskCollection(
             getStateQueueDirectory(dataDirectory),
@@ -84,9 +99,9 @@ public class FastDownloaderFactory {
             syncConfig.getWorldStateMinMillisBeforeStalling(),
             clock,
             metricsSystem);
-    final FastSyncDownloader<C> fastSyncDownloader =
-        new FastSyncDownloader<>(
-            new FastSyncActions<>(
+    final FastSyncDownloader fastSyncDownloader =
+        new FastSyncDownloader(
+            new FastSyncActions(
                 syncConfig,
                 protocolSchedule,
                 protocolContext,
@@ -109,7 +124,7 @@ public class FastDownloaderFactory {
   }
 
   private static Path getFastSyncDataDirectory(final Path dataDirectory) {
-    final Path fastSyncDataDir = dataDirectory.resolve("fastsync");
+    final Path fastSyncDataDir = dataDirectory.resolve(FAST_SYNC_FOLDER);
     ensureDirectoryExists(fastSyncDataDir.toFile());
     return fastSyncDataDir;
   }

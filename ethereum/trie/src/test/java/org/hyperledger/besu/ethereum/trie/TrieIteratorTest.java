@@ -32,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.TreeSet;
-import java.util.function.Function;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -52,10 +51,13 @@ public class TrieIteratorTest {
   @SuppressWarnings("unchecked")
   private final LeafHandler<String> leafHandler = mock(LeafHandler.class);
 
-  private final Function<String, Bytes> valueSerializer =
-      value -> Bytes.wrap(value.getBytes(StandardCharsets.UTF_8));
-  private final DefaultNodeFactory<String> nodeFactory = new DefaultNodeFactory<>(valueSerializer);
-  private final TrieIterator<String> iterator = new TrieIterator<>(leafHandler);
+  private final DefaultNodeFactory<String> nodeFactory =
+      new DefaultNodeFactory<>(this::valueSerializer);
+  private final TrieIterator<String> iterator = new TrieIterator<>(leafHandler, false);
+
+  private Bytes valueSerializer(final String value) {
+    return Bytes.wrap(value.getBytes(StandardCharsets.UTF_8));
+  }
 
   @Test
   public void shouldCallLeafHandlerWhenRootNodeIsALeaf() {
@@ -122,8 +124,7 @@ public class TrieIteratorTest {
     final int startNodeNumber = random.nextInt(Math.max(1, totalNodes - 1));
     final int stopNodeNumber = random.nextInt(Math.max(1, totalNodes - 1));
     for (int i = 0; i < totalNodes; i++) {
-      final Bytes32 keyHash =
-          Hash.keccak256(UInt256.valueOf(Math.abs(random.nextLong())).toBytes());
+      final Bytes32 keyHash = Hash.keccak256(UInt256.valueOf(Math.abs(random.nextLong())));
       root = root.accept(new PutVisitor<>(nodeFactory, "Value"), bytesToPath(keyHash));
       expectedKeyHashes.add(keyHash);
       if (i == startNodeNumber) {

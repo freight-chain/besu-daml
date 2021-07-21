@@ -35,7 +35,7 @@ import org.hyperledger.besu.ethereum.core.BlockDataGenerator.BlockOptions;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockWithReceipts;
 import org.hyperledger.besu.ethereum.core.Hash;
-import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.Log;
 import org.hyperledger.besu.ethereum.core.LogTopic;
 import org.hyperledger.besu.ethereum.core.LogWithMetadata;
@@ -66,7 +66,7 @@ public class LogsSubscriptionServiceTest {
 
   private final BlockDataGenerator gen = new BlockDataGenerator(1);
   private final MutableBlockchain blockchain =
-      InMemoryStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
+      InMemoryKeyValueStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
 
   private LogsSubscriptionService logsSubscriptionService;
   private final AtomicLong nextSubscriptionId = new AtomicLong();
@@ -295,7 +295,9 @@ public class LogsSubscriptionServiceTest {
   public void whenExistsPrivateLogsSubscriptionPrivacyQueriesIsCalled() {
     final String privacyGroupId = "privacy_group_id";
     final Address address = Address.fromHexString("0x0");
-    final PrivateLogsSubscription subscription = createPrivateSubscription(privacyGroupId, address);
+    final String enclavePublicKey = "public_key";
+    final PrivateLogsSubscription subscription =
+        createPrivateSubscription(privacyGroupId, address, enclavePublicKey);
     registerSubscriptions(subscription);
 
     final BlockWithReceipts blockWithReceipts = generateBlock(2, 2, 2);
@@ -312,7 +314,9 @@ public class LogsSubscriptionServiceTest {
   public void whenPrivateLogsSubscriptionMatchesLogNotificationIsSent() {
     final String privacyGroupId = "privacy_group_id";
     final Address address = Address.fromHexString("0x0");
-    final PrivateLogsSubscription subscription = createPrivateSubscription(privacyGroupId, address);
+    final String enclavePublicKey = "public_key";
+    final PrivateLogsSubscription subscription =
+        createPrivateSubscription(privacyGroupId, address, enclavePublicKey);
     registerSubscriptions(subscription);
 
     when(privacyQueries.matchingLogs(any(), any(), any())).thenReturn(List.of(logWithMetadata()));
@@ -388,7 +392,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   private PrivateLogsSubscription createPrivateSubscription(
-      final String privacyGroupId, final Address address) {
+      final String privacyGroupId, final Address address, final String enclavePublicKey) {
     return new PrivateLogsSubscription(
         nextSubscriptionId.incrementAndGet(),
         "conn",
@@ -398,7 +402,8 @@ public class LogsSubscriptionServiceTest {
             Arrays.asList(address),
             Collections.emptyList(),
             null),
-        privacyGroupId);
+        privacyGroupId,
+        enclavePublicKey);
   }
 
   private LogsSubscription createSubscription(final Address address) {

@@ -14,14 +14,15 @@
  */
 package org.hyperledger.besu.consensus.ibft.validation;
 
-import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
-import org.hyperledger.besu.consensus.ibft.IbftBlockHeaderFunctions;
-import org.hyperledger.besu.consensus.ibft.IbftBlockInterface;
-import org.hyperledger.besu.consensus.ibft.IbftHelpers;
+import org.hyperledger.besu.consensus.common.bft.BftBlockHeaderFunctions;
+import org.hyperledger.besu.consensus.common.bft.BftBlockInterface;
+import org.hyperledger.besu.consensus.common.bft.BftExtraDataCodec;
+import org.hyperledger.besu.consensus.common.bft.BftHelpers;
+import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier;
+import org.hyperledger.besu.consensus.common.bft.payload.SignedData;
 import org.hyperledger.besu.consensus.ibft.payload.PreparedCertificate;
 import org.hyperledger.besu.consensus.ibft.payload.RoundChangeCertificate;
 import org.hyperledger.besu.consensus.ibft.payload.RoundChangePayload;
-import org.hyperledger.besu.consensus.ibft.payload.SignedData;
 import org.hyperledger.besu.consensus.ibft.validation.RoundChangePayloadValidator.MessageValidatorForHeightFactory;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -38,17 +39,23 @@ public class RoundChangeCertificateValidator {
 
   private final Collection<Address> validators;
   private final MessageValidatorForHeightFactory messageValidatorFactory;
+  private final BftExtraDataCodec bftExtraDataCodec;
+  private final BftBlockInterface bftBlockInterface;
   private final long quorum;
   private final long chainHeight;
 
   public RoundChangeCertificateValidator(
       final Collection<Address> validators,
       final MessageValidatorForHeightFactory messageValidatorFactory,
-      final long chainHeight) {
+      final long chainHeight,
+      final BftExtraDataCodec bftExtraDataCodec,
+      final BftBlockInterface bftBlockInterface) {
     this.validators = validators;
     this.messageValidatorFactory = messageValidatorFactory;
-    this.quorum = IbftHelpers.calculateRequiredValidatorQuorum(validators.size());
+    this.quorum = BftHelpers.calculateRequiredValidatorQuorum(validators.size());
     this.chainHeight = chainHeight;
+    this.bftExtraDataCodec = bftExtraDataCodec;
+    this.bftBlockInterface = bftBlockInterface;
   }
 
   public boolean validateRoundChangeMessagesAndEnsureTargetRoundMatchesRoot(
@@ -57,12 +64,12 @@ public class RoundChangeCertificateValidator {
     final Collection<SignedData<RoundChangePayload>> roundChangeMsgs =
         roundChangeCert.getRoundChangePayloads();
 
-    if (hasDuplicateAuthors(roundChangeMsgs)) {
+    if (roundChangeMsgs.size() < quorum) {
+      LOG.info("Invalid RoundChangeCertificate, insufficient RoundChange messages.");
       return false;
     }
 
-    if (roundChangeMsgs.size() < quorum) {
-      LOG.info("Invalid RoundChangeCertificate, insufficient RoundChange messages.");
+    if (hasDuplicateAuthors(roundChangeMsgs)) {
       return false;
     }
 
@@ -78,7 +85,7 @@ public class RoundChangeCertificateValidator {
         new RoundChangePayloadValidator(
             messageValidatorFactory,
             validators,
-            IbftHelpers.prepareMessageCountForQuorum(quorum),
+            BftHelpers.prepareMessageCountForQuorum(quorum),
             chainHeight);
 
     if (!roundChangeCert.getRoundChangePayloads().stream()
@@ -109,7 +116,7 @@ public class RoundChangeCertificateValidator {
         roundChangeCert.getRoundChangePayloads();
 
     final Optional<PreparedCertificate> latestPreparedCertificate =
-        IbftHelpers.findLatestPreparedCertificate(roundChangePayloads);
+        findLatestPreparedCertificate(roundChangePayloads);
 
     if (!latestPreparedCertificate.isPresent()) {
       LOG.debug(
@@ -120,7 +127,7 @@ public class RoundChangeCertificateValidator {
     // Need to check that if we substitute the LatestPrepareCert round number into the supplied
     // block that we get the SAME hash as PreparedCert.
     final Block currentBlockWithOldRound =
-        IbftBlockInterface.replaceRoundInBlock(
+        bftBlockInterface.replaceRoundInBlock(
             proposedBlock,
             latestPreparedCertificate
                 .get()
@@ -128,7 +135,7 @@ public class RoundChangeCertificateValidator {
                 .getPayload()
                 .getRoundIdentifier()
                 .getRoundNumber(),
-            IbftBlockHeaderFunctions.forCommittedSeal());
+            BftBlockHeaderFunctions.forCommittedSeal(bftExtraDataCodec));
 
     if (!currentBlockWithOldRound
         .getHash()
@@ -139,5 +146,29 @@ public class RoundChangeCertificateValidator {
     }
 
     return true;
+  }
+
+  public static Optional<PreparedCertificate> findLatestPreparedCertificate(
+      final Collection<SignedData<RoundChangePayload>> msgs) {
+
+    Optional<PreparedCertificate> result = Optional.empty();
+
+    for (SignedData<RoundChangePayload> roundChangeMsg : msgs) {
+      final RoundChangePayload payload = roundChangeMsg.getPayload();
+      if (payload.getPreparedCertificate().isPresent()) {
+        if (!result.isPresent()) {
+          result = payload.getPreparedCertificate();
+        } else {
+          final PreparedCertificate currentLatest = result.get();
+          final PreparedCertificate nextCert = payload.getPreparedCertificate().get();
+
+          if (currentLatest.getProposalPayload().getPayload().getRoundIdentifier().getRoundNumber()
+              < nextCert.getProposalPayload().getPayload().getRoundIdentifier().getRoundNumber()) {
+            result = Optional.of(nextCert);
+          }
+        }
+      }
+    }
+    return result;
   }
 }

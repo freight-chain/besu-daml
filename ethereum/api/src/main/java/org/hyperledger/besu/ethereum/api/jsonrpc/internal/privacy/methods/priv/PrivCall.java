@@ -21,25 +21,24 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonR
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.AbstractBlockParameterMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.BlockParameter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.EnclavePublicKeyProvider;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.PrivacyIdProvider;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.privacy.PrivacyController;
-import org.hyperledger.besu.ethereum.transaction.CallParameter;
 
 public class PrivCall extends AbstractBlockParameterMethod {
 
-  private final EnclavePublicKeyProvider enclavePublicKeyProvider;
+  private final PrivacyIdProvider privacyIdProvider;
   private final PrivacyController privacyController;
 
   public PrivCall(
       final BlockchainQueries blockchainQueries,
       final PrivacyController privacyController,
-      final EnclavePublicKeyProvider enclavePublicKeyProvider) {
+      final PrivacyIdProvider privacyIdProvider) {
     super(blockchainQueries);
-    this.enclavePublicKeyProvider = enclavePublicKeyProvider;
+    this.privacyIdProvider = privacyIdProvider;
     this.privacyController = privacyController;
   }
 
@@ -56,13 +55,16 @@ public class PrivCall extends AbstractBlockParameterMethod {
   @Override
   protected Object resultByBlockNumber(
       final JsonRpcRequestContext request, final long blockNumber) {
-    final CallParameter callParams = validateAndGetCallParams(request);
+    final JsonCallParameter callParams = validateAndGetCallParams(request);
     final String privacyGroupId = request.getRequiredParameter(0, String.class);
 
-    final String enclavePublicKey = enclavePublicKeyProvider.getEnclaveKey(request.getUser());
+    final String privacyUserId = privacyIdProvider.getPrivacyUserId(request.getUser());
+
+    PrivUtil.checkMembershipForAuthenticatedUser(
+        privacyController, privacyIdProvider, request, privacyGroupId, blockNumber);
 
     return privacyController
-        .simulatePrivateTransaction(privacyGroupId, enclavePublicKey, callParams, blockNumber)
+        .simulatePrivateTransaction(privacyGroupId, privacyUserId, callParams, blockNumber)
         .map(
             result ->
                 result
@@ -87,7 +89,7 @@ public class PrivCall extends AbstractBlockParameterMethod {
     return (JsonRpcResponse) findResultByParamType(requestContext);
   }
 
-  private CallParameter validateAndGetCallParams(final JsonRpcRequestContext request) {
+  private JsonCallParameter validateAndGetCallParams(final JsonRpcRequestContext request) {
     final JsonCallParameter callParams = request.getRequiredParameter(1, JsonCallParameter.class);
     if (callParams.getTo() == null) {
       throw new InvalidJsonRpcParameters("Missing \"to\" field in call arguments");

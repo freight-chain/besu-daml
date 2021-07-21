@@ -15,13 +15,18 @@
 package org.hyperledger.besu.ethereum.core;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static java.util.stream.Collectors.toUnmodifiableSet;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 
-import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SecureRandomProvider;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.mainnet.BodyValidation;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
+import org.hyperledger.besu.plugin.data.TransactionType;
 
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
@@ -35,13 +40,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import com.google.common.base.Supplier;
@@ -60,6 +65,7 @@ public class BlockDataGenerator {
 
   private final Random random;
   private final KeyPairGenerator keyPairGenerator;
+  private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithmFactory.getInstance();
   private Supplier<BlockOptions> blockOptionsSupplier = BlockOptions::create;
 
   public BlockDataGenerator(final int seed) {
@@ -78,11 +84,14 @@ public class BlockDataGenerator {
   private KeyPairGenerator createKeyPairGenerator(final long seed) {
     final KeyPairGenerator keyPairGenerator;
     try {
-      keyPairGenerator = KeyPairGenerator.getInstance(SECP256K1.ALGORITHM, SECP256K1.PROVIDER);
+      keyPairGenerator =
+          KeyPairGenerator.getInstance(
+              SignatureAlgorithm.ALGORITHM, signatureAlgorithm.getProvider());
     } catch (final Exception e) {
       throw new RuntimeException(e);
     }
-    final ECGenParameterSpec ecGenParameterSpec = new ECGenParameterSpec(SECP256K1.CURVE_NAME);
+    final ECGenParameterSpec ecGenParameterSpec =
+        new ECGenParameterSpec(signatureAlgorithm.getCurveName());
     try {
       final SecureRandom secureRandom = SecureRandomProvider.createSecureRandom();
       secureRandom.setSeed(seed);
@@ -138,7 +147,7 @@ public class BlockDataGenerator {
       seq.add(next);
       parentHash = next.getHash();
       nextBlockNumber = nextBlockNumber + 1L;
-      worldState.persist();
+      worldState.persist(null);
     }
 
     return seq;
@@ -158,17 +167,17 @@ public class BlockDataGenerator {
       final int count,
       final float percentContractAccounts,
       final float percentContractAccountsWithNonEmptyStorage) {
-    WorldUpdater updater = worldState.updater();
-    List<Account> accounts = new ArrayList<>(count);
+    final WorldUpdater updater = worldState.updater();
+    final List<Account> accounts = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
-      MutableAccount account = updater.getOrCreate(address()).getMutable();
+      final MutableAccount account = updater.getOrCreate(address()).getMutable();
       if (random.nextFloat() < percentContractAccounts) {
         // Some percentage of accounts are contract accounts
         account.setCode(bytesValue(5, 50));
         account.setVersion(Account.DEFAULT_VERSION);
         if (random.nextFloat() < percentContractAccountsWithNonEmptyStorage) {
           // Add some storage for contract accounts
-          int storageValues = random.nextInt(20) + 10;
+          final int storageValues = random.nextInt(20) + 10;
           for (int j = 0; j < storageValues; j++) {
             account.setStorageValue(uint256(), uint256());
           }
@@ -180,19 +189,19 @@ public class BlockDataGenerator {
       accounts.add(account);
     }
     updater.commit();
-    worldState.persist();
+    worldState.persist(null);
     return accounts;
   }
 
   public List<Block> blockSequence(final int count) {
-    final WorldStateArchive worldState = InMemoryStorageProvider.createInMemoryWorldStateArchive();
+    final WorldStateArchive worldState = createInMemoryWorldStateArchive();
     return blockSequence(count, worldState, Collections.emptyList(), Collections.emptyList());
   }
 
   public List<Block> blockSequence(final Block previousBlock, final int count) {
-    final WorldStateArchive worldState = InMemoryStorageProvider.createInMemoryWorldStateArchive();
-    Hash parentHash = previousBlock.getHeader().getHash();
-    long blockNumber = previousBlock.getHeader().getNumber() + 1;
+    final WorldStateArchive worldState = createInMemoryWorldStateArchive();
+    final Hash parentHash = previousBlock.getHeader().getHash();
+    final long blockNumber = previousBlock.getHeader().getNumber() + 1;
     return blockSequence(
         count,
         blockNumber,
@@ -265,24 +274,30 @@ public class BlockDataGenerator {
     final int gasLimit = random.nextInt() & Integer.MAX_VALUE;
     final int gasUsed = Math.max(0, gasLimit - 1);
     final long blockNonce = random.nextLong();
-    return BlockHeaderBuilder.create()
-        .parentHash(options.getParentHash(hash()))
-        .ommersHash(BodyValidation.ommersHash(body.getOmmers()))
-        .coinbase(address())
-        .stateRoot(options.getStateRoot(hash()))
-        .transactionsRoot(BodyValidation.transactionsRoot(body.getTransactions()))
-        .receiptsRoot(options.getReceiptsRoot(hash()))
-        .logsBloom(options.getLogsBloom(logsBloom()))
-        .difficulty(options.getDifficulty(Difficulty.of(uint256(4))))
-        .number(number)
-        .gasLimit(gasLimit)
-        .gasUsed(options.getGasUsed(gasUsed))
-        .timestamp(Instant.now().truncatedTo(ChronoUnit.SECONDS).getEpochSecond())
-        .extraData(options.getExtraData(bytes32()))
-        .mixHash(hash())
-        .nonce(blockNonce)
-        .blockHeaderFunctions(options.getBlockHeaderFunctions(new MainnetBlockHeaderFunctions()))
-        .buildBlockHeader();
+    final BlockHeaderBuilder blockHeaderBuilder =
+        BlockHeaderBuilder.create()
+            .parentHash(options.getParentHash(hash()))
+            .ommersHash(BodyValidation.ommersHash(body.getOmmers()))
+            .coinbase(options.getCoinbase(address()))
+            .stateRoot(options.getStateRoot(hash()))
+            .transactionsRoot(BodyValidation.transactionsRoot(body.getTransactions()))
+            .receiptsRoot(options.getReceiptsRoot(hash()))
+            .logsBloom(options.getLogsBloom(logsBloom()))
+            .difficulty(options.getDifficulty(Difficulty.of(uint256(4))))
+            .number(number)
+            .gasLimit(gasLimit)
+            .gasUsed(options.getGasUsed(gasUsed))
+            .timestamp(
+                options
+                    .getTimestamp()
+                    .orElse(Instant.now().truncatedTo(ChronoUnit.SECONDS).getEpochSecond()))
+            .extraData(options.getExtraData(bytes32()))
+            .mixHash(hash())
+            .nonce(blockNonce)
+            .blockHeaderFunctions(
+                options.getBlockHeaderFunctions(new MainnetBlockHeaderFunctions()));
+    options.getBaseFee(Optional.of(uint256(2).toLong())).ifPresent(blockHeaderBuilder::baseFee);
+    return blockHeaderBuilder.buildBlockHeader();
   }
 
   public BlockBody body() {
@@ -299,8 +314,8 @@ public class BlockDataGenerator {
     }
     final List<Transaction> defaultTxs = new ArrayList<>();
     if (options.hasTransactions()) {
-      defaultTxs.add(transaction());
-      defaultTxs.add(transaction());
+      defaultTxs.add(transaction(options.getTransactionTypes()));
+      defaultTxs.add(transaction(options.getTransactionTypes()));
     }
 
     return new BlockBody(options.getTransactions(defaultTxs), ommers);
@@ -310,18 +325,97 @@ public class BlockDataGenerator {
     return header(positiveLong(), body(BlockOptions.create().hasOmmers(false)));
   }
 
+  private TransactionType transactionType() {
+    return transactionType(TransactionType.values());
+  }
+
+  private TransactionType transactionType(final TransactionType... transactionTypes) {
+    return transactionTypes[random.nextInt(transactionTypes.length)];
+  }
+
   public Transaction transaction() {
-    return transaction(bytes32());
+    return transaction(transactionType());
+  }
+
+  public Transaction transaction(final TransactionType... transactionTypes) {
+    return transaction(transactionType(transactionTypes));
+  }
+
+  public Transaction transaction(final TransactionType transactionType) {
+    return transaction(transactionType, bytes32(), address());
   }
 
   public Transaction transaction(final Bytes payload) {
-    return transaction(payload, address());
+    return transaction(transactionType(), payload);
   }
 
-  public Transaction transaction(final Bytes payload, final Address to) {
+  public Transaction transaction(final TransactionType transactionType, final Bytes payload) {
+    return transaction(transactionType, payload, address());
+  }
+
+  public Transaction transaction(
+      final TransactionType transactionType, final Bytes payload, final Address to) {
+    switch (transactionType) {
+      case FRONTIER:
+        return frontierTransaction(payload, to);
+      case EIP1559:
+        return eip1559Transaction(payload, to);
+      case ACCESS_LIST:
+        return accessListTransaction(payload, to);
+      default:
+        throw new RuntimeException(
+            String.format(
+                "Developer Error. No random transaction generator defined for %s",
+                transactionType));
+    }
+  }
+
+  private Transaction accessListTransaction(final Bytes payload, final Address to) {
     return Transaction.builder()
+        .type(TransactionType.ACCESS_LIST)
         .nonce(positiveLong())
-        .gasPrice(Wei.wrap(bytes32()))
+        .gasPrice(Wei.wrap(bytesValue(4)))
+        .gasLimit(positiveLong())
+        .to(to)
+        .value(Wei.wrap(bytes32()))
+        .payload(payload)
+        .accessList(accessList())
+        .chainId(BigInteger.ONE)
+        .signAndBuild(generateKeyPair());
+  }
+
+  private List<AccessListEntry> accessList() {
+    final List<Address> accessedAddresses =
+        Stream.generate(this::address).limit(1 + random.nextInt(3)).collect(toUnmodifiableList());
+    final List<AccessListEntry> accessedStorage = new ArrayList<>();
+    for (int i = 0; i < accessedAddresses.size(); ++i) {
+      accessedStorage.add(
+          new AccessListEntry(
+              accessedAddresses.get(i),
+              Stream.generate(this::bytes32).limit(2L * i).collect(toUnmodifiableList())));
+    }
+    return accessedStorage;
+  }
+
+  private Transaction eip1559Transaction(final Bytes payload, final Address to) {
+    return Transaction.builder()
+        .type(TransactionType.EIP1559)
+        .nonce(positiveLong())
+        .maxPriorityFeePerGas(Wei.wrap(bytesValue(4)))
+        .maxFeePerGas(Wei.wrap(bytesValue(4)))
+        .gasLimit(positiveLong())
+        .to(to)
+        .value(Wei.of(positiveLong()))
+        .payload(payload)
+        .chainId(BigInteger.ONE)
+        .signAndBuild(generateKeyPair());
+  }
+
+  private Transaction frontierTransaction(final Bytes payload, final Address to) {
+    return Transaction.builder()
+        .type(TransactionType.FRONTIER)
+        .nonce(positiveLong())
+        .gasPrice(Wei.wrap(bytesValue(4)))
         .gasLimit(positiveLong())
         .to(to)
         .value(Wei.wrap(bytes32()))
@@ -330,42 +424,50 @@ public class BlockDataGenerator {
         .signAndBuild(generateKeyPair());
   }
 
-  public Set<Transaction> transactions(final int n) {
-    Wei gasPrice = Wei.wrap(bytes32());
-    long gasLimit = positiveLong();
-    Address to = address();
-    Wei value = Wei.wrap(bytes32());
-    int chainId = 1;
-    Bytes32 payload = bytes32();
-    final SECP256K1.Signature signature = SECP256K1.sign(payload, generateKeyPair());
+  public Set<Transaction> transactions(final int n, final TransactionType... transactionTypes) {
+    return Stream.generate(() -> transaction(transactionTypes))
+        .parallel()
+        .limit(n)
+        .collect(toUnmodifiableSet());
+  }
 
-    final Set<Transaction> txs =
-        IntStream.range(0, n)
-            .parallel()
-            .mapToObj(
-                v ->
-                    new Transaction(
-                        v,
-                        gasPrice,
-                        gasLimit,
-                        Optional.of(to),
-                        value,
-                        signature,
-                        payload,
-                        to,
-                        Optional.of(BigInteger.valueOf(chainId))))
-            .collect(toSet());
-    return txs;
+  public Set<Transaction> transactions(final int n) {
+    return transactions(n, TransactionType.values());
+  }
+
+  public Set<Transaction> transactionsWithAllTypes() {
+    return transactionsWithAllTypes(0);
+  }
+
+  public Set<Transaction> transactionsWithAllTypes(final int atLeast) {
+    checkArgument(atLeast >= 0);
+    final HashSet<TransactionType> remainingTransactionTypes =
+        new HashSet<>(Set.of(TransactionType.values()));
+    final HashSet<Transaction> transactions = new HashSet<>();
+    while (transactions.size() < atLeast || !remainingTransactionTypes.isEmpty()) {
+      final Transaction newTransaction = transaction();
+      transactions.add(newTransaction);
+      remainingTransactionTypes.remove(newTransaction.getType());
+    }
+    return transactions;
   }
 
   public TransactionReceipt receipt(final long cumulativeGasUsed) {
     return new TransactionReceipt(
-        hash(), cumulativeGasUsed, Arrays.asList(log(), log()), Optional.empty());
+        transactionType(),
+        random.nextInt(2),
+        cumulativeGasUsed,
+        Arrays.asList(log(), log()),
+        Optional.empty());
   }
 
   public TransactionReceipt receipt(final Bytes revertReason) {
     return new TransactionReceipt(
-        hash(), positiveLong(), Arrays.asList(log(), log()), Optional.of(revertReason));
+        transactionType(),
+        random.nextInt(2),
+        positiveLong(),
+        Arrays.asList(log(), log()),
+        Optional.of(revertReason));
   }
 
   public TransactionReceipt receipt() {
@@ -373,7 +475,8 @@ public class BlockDataGenerator {
   }
 
   public TransactionReceipt receipt(final List<Log> logs) {
-    return new TransactionReceipt(hash(), positiveLong(), logs, Optional.empty());
+    return new TransactionReceipt(
+        transactionType(), random.nextInt(2), positiveLong(), logs, Optional.empty());
   }
 
   public UInt256 storageKey() {
@@ -410,7 +513,7 @@ public class BlockDataGenerator {
     return LogTopic.wrap(bytesValue(Bytes32.SIZE));
   }
 
-  private Bytes32 bytes32() {
+  public Bytes32 bytes32() {
     return Bytes32.wrap(bytes(Bytes32.SIZE));
   }
 
@@ -434,10 +537,10 @@ public class BlockDataGenerator {
    * Creates a UInt256 with a value that fits within maxByteSize
    *
    * @param maxByteSize The byte size to cap this value to
-   * @return
+   * @return the maximum size
    */
   private UInt256 uint256(final int maxByteSize) {
-    assert maxByteSize <= 32;
+    checkArgument(maxByteSize <= 32);
     return UInt256.fromBytes(Bytes32.wrap(bytes(32, 32 - maxByteSize)));
   }
 
@@ -472,7 +575,7 @@ public class BlockDataGenerator {
    * @param size The size of the byte array to return
    * @param zerofill The number of lower-order bytes to fill with zero (creating a smaller big
    *     endian integer value)
-   * @return
+   * @return the array of bytes.
    */
   private byte[] bytes(final int size, final int zerofill) {
     final byte[] bytes = new byte[size];
@@ -481,7 +584,7 @@ public class BlockDataGenerator {
     return bytes;
   }
 
-  private SECP256K1.KeyPair generateKeyPair() {
+  public KeyPair generateKeyPair() {
     final java.security.KeyPair rawKeyPair = keyPairGenerator.generateKeyPair();
     final BCECPrivateKey privateKey = (BCECPrivateKey) rawKeyPair.getPrivate();
     final BCECPublicKey publicKey = (BCECPublicKey) rawKeyPair.getPublic();
@@ -495,8 +598,9 @@ public class BlockDataGenerator {
     final BigInteger publicKeyValue =
         new BigInteger(1, Arrays.copyOfRange(publicKeyBytes, 1, publicKeyBytes.length));
 
-    return new SECP256K1.KeyPair(
-        SECP256K1.PrivateKey.create(privateKeyValue), SECP256K1.PublicKey.create(publicKeyValue));
+    return new KeyPair(
+        signatureAlgorithm.createPrivateKey(privateKeyValue),
+        signatureAlgorithm.createPublicKey(publicKeyValue));
   }
 
   public static class BlockOptions {
@@ -511,8 +615,12 @@ public class BlockDataGenerator {
     private Optional<Hash> receiptsRoot = Optional.empty();
     private Optional<Long> gasUsed = Optional.empty();
     private Optional<LogsBloomFilter> logsBloom = Optional.empty();
+    private Optional<Long> timestamp = Optional.empty();
     private boolean hasOmmers = true;
     private boolean hasTransactions = true;
+    private TransactionType[] transactionTypes = TransactionType.values();
+    private Optional<Address> coinbase = Optional.empty();
+    private Optional<Optional<Long>> maybeBaseFee = Optional.empty();
 
     public static BlockOptions create() {
       return new BlockOptions();
@@ -520,6 +628,10 @@ public class BlockDataGenerator {
 
     public List<Transaction> getTransactions(final List<Transaction> defaultValue) {
       return transactions.isEmpty() ? defaultValue : transactions;
+    }
+
+    public TransactionType[] getTransactionTypes() {
+      return transactionTypes;
     }
 
     public List<BlockHeader> getOmmers(final List<BlockHeader> defaultValue) {
@@ -560,6 +672,10 @@ public class BlockDataGenerator {
 
     public LogsBloomFilter getLogsBloom(final LogsBloomFilter defaultValue) {
       return logsBloom.orElse(defaultValue);
+    }
+
+    public Optional<Long> getTimestamp() {
+      return timestamp;
     }
 
     public boolean hasTransactions() {
@@ -634,8 +750,36 @@ public class BlockDataGenerator {
       return this;
     }
 
+    public BlockOptions transactionTypes(final TransactionType... transactionTypes) {
+      this.transactionTypes = transactionTypes;
+      return this;
+    }
+
     public BlockOptions hasOmmers(final boolean hasOmmers) {
       this.hasOmmers = hasOmmers;
+      return this;
+    }
+
+    public BlockOptions setTimestamp(final Long timestamp) {
+      this.timestamp = Optional.of(timestamp);
+      return this;
+    }
+
+    public BlockOptions setCoinbase(final Address coinbase) {
+      this.coinbase = Optional.of(coinbase);
+      return this;
+    }
+
+    public Address getCoinbase(final Address defaultValue) {
+      return coinbase.orElse(defaultValue);
+    }
+
+    public Optional<Long> getBaseFee(final Optional<Long> defaultValue) {
+      return maybeBaseFee.orElse(defaultValue);
+    }
+
+    public BlockOptions setBaseFee(final Optional<Long> baseFee) {
+      this.maybeBaseFee = Optional.of(baseFee);
       return this;
     }
   }

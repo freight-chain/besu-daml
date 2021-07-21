@@ -14,14 +14,13 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.processor;
 
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.processor.BlockReplay.TransactionAction;
 import org.hyperledger.besu.ethereum.core.AbstractWorldUpdater;
 import org.hyperledger.besu.ethereum.core.AbstractWorldUpdater.StackedUpdater;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.debug.TraceFrame;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.DebugOperationTracer;
 
@@ -47,7 +46,7 @@ public class BlockTracer {
     return blockReplay.block(block, prepareReplayAction(tracer));
   }
 
-  private TransactionAction<TransactionTrace> prepareReplayAction(
+  private BlockReplay.TransactionAction<TransactionTrace> prepareReplayAction(
       final DebugOperationTracer tracer) {
     return (transaction, header, blockchain, mutableWorldState, transactionProcessor) -> {
       // if we have no prior updater, it must be the first TX, so use the block's initial state
@@ -58,7 +57,7 @@ public class BlockTracer {
       }
       // create an updater for just this tx
       chainedUpdater = chainedUpdater.updater();
-      final TransactionProcessor.Result result =
+      final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
               blockchain,
               chainedUpdater,

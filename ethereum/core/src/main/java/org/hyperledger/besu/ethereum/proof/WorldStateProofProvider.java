@@ -24,6 +24,7 @@ import org.hyperledger.besu.ethereum.worldstate.StateTrieAccountValue;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
 
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -45,12 +46,12 @@ public class WorldStateProofProvider {
       final Address accountAddress,
       final List<UInt256> accountStorageKeys) {
 
-    if (!worldStateStorage.isWorldStateAvailable(worldStateRoot)) {
+    if (!worldStateStorage.isWorldStateAvailable(worldStateRoot, null)) {
       return Optional.empty();
     } else {
-      final Hash addressHash = Hash.hash(accountAddress);
+      final Hash accountHash = Hash.hash(accountAddress);
       final Proof<Bytes> accountProof =
-          newAccountStateTrie(worldStateRoot).getValueWithProof(addressHash);
+          newAccountStateTrie(worldStateRoot).getValueWithProof(accountHash);
 
       return accountProof
           .getValue()
@@ -59,19 +60,21 @@ public class WorldStateProofProvider {
           .map(
               account -> {
                 final SortedMap<UInt256, Proof<Bytes>> storageProofs =
-                    getStorageProofs(account, accountStorageKeys);
+                    getStorageProofs(accountHash, account, accountStorageKeys);
                 return new WorldStateProof(account, accountProof, storageProofs);
               });
     }
   }
 
   private SortedMap<UInt256, Proof<Bytes>> getStorageProofs(
-      final StateTrieAccountValue account, final List<UInt256> accountStorageKeys) {
+      final Hash accountHash,
+      final StateTrieAccountValue account,
+      final List<UInt256> accountStorageKeys) {
     final MerklePatriciaTrie<Bytes32, Bytes> storageTrie =
-        newAccountStorageTrie(account.getStorageRoot());
-    final SortedMap<UInt256, Proof<Bytes>> storageProofs = new TreeMap<>();
+        newAccountStorageTrie(accountHash, account.getStorageRoot());
+    final NavigableMap<UInt256, Proof<Bytes>> storageProofs = new TreeMap<>();
     accountStorageKeys.forEach(
-        key -> storageProofs.put(key, storageTrie.getValueWithProof(Hash.hash(key.toBytes()))));
+        key -> storageProofs.put(key, storageTrie.getValueWithProof(Hash.hash(key))));
     return storageProofs;
   }
 
@@ -80,8 +83,13 @@ public class WorldStateProofProvider {
         worldStateStorage::getAccountStateTrieNode, rootHash, b -> b, b -> b);
   }
 
-  private MerklePatriciaTrie<Bytes32, Bytes> newAccountStorageTrie(final Bytes32 rootHash) {
+  private MerklePatriciaTrie<Bytes32, Bytes> newAccountStorageTrie(
+      final Hash accountHash, final Bytes32 rootHash) {
     return new StoredMerklePatriciaTrie<>(
-        worldStateStorage::getAccountStorageTrieNode, rootHash, b -> b, b -> b);
+        (location, hash) ->
+            worldStateStorage.getAccountStorageTrieNode(accountHash, location, hash),
+        rootHash,
+        b -> b,
+        b -> b);
   }
 }

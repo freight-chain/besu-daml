@@ -16,29 +16,16 @@ package org.hyperledger.besu.ethereum.core.fees;
 
 public class FeeMarketConfig implements FeeMarket {
   private final long basefeeMaxChangeDenominator;
-  private final long targetGasUsed;
-  private final long decayRange;
   private final long initialBasefee;
-  private final long perTxGaslimit;
   private final long slackCoefficient;
-  private final long maxGas;
-  private final long gasIncrementAmount;
 
   public FeeMarketConfig(
       final long basefeeMaxChangeDenominator,
-      final long targetGasUsed,
-      final long slackCoefficient,
-      final long decayRange,
       final long initialBasefee,
-      final long perTxGaslimit) {
+      final long slackCoefficient) {
     this.basefeeMaxChangeDenominator = basefeeMaxChangeDenominator;
-    this.targetGasUsed = targetGasUsed;
-    this.slackCoefficient = slackCoefficient;
-    this.decayRange = decayRange;
     this.initialBasefee = initialBasefee;
-    this.perTxGaslimit = perTxGaslimit;
-    this.maxGas = slackCoefficient * targetGasUsed;
-    this.gasIncrementAmount = this.maxGas / 2 / this.decayRange;
+    this.slackCoefficient = slackCoefficient;
   }
 
   @Override
@@ -47,33 +34,8 @@ public class FeeMarketConfig implements FeeMarket {
   }
 
   @Override
-  public long getTargetGasUsed() {
-    return targetGasUsed;
-  }
-
-  @Override
-  public long getMaxGas() {
-    return maxGas;
-  }
-
-  @Override
-  public long getDecayRange() {
-    return decayRange;
-  }
-
-  @Override
-  public long getGasIncrementAmount() {
-    return gasIncrementAmount;
-  }
-
-  @Override
   public long getInitialBasefee() {
     return initialBasefee;
-  }
-
-  @Override
-  public long getPerTxGaslimit() {
-    return perTxGaslimit;
   }
 
   @Override

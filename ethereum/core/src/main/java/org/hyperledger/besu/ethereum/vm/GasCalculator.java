@@ -15,7 +15,9 @@
 package org.hyperledger.besu.ethereum.vm;
 
 import org.hyperledger.besu.ethereum.core.Account;
+import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Gas;
+import org.hyperledger.besu.ethereum.core.GasAndAccessedState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.mainnet.AbstractMessageProcessor;
@@ -24,7 +26,6 @@ import org.hyperledger.besu.ethereum.mainnet.precompiles.IDPrecompiledContract;
 import org.hyperledger.besu.ethereum.mainnet.precompiles.RIPEMD160PrecompiledContract;
 import org.hyperledger.besu.ethereum.mainnet.precompiles.SHA256PrecompiledContract;
 import org.hyperledger.besu.ethereum.vm.operations.BalanceOperation;
-import org.hyperledger.besu.ethereum.vm.operations.BeginSubOperation;
 import org.hyperledger.besu.ethereum.vm.operations.BlockHashOperation;
 import org.hyperledger.besu.ethereum.vm.operations.ExpOperation;
 import org.hyperledger.besu.ethereum.vm.operations.ExtCodeCopyOperation;
@@ -58,12 +59,12 @@ public interface GasCalculator {
   // Transaction Gas Calculations
 
   /**
-   * Returns a {@link Transaction}s intrinisic gas cost
+   * Returns a {@link Transaction}s intrinsic gas cost
    *
    * @param transaction The transaction
    * @return the transaction's intrinsic gas cost
    */
-  Gas transactionIntrinsicGasCost(Transaction transaction);
+  GasAndAccessedState transactionIntrinsicGasCostAndAccessedState(Transaction transaction);
 
   // Contract Creation Gas Calculations
 
@@ -155,6 +156,13 @@ public interface GasCalculator {
   // Call/Create Operation Calculations
 
   /**
+   * Returns the base gas cost to execute a call operation.
+   *
+   * @return the base gas cost to execute a call operation
+   */
+  Gas callOperationBaseGasCost();
+
+  /**
    * Returns the gas cost for one of the various CALL operations.
    *
    * @param frame The current frame
@@ -164,7 +172,8 @@ public interface GasCalculator {
    * @param outputDataOffset The offset in memory to place the CALL output data
    * @param outputDataLength The CALL output data length
    * @param transferValue The wei being transferred
-   * @param recipient The CALL recipient
+   * @param recipient The CALL recipient (may be null if self destructed or new)
+   * @param contract The address of the recipient (never null)
    * @return The gas cost for the CALL operation
    */
   Gas callOperationGasCost(
@@ -175,7 +184,8 @@ public interface GasCalculator {
       UInt256 outputDataOffset,
       UInt256 outputDataLength,
       Wei transferValue,
-      Account recipient);
+      Account recipient,
+      Address contract);
 
   Gas getAdditionalCallStipend();
 
@@ -383,9 +393,52 @@ public interface GasCalculator {
   Gas getSelfDestructRefundAmount();
 
   /**
-   * Returns the cost for executing a {@link BeginSubOperation}.
+   * Returns the cost of a SLOAD to a storage slot not previously loaded in the TX context.
    *
-   * @return the cost for executing begin sub operation
+   * @return the cost of a SLOAD to a storage slot not previously loaded in the TX context.
    */
-  Gas getBeginSubGasCost();
+  default Gas getColdSloadCost() {
+    return Gas.ZERO;
+  }
+
+  /**
+   * Returns the cost to access an account not previously accessed in the TX context.
+   *
+   * @return the cost to access an account not previously accessed in the TX context.
+   */
+  default Gas getColdAccountAccessCost() {
+    return Gas.ZERO;
+  }
+
+  /**
+   * Returns the cost of a SLOAD to a storage slot that has previously been loaded in the TX
+   * context.
+   *
+   * @return the cost of a SLOAD to a storage slot that has previously been loaded in the TX
+   *     context.
+   */
+  default Gas getWarmStorageReadCost() {
+    return Gas.ZERO;
+  }
+
+  /**
+   * For the purposes of this gas calculator, is this address a precompile?
+   *
+   * @param address the address to test for being a precompile
+   * @return true if it is a precompile.
+   */
+  default boolean isPrecompile(final Address address) {
+    return false;
+  }
+
+  default Gas modExpGasCost(final Bytes input) {
+    return Gas.ZERO;
+  }
+
+  default long getMaxRefundQuotient() {
+    return 2;
+  };
+
+  // what would be the gas for a PMT with hash of all non-zeros
+  Gas getMaximumPmtCost();
 }

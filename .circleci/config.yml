@@ -1,33 +1,33 @@
 ---
 version: 2.1
+orbs:
+  win: circleci/windows@2.2.0
+
 executors:
   besu_executor_med: # 2cpu, 4G ram
     docker:
-      - image: circleci/openjdk:11.0.4-jdk-stretch
+      - image: circleci/openjdk:11.0.8-jdk-buster
     resource_class: medium
     working_directory: ~/project
     environment:
       GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=2
 
-  besu_executor_med_plus: # 3cpu, 6G ram, for acceptance testing
-    docker:
-      - image: circleci/openjdk:11.0.4-jdk-stretch
-    resource_class: medium+
-    working_directory: ~/project
-    environment:
-      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=1
-
   besu_executor_xl: # 8cpu, 16G ram
     docker:
-      - image: circleci/openjdk:11.0.4-jdk-stretch
+      - image: circleci/openjdk:11.0.8-jdk-buster
     resource_class: xlarge
     working_directory: ~/project
     environment:
       GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4
 
+  xl_machine_executor:
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: xlarge
+
 notify:
   webhooks:
-    - url: https://hyperledger-rocket-chat-hubot.herokuapp.com/hubot/circleci
+    - url: $HUBOT_URL
 
 commands:
   prepare:
@@ -35,10 +35,11 @@ commands:
     steps:
       - checkout
       - run:
-          name: Install Packages - LibSodium
+          name: Install Packages - LibSodium, nssdb
           command: |
             sudo apt-get update
-            sudo apt-get install -y libsodium18 libsodium-dev apt-transport-https
+            sudo apt-get install -y libsodium23 libsodium-dev apt-transport-https haveged libnss3-tools
+            sudo service haveged restart
       - restore_cache:
           name: Restore cached gradle dependencies
           keys:
@@ -70,6 +71,8 @@ commands:
       - store_artifacts:
           path: acceptance-tests/tests/build/acceptanceTestLogs
           destination: acceptance-tests-logs
+      - store_artifacts:
+          path: acceptance-tests/tests/build/jvmErrorLogs
 
 jobs:
   assemble:
@@ -96,9 +99,28 @@ jobs:
             - ./
       - store_artifacts:
           name: Distribution artifacts
-          path:  build/distributions
+          path: build/distributions
           destination: distributions
           when: always
+  testWindows:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Unzip Windows build
+          no_output_timeout: 20m
+          command: |
+            cd build/distributions
+            unzip besu-*.zip -d besu-tmp
+            cd besu-tmp
+            mv besu-* ../besu
+      - run:
+          name: Test Besu Windows executable
+          no_output_timeout: 10m
+          command: |
+            build\distributions\besu\bin\besu.bat --help
+            build\distributions\besu\bin\besu.bat --version
 
   unitTests:
     executor: besu_executor_xl
@@ -114,7 +136,7 @@ jobs:
       - capture_test_results
 
   integrationTests:
-    executor: besu_executor_xl
+    executor: besu_executor_med
     steps:
       - prepare
       - attach_workspace:
@@ -148,15 +170,15 @@ jobs:
       - capture_test_results
 
   acceptanceTests:
-    parallelism: 8
-    executor: besu_executor_med_plus
+    parallelism: 6
+    executor: xl_machine_executor
     steps:
       - prepare
       - attach_workspace:
           at: ~/project
       - run:
           name: AcceptanceTests
-          no_output_timeout: 40m
+          no_output_timeout: 30m
           command: |
             CLASSNAMES=$(circleci tests glob "acceptance-tests/tests/src/test/java/**/*.java" \
               | sed 's@.*/src/test/java/@@' \
@@ -169,6 +191,23 @@ jobs:
       - capture_test_results
       - capture_test_logs
 
+  acceptanceTestsQuorum:
+    parallelism: 1
+    executor: xl_machine_executor
+    steps:
+      - prepare
+      - attach_workspace:
+          at: ~/project
+      - run:
+          name: Quorum Acceptance Tests
+          no_output_timeout: 40m
+          command: ./gradlew --no-daemon acceptanceTestsQuorum
+      - store_artifacts:
+          path: build/quorum-at
+          destination: quorum-at-artifacts
+      - store_test_results:
+          path: build/quorum-at/openjdk-latest/reports/xml-report
+
   buildDocker:
     executor: besu_executor_med
     steps:
@@ -177,9 +216,17 @@ jobs:
           at: ~/project
       - setup_remote_docker
       - run:
-          name: hadoLint
+          name: hadoLint_openjdk_11
           command: |
-            docker run --rm -i hadolint/hadolint < docker/Dockerfile
+            docker run --rm -i hadolint/hadolint < docker/openjdk-11/Dockerfile
+      - run:
+          name: hadoLint_openjdk_latest
+          command: |
+            docker run --rm -i hadolint/hadolint < docker/openjdk-latest/Dockerfile
+      - run:
+          name: hadoLint_graalvm
+          command: |
+            docker run --rm -i hadolint/hadolint < docker/graalvm/Dockerfile
       - run:
           name: build image
           command: |
@@ -200,7 +247,7 @@ jobs:
       - run:
           name: Publish
           command: |
-            ./gradlew --no-daemon bintrayUpload
+            ./gradlew --no-daemon artifactoryPublish
 
   publishDocker:
     executor: besu_executor_med
@@ -212,8 +259,9 @@ jobs:
       - run:
           name: Publish Docker
           command: |
-            docker login --username "${DOCKER_USER}" --password "${DOCKER_PASSWORD}"
-            docker login "${ACR_REPO}" --username "${ACR_DOCKER_USER}" --password "${ACR_DOCKER_PASSWORD}"
+            docker login --username "${DOCKER_USER_RW}" --password "${DOCKER_PASSWORD_RW}"
+            # temporarily commented out because AWS credentials are broken
+            # docker login "${ACR_REPO}" --username "${ACR_USER_RW}" --password "${ACR_PASSWORD_RW}"
             ./gradlew --no-daemon "-Pbranch=${CIRCLE_BRANCH}" dockerUpload
 
 workflows:
@@ -222,6 +270,9 @@ workflows:
     jobs:
       - assemble
       - unitTests:
+          requires:
+            - assemble
+      - testWindows:
           requires:
             - assemble
       - referenceTests:
@@ -233,9 +284,12 @@ workflows:
       - acceptanceTests:
           requires:
             - assemble
+      - acceptanceTestsQuorum:
+          requires:
+            - assemble
       - buildDocker:
           requires:
-            - unitTests
+            - assemble
       - publish:
           filters:
             branches:
@@ -246,6 +300,7 @@ workflows:
             - integrationTests
             - unitTests
             - acceptanceTests
+            - acceptanceTestsQuorum
             - referenceTests
             - buildDocker
       - publishDocker:
@@ -258,5 +313,11 @@ workflows:
             - integrationTests
             - unitTests
             - acceptanceTests
+            - acceptanceTestsQuorum
             - referenceTests
             - buildDocker
+          context:
+            - besu-dockerhub-ro
+            - besu-dockerhub-rw
+            - besu-acr-rw
+

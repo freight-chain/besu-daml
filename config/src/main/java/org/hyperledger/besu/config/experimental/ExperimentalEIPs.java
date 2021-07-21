@@ -17,35 +17,12 @@ package org.hyperledger.besu.config.experimental;
 import picocli.CommandLine.Option;
 
 /**
- * Flags defined in those class must be used with cautious, and strictly reserved to experimental
+ * Flags defined in this class must be used with caution, and strictly reserved to experimental
  * EIPs.
  */
 public class ExperimentalEIPs {
   // To make it easier for tests to reset the value to default
-  public static final boolean EIP1559_ENABLED_DEFAULT_VALUE = false;
-
-  @Option(
-      hidden = true,
-      names = {"--Xeip1559-enabled"},
-      description = "Enable experimental EIP-1559 fee market change (default: ${DEFAULT-VALUE})",
-      arity = "1")
-  public static boolean eip1559Enabled = EIP1559_ENABLED_DEFAULT_VALUE;
-
-  // To make it easier for tests to reset the value to default
-  public static final boolean BERLIN_ENABLED_DEFAULT_VALUE = false;
-
-  @Option(
-      hidden = true,
-      names = {"--Xberlin-enabled"},
-      description = "Enable non-finalized Berlin features (default: ${DEFAULT-VALUE})",
-      arity = "1")
-  public static boolean berlinEnabled = BERLIN_ENABLED_DEFAULT_VALUE;
-
-  public static void eip1559MustBeEnabled() {
-    if (!eip1559Enabled) {
-      throw new RuntimeException("EIP-1559 feature flag must be enabled --Xeip1559-enabled");
-    }
-  }
+  public static final long EIP1559_BASEFEE_DEFAULT_VALUE = 1000000000L;
 
   @Option(
       hidden = true,
@@ -55,31 +32,13 @@ public class ExperimentalEIPs {
 
   @Option(
       hidden = true,
-      names = {"--Xeip1559-target-gas-used"},
+      names = {"--Xeip1559-initial-base-fee"},
       arity = "1")
-  public static Long targetGasUsed = 10000000L;
+  public static Long initialBasefee = EIP1559_BASEFEE_DEFAULT_VALUE;
 
   @Option(
       hidden = true,
       names = {"--Xeip1559-slack-coefficient"},
       arity = "1")
   public static Long slackCoefficient = 2L;
-
-  @Option(
-      hidden = true,
-      names = {"--Xeip1559-decay-range"},
-      arity = "1")
-  public static Long decayRange = 1000000L;
-
-  @Option(
-      hidden = true,
-      names = {"--Xeip1559-initial-base-fee"},
-      arity = "1")
-  public static Long initialBasefee = 1000000000L;
-
-  @Option(
-      hidden = true,
-      names = {"--Xeip1559-per-tx-gas-limit"},
-      arity = "1")
-  public static Long perTxGasLimit = 8000000L;
 }

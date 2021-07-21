@@ -18,9 +18,12 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.util.NetworkUtility.urlForSocketAddress;
 
+import org.hyperledger.besu.metrics.MetricsSystemFactory;
+
 import java.net.InetSocketAddress;
 import java.util.Properties;
 
+import io.prometheus.client.exporter.common.TextFormat;
 import io.vertx.core.Vertx;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -52,13 +55,13 @@ public class MetricsHttpServiceTest {
   }
 
   private static MetricsHttpService createMetricsHttpService(final MetricsConfiguration config) {
-    return new MetricsHttpService(vertx, config, PrometheusMetricsSystem.init(config));
+    return new MetricsHttpService(vertx, config, MetricsSystemFactory.create(config));
   }
 
   private static MetricsHttpService createMetricsHttpService() {
     final MetricsConfiguration metricsConfiguration = createMetricsConfig();
     return new MetricsHttpService(
-        vertx, metricsConfiguration, PrometheusMetricsSystem.init(metricsConfiguration));
+        vertx, metricsConfiguration, MetricsSystemFactory.create(metricsConfiguration));
   }
 
   private static MetricsConfiguration createMetricsConfig() {
@@ -66,7 +69,7 @@ public class MetricsHttpServiceTest {
   }
 
   private static MetricsConfiguration.Builder createMetricsConfigBuilder() {
-    return MetricsConfiguration.builder().enabled(true).port(0).hostsWhitelist(singletonList("*"));
+    return MetricsConfiguration.builder().enabled(true).port(0).hostsAllowlist(singletonList("*"));
   }
 
   /** Tears down the HTTP server. */
@@ -171,6 +174,23 @@ public class MetricsHttpServiceTest {
 
       // We should have JVM metrics already loaded, verify a simple key.
       assertThat(props).isEmpty();
+    }
+  }
+
+  @Test
+  // There is only one available representation so content negotiation should not be used
+  public void acceptHeaderIgnored() throws Exception {
+    final Request metricsRequest =
+        new Request.Builder().addHeader("Accept", "text/xml").url(baseUrl + "/metrics").build();
+    try (final Response resp = client.newCall(metricsRequest).execute()) {
+      assertThat(resp.code()).isEqualTo(200);
+      // Check general format of result, it maps to java.util.Properties
+      final Properties props = new Properties();
+      props.load(resp.body().byteStream());
+
+      // We should have JVM metrics already loaded, verify a simple key.
+      assertThat(props).containsKey("jvm_threads_deadlocked");
+      assertThat(resp.header("Content-Type")).contains(TextFormat.CONTENT_TYPE_004);
     }
   }
 

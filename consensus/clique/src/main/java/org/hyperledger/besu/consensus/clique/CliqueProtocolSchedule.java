@@ -18,25 +18,29 @@ import org.hyperledger.besu.config.CliqueConfigOptions;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.consensus.common.EpochManager;
 import org.hyperledger.besu.crypto.NodeKey;
-import org.hyperledger.besu.ethereum.MainnetBlockValidator;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Util;
 import org.hyperledger.besu.ethereum.core.Wei;
+import org.hyperledger.besu.ethereum.core.fees.EIP1559;
+import org.hyperledger.besu.ethereum.mainnet.BlockHeaderValidator;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockBodyValidator;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockImporter;
+import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSpecs;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolScheduleBuilder;
+import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecAdapters;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecBuilder;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 /** Defines the protocol behaviours for a blockchain using Clique. */
 public class CliqueProtocolSchedule {
 
   private static final BigInteger DEFAULT_CHAIN_ID = BigInteger.valueOf(4);
 
-  public static ProtocolSchedule<CliqueContext> create(
+  public static ProtocolSchedule create(
       final GenesisConfigOptions config,
       final NodeKey nodeKey,
       final PrivacyParameters privacyParameters,
@@ -46,43 +50,71 @@ public class CliqueProtocolSchedule {
 
     final Address localNodeAddress = Util.publicKeyToAddress(nodeKey.getPublicKey());
 
+    if (cliqueConfig.getEpochLength() <= 0) {
+      throw new IllegalArgumentException("Epoch length in config must be greater than zero");
+    }
+
     final EpochManager epochManager = new EpochManager(cliqueConfig.getEpochLength());
-    return new ProtocolScheduleBuilder<>(
+
+    final Optional<EIP1559> eip1559 =
+        config.getEIP1559BlockNumber().isPresent()
+            ? Optional.of(new EIP1559(config.getEIP1559BlockNumber().orElse(0)))
+            : Optional.empty();
+
+    return new ProtocolScheduleBuilder(
             config,
             DEFAULT_CHAIN_ID,
-            builder ->
-                applyCliqueSpecificModifications(
-                    epochManager, cliqueConfig.getBlockPeriodSeconds(), localNodeAddress, builder),
+            ProtocolSpecAdapters.create(
+                0,
+                builder ->
+                    applyCliqueSpecificModifications(
+                        epochManager,
+                        cliqueConfig.getBlockPeriodSeconds(),
+                        localNodeAddress,
+                        builder,
+                        eip1559,
+                        privacyParameters.getGoQuorumPrivacyParameters().isPresent())),
             privacyParameters,
-            isRevertReasonEnabled)
+            isRevertReasonEnabled,
+            config.isQuorum())
         .createProtocolSchedule();
   }
 
-  public static ProtocolSchedule<CliqueContext> create(
+  public static ProtocolSchedule create(
       final GenesisConfigOptions config,
       final NodeKey nodeKey,
       final boolean isRevertReasonEnabled) {
     return create(config, nodeKey, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
   }
 
-  private static ProtocolSpecBuilder<CliqueContext> applyCliqueSpecificModifications(
+  private static ProtocolSpecBuilder applyCliqueSpecificModifications(
       final EpochManager epochManager,
       final long secondsBetweenBlocks,
       final Address localNodeAddress,
-      final ProtocolSpecBuilder<Void> specBuilder) {
+      final ProtocolSpecBuilder specBuilder,
+      final Optional<EIP1559> eip1559,
+      final boolean goQuorumMode) {
+
     return specBuilder
-        .changeConsensusContextType(
-            BlockHeaderValidationRulesetFactory.cliqueBlockHeaderValidator(
-                secondsBetweenBlocks, epochManager),
-            BlockHeaderValidationRulesetFactory.cliqueBlockHeaderValidator(
-                secondsBetweenBlocks, epochManager),
-            MainnetBlockBodyValidator::new,
-            MainnetBlockValidator::new,
-            MainnetBlockImporter::new,
-            new CliqueDifficultyCalculator(localNodeAddress))
+        .blockHeaderValidatorBuilder(
+            getBlockHeaderValidator(epochManager, secondsBetweenBlocks, eip1559))
+        .ommerHeaderValidatorBuilder(
+            getBlockHeaderValidator(epochManager, secondsBetweenBlocks, eip1559))
+        .blockBodyValidatorBuilder(MainnetBlockBodyValidator::new)
+        .blockValidatorBuilder(MainnetProtocolSpecs.blockValidatorBuilder(goQuorumMode))
+        .blockImporterBuilder(MainnetBlockImporter::new)
+        .difficultyCalculator(new CliqueDifficultyCalculator(localNodeAddress))
         .blockReward(Wei.ZERO)
         .skipZeroBlockRewards(true)
         .miningBeneficiaryCalculator(CliqueHelpers::getProposerOfBlock)
         .blockHeaderFunctions(new CliqueBlockHeaderFunctions());
+  }
+
+  private static BlockHeaderValidator.Builder getBlockHeaderValidator(
+      final EpochManager epochManager,
+      final long secondsBetweenBlocks,
+      final Optional<EIP1559> eip1559) {
+    return BlockHeaderValidationRulesetFactory.cliqueBlockHeaderValidator(
+        secondsBetweenBlocks, epochManager, eip1559);
   }
 }

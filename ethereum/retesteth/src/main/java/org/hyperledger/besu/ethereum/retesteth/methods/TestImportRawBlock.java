@@ -17,14 +17,17 @@ package org.hyperledger.besu.ethereum.retesteth.methods;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockImporter;
-import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.retesteth.RetestethContext;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
+
+import java.util.Collections;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +36,7 @@ import org.apache.tuweni.bytes.Bytes;
 public class TestImportRawBlock implements JsonRpcMethod {
   private static final Logger LOG = LogManager.getLogger();
 
-  private static final String METHOD_NAME = "test_importRawBlock";
+  public static final String METHOD_NAME = "test_importRawBlock";
 
   private final RetestethContext context;
 
@@ -49,30 +52,45 @@ public class TestImportRawBlock implements JsonRpcMethod {
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
     final String input = requestContext.getRequiredParameter(0, String.class);
-    final ProtocolSpec<Void> protocolSpec = context.getProtocolSpec(context.getBlockHeight());
-    final ProtocolContext<Void> protocolContext = this.context.getProtocolContext();
+    final ProtocolContext protocolContext = this.context.getProtocolContext();
 
     final Block block;
     try {
       block =
-          Block.readFrom(
-              RLP.input(Bytes.fromHexString(input)), protocolSpec.getBlockHeaderFunctions());
+          Block.readFrom(RLP.input(Bytes.fromHexString(input)), context.getBlockHeaderFunctions());
     } catch (final RLPException | IllegalArgumentException e) {
       LOG.debug("Failed to parse block RLP", e);
-      return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), "0x");
+      return new JsonRpcErrorResponse(
+          requestContext.getRequest().getId(), JsonRpcError.BLOCK_RLP_IMPORT_ERROR);
     }
 
-    final BlockImporter<Void> blockImporter = protocolSpec.getBlockImporter();
-    if (blockImporter.importBlock(
-        protocolContext,
-        block,
-        context.getHeaderValidationMode(),
-        context.getHeaderValidationMode())) {
-      return new JsonRpcSuccessResponse(
-          requestContext.getRequest().getId(), block.getHash().toString());
+    // retesteth expects test_rawImportBlock to not only import the block, but append it to head
+    if (context.getBlockchain().contains(block.getHash())) {
+      // if we already have the block but it is not head, append it:
+      context
+          .getBlockchain()
+          .appendBlock(
+              block,
+              context
+                  .getBlockchain()
+                  .getTxReceipts(block.getHash())
+                  .orElse(Collections.emptyList()));
     } else {
-      LOG.debug("Failed to import block.");
-      return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), "0x");
+      // otherwise attempt to import the block
+      final BlockImporter blockImporter =
+          context.getProtocolSpec(block.getHeader().getNumber()).getBlockImporter();
+      if (!blockImporter.importBlock(
+          protocolContext,
+          block,
+          context.getHeaderValidationMode(),
+          context.getHeaderValidationMode())) {
+        LOG.debug("Failed to import block.");
+        return new JsonRpcErrorResponse(
+            requestContext.getRequest().getId(), JsonRpcError.BLOCK_IMPORT_ERROR);
+      }
     }
+    // return success on append or import
+    return new JsonRpcSuccessResponse(
+        requestContext.getRequest().getId(), block.getHash().toString());
   }
 }

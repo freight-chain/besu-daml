@@ -21,7 +21,7 @@ import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class ConstantinopleGasCalculator extends SpuriousDragonGasCalculator {
+public class ConstantinopleGasCalculator extends ByzantiumGasCalculator {
 
   private static final Gas SSTORE_NO_OP_COST = Gas.of(200);
   private static final Gas SSTORE_ADDITIONAL_WRITE_COST = Gas.of(200);
@@ -36,7 +36,7 @@ public class ConstantinopleGasCalculator extends SpuriousDragonGasCalculator {
 
   @Override
   public Gas create2OperationGasCost(final MessageFrame frame) {
-    final UInt256 initCodeLength = UInt256.fromBytes(frame.getStackItem(2));
+    final UInt256 initCodeLength = frame.getStackItem(2);
     final UInt256 numWords = initCodeLength.divideCeil(Bytes32.SIZE);
     final Gas initCodeHashCost = SHA3_OPERATION_WORD_GAS_COST.times(Gas.of(numWords));
     return createOperationGasCost(frame).plus(initCodeHashCost);

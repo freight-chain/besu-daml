@@ -14,8 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
@@ -23,36 +22,33 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 
-public class SDivOperation extends AbstractOperation {
+public class SDivOperation extends AbstractFixedCostOperation {
 
   public SDivOperation(final GasCalculator gasCalculator) {
-    super(0x05, "SDIV", 2, 1, false, 1, gasCalculator);
+    super(0x05, "SDIV", 2, 1, false, 1, gasCalculator, gasCalculator.getLowTierGasCost());
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getLowTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
-    final Bytes32 value0 = frame.popStackItem();
-    final Bytes32 value1 = frame.popStackItem();
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
+    final UInt256 value0 = frame.popStackItem();
+    final UInt256 value1 = frame.popStackItem();
     if (value1.isZero()) {
-      frame.pushStackItem(Bytes32.ZERO);
+      frame.pushStackItem(UInt256.ZERO);
     } else {
-      BigInteger result = value0.toBigInteger().divide(value1.toBigInteger());
+      final BigInteger result = value0.toSignedBigInteger().divide(value1.toSignedBigInteger());
       Bytes resultBytes = Bytes.wrap(result.toByteArray());
       if (resultBytes.size() > 32) {
         resultBytes = resultBytes.slice(resultBytes.size() - 32, 32);
       }
 
-      byte[] padding = new byte[32 - resultBytes.size()];
+      final byte[] padding = new byte[32 - resultBytes.size()];
       Arrays.fill(padding, result.signum() < 0 ? (byte) 0xFF : 0x00);
 
-      frame.pushStackItem(Bytes32.wrap(Bytes.concatenate(Bytes.wrap(padding), resultBytes)));
+      frame.pushStackItem(UInt256.fromBytes(Bytes.concatenate(Bytes.wrap(padding), resultBytes)));
     }
+
+    return successResponse;
   }
 }

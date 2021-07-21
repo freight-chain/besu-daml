@@ -90,7 +90,7 @@ public class BlockHashOperationTest {
 
   private void assertBlockHash(
       final long requestedBlock, final Bytes32 expectedOutput, final long currentBlockNumber) {
-    assertBlockHash(UInt256.valueOf(requestedBlock).toBytes(), expectedOutput, currentBlockNumber);
+    assertBlockHash(UInt256.valueOf(requestedBlock), expectedOutput, currentBlockNumber);
   }
 
   private void assertBlockHash(
@@ -99,9 +99,9 @@ public class BlockHashOperationTest {
         new MessageFrameTestFixture()
             .blockHashLookup(blockHashLookup)
             .blockHeader(new BlockHeaderTestFixture().number(currentBlockNumber).buildHeader())
-            .pushStackItem(input)
+            .pushStackItem(UInt256.fromBytes(input))
             .build();
-    blockHashOperation.execute(frame);
+    blockHashOperation.execute(frame, null);
     final Bytes32 result = frame.popStackItem();
     assertThat(result).isEqualTo(expectedOutput);
     assertThat(frame.stackSize()).isZero();

@@ -44,6 +44,10 @@ dependencies {
   implementation 'io.vertx:vertx-core'
   implementation 'org.apache.tuweni:tuweni-bytes'
   implementation 'org.apache.tuweni:tuweni-units'
+  implementation 'org.apache.tuweni:tuweni-rlp'
+
+  annotationProcessor "org.immutables:value"
+  implementation "org.immutables:value-annotations"
 
   testImplementation project(':config')
   testImplementation project(path: ':config', configuration: 'testSupportArtifacts')
@@ -52,6 +56,7 @@ dependencies {
   testImplementation project(path: ':ethereum:core', configuration: 'testArtifacts')
   testImplementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
   testImplementation project(':ethereum:mock-p2p')
+  testImplementation project(':ethereum:referencetests')
   testImplementation project(path: ':metrics:core', configuration: 'testSupportArtifacts')
   testImplementation project(':testutil')
 

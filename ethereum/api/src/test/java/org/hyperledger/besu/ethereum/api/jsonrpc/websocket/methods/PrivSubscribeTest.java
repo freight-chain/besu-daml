@@ -23,9 +23,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.EnclavePublicKeyProvider;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.PrivacyIdProvider;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
@@ -53,7 +54,7 @@ public class PrivSubscribeTest {
   @Mock private SubscriptionManager subscriptionManagerMock;
   @Mock private SubscriptionRequestMapper mapperMock;
   @Mock private PrivacyController privacyController;
-  @Mock private EnclavePublicKeyProvider enclavePublicKeyProvider;
+  @Mock private PrivacyIdProvider privacyIdProvider;
 
   private PrivSubscribe privSubscribe;
 
@@ -61,7 +62,7 @@ public class PrivSubscribeTest {
   public void before() {
     privSubscribe =
         new PrivSubscribe(
-            subscriptionManagerMock, mapperMock, privacyController, enclavePublicKeyProvider);
+            subscriptionManagerMock, mapperMock, privacyController, privacyIdProvider);
   }
 
   @Test
@@ -80,9 +81,10 @@ public class PrivSubscribeTest {
             null,
             null,
             webSocketRequest.getConnectionId(),
-            PRIVACY_GROUP_ID);
+            PRIVACY_GROUP_ID,
+            "public_key");
 
-    when(mapperMock.mapPrivateSubscribeRequest(eq(jsonRpcrequestContext)))
+    when(mapperMock.mapPrivateSubscribeRequest(eq(jsonRpcrequestContext), any()))
         .thenReturn(subscribeRequest);
     when(subscriptionManagerMock.subscribe(eq(subscribeRequest))).thenReturn(1L);
 
@@ -98,7 +100,7 @@ public class PrivSubscribeTest {
     final WebSocketRpcRequest webSocketRequest = createWebSocketRpcRequest();
     final JsonRpcRequestContext jsonRpcrequestContext = new JsonRpcRequestContext(webSocketRequest);
 
-    when(mapperMock.mapPrivateSubscribeRequest(any()))
+    when(mapperMock.mapPrivateSubscribeRequest(any(), any()))
         .thenThrow(new InvalidSubscriptionRequestException());
 
     final JsonRpcErrorResponse expectedResponse =
@@ -121,17 +123,43 @@ public class PrivSubscribeTest {
             null,
             null,
             webSocketRequest.getConnectionId(),
-            PRIVACY_GROUP_ID);
+            PRIVACY_GROUP_ID,
+            "public_key");
 
-    when(mapperMock.mapPrivateSubscribeRequest(any())).thenReturn(subscribeRequest);
-    when(enclavePublicKeyProvider.getEnclaveKey(any())).thenReturn(ENCLAVE_KEY);
+    when(mapperMock.mapPrivateSubscribeRequest(any(), any())).thenReturn(subscribeRequest);
+    when(privacyIdProvider.getPrivacyUserId(any())).thenReturn(ENCLAVE_KEY);
     doThrow(new MultiTenancyValidationException("msg"))
         .when(privacyController)
-        .verifyPrivacyGroupContainsEnclavePublicKey(eq(PRIVACY_GROUP_ID), eq(ENCLAVE_KEY));
+        .verifyPrivacyGroupContainsPrivacyUserId(eq(PRIVACY_GROUP_ID), eq(ENCLAVE_KEY));
 
     assertThatThrownBy(() -> privSubscribe.response(jsonRpcrequestContext))
         .isInstanceOf(MultiTenancyValidationException.class)
         .hasMessageContaining("msg");
+  }
+
+  @Test
+  public void multiTenancyCheckSuccess() {
+    final User user = mock(User.class);
+    final WebSocketRpcRequest webSocketRequest = createWebSocketRpcRequest();
+    final JsonRpcRequestContext jsonRpcrequestContext =
+        new JsonRpcRequestContext(webSocketRequest, user);
+
+    final PrivateSubscribeRequest subscribeRequest =
+        new PrivateSubscribeRequest(
+            SubscriptionType.LOGS,
+            null,
+            null,
+            webSocketRequest.getConnectionId(),
+            PRIVACY_GROUP_ID,
+            ENCLAVE_KEY);
+
+    when(mapperMock.mapPrivateSubscribeRequest(any(), any())).thenReturn(subscribeRequest);
+    when(privacyIdProvider.getPrivacyUserId(any())).thenReturn(ENCLAVE_KEY);
+
+    // This should pass if a MultiTenancyMultiTenancyValidationException isn't thrown
+
+    final JsonRpcResponse response = privSubscribe.response(jsonRpcrequestContext);
+    assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
   }
 
   private WebSocketRpcRequest createWebSocketRpcRequest() {

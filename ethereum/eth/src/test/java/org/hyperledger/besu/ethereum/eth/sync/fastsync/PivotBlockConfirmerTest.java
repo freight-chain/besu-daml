@@ -32,9 +32,12 @@ import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer.Responder;
 import org.hyperledger.besu.ethereum.eth.sync.fastsync.PivotBlockConfirmer.ContestedPivotBlockException;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,24 +45,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.tuweni.bytes.Bytes;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class PivotBlockConfirmerTest {
 
   private static final long PIVOT_BLOCK_NUMBER = 10;
 
-  private ProtocolContext<Void> protocolContext;
+  private ProtocolContext protocolContext;
 
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
   private final AtomicBoolean timeout = new AtomicBoolean(false);
   private EthProtocolManager ethProtocolManager;
   private MutableBlockchain blockchain;
   private TransactionPool transactionPool;
-  private PivotBlockConfirmer<Void> pivotBlockConfirmer;
-  private ProtocolSchedule<Void> protocolSchedule;
+  private PivotBlockConfirmer pivotBlockConfirmer;
+  private ProtocolSchedule protocolSchedule;
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {{DataStorageFormat.BONSAI}, {DataStorageFormat.FOREST}});
+  }
+
+  private final DataStorageFormat storageFormat;
+
+  public PivotBlockConfirmerTest(final DataStorageFormat storageFormat) {
+    this.storageFormat = storageFormat;
+  }
 
   @Before
   public void setUp() {
-    final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil blockchainSetupUtil = BlockchainSetupUtil.forTesting(storageFormat);
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     transactionPool = blockchainSetupUtil.getTransactionPool();
@@ -75,11 +93,11 @@ public class PivotBlockConfirmerTest {
     pivotBlockConfirmer = createPivotBlockConfirmer(3, 1);
   }
 
-  private PivotBlockConfirmer<Void> createPivotBlockConfirmer(
+  private PivotBlockConfirmer createPivotBlockConfirmer(
       final int peersToQuery, final int maxRetries) {
     return pivotBlockConfirmer =
         spy(
-            new PivotBlockConfirmer<>(
+            new PivotBlockConfirmer(
                 protocolSchedule,
                 ethProtocolManager.ethContext(),
                 metricsSystem,

@@ -28,20 +28,19 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
 public class PrivateStorageMigrationBuilder {
 
-  private final BesuController<?> besuController;
+  private final BesuController besuController;
   private final PrivacyParameters privacyParameters;
 
   public PrivateStorageMigrationBuilder(
-      final BesuController<?> besuController, final PrivacyParameters privacyParameters) {
+      final BesuController besuController, final PrivacyParameters privacyParameters) {
     this.besuController = besuController;
     this.privacyParameters = privacyParameters;
   }
 
   public PrivateStorageMigration build() {
     final Blockchain blockchain = besuController.getProtocolContext().getBlockchain();
-    final Address privacyPrecompileAddress =
-        Address.privacyPrecompiled(privacyParameters.getPrivacyAddress());
-    final ProtocolSchedule<?> protocolSchedule = besuController.getProtocolSchedule();
+    final Address privacyPrecompileAddress = privacyParameters.getPrivacyAddress();
+    final ProtocolSchedule protocolSchedule = besuController.getProtocolSchedule();
     final WorldStateArchive publicWorldStateArchive =
         besuController.getProtocolContext().getWorldStateArchive();
     final PrivateStateStorage privateStateStorage = privacyParameters.getPrivateStateStorage();

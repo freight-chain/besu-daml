@@ -14,7 +14,8 @@
  */
 package org.hyperledger.besu.ethereum.privacy.markertransaction;
 
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
@@ -27,10 +28,11 @@ public class RandomSigningPrivateMarkerTransactionFactory extends PrivateMarkerT
 
   @Override
   public Transaction create(
-      final String transactionEnclaveKey,
+      final String privateMarkerTransactionPayload,
       final PrivateTransaction privateTransaction,
       final Address precompileAddress) {
-    final KeyPair signingKey = KeyPair.generate();
-    return create(transactionEnclaveKey, privateTransaction, 0, signingKey, precompileAddress);
+    final KeyPair signingKey = SignatureAlgorithmFactory.getInstance().generateKeyPair();
+    return create(
+        privateMarkerTransactionPayload, privateTransaction, 0, signingKey, precompileAddress);
   }
 }

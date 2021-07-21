@@ -27,14 +27,14 @@ public class EthProtocolConfiguration {
   public static final int DEFAULT_MAX_GET_RECEIPTS = 256;
   public static final int DEFAULT_MAX_GET_NODE_DATA = 384;
   public static final int DEFAULT_MAX_GET_POOLED_TRANSACTIONS = 256;
-  public static final boolean DEFAULT_ETH_65_ENABLED = false;
+  public static final boolean DEFAULT_LEGACY_ETH_64_FORK_ID_ENABLED = false;
 
   private final int maxGetBlockHeaders;
   private final int maxGetBlockBodies;
   private final int maxGetReceipts;
   private final int maxGetNodeData;
   private final int maxGetPooledTransactions;
-  private final boolean eth65Enabled;
+  private final boolean legacyEth64ForkIdEnabled;
 
   public EthProtocolConfiguration(
       final int maxGetBlockHeaders,
@@ -42,13 +42,13 @@ public class EthProtocolConfiguration {
       final int maxGetReceipts,
       final int maxGetNodeData,
       final int maxGetPooledTransactions,
-      final boolean eth65Enabled) {
+      final boolean legacyEth64ForkIdEnabled) {
     this.maxGetBlockHeaders = maxGetBlockHeaders;
     this.maxGetBlockBodies = maxGetBlockBodies;
     this.maxGetReceipts = maxGetReceipts;
     this.maxGetNodeData = maxGetNodeData;
     this.maxGetPooledTransactions = maxGetPooledTransactions;
-    this.eth65Enabled = eth65Enabled;
+    this.legacyEth64ForkIdEnabled = legacyEth64ForkIdEnabled;
   }
 
   public static EthProtocolConfiguration defaultConfig() {
@@ -58,7 +58,7 @@ public class EthProtocolConfiguration {
         DEFAULT_MAX_GET_RECEIPTS,
         DEFAULT_MAX_GET_NODE_DATA,
         DEFAULT_MAX_GET_POOLED_TRANSACTIONS,
-        DEFAULT_ETH_65_ENABLED);
+        DEFAULT_LEGACY_ETH_64_FORK_ID_ENABLED);
   }
 
   public static Builder builder() {
@@ -85,8 +85,8 @@ public class EthProtocolConfiguration {
     return maxGetPooledTransactions;
   }
 
-  public boolean isEth65Enabled() {
-    return eth65Enabled;
+  public boolean isLegacyEth64ForkIdEnabled() {
+    return legacyEth64ForkIdEnabled;
   }
 
   @Override
@@ -137,7 +137,8 @@ public class EthProtocolConfiguration {
     private PositiveNumber maxGetPooledTransactions =
         PositiveNumber.fromInt(EthProtocolConfiguration.DEFAULT_MAX_GET_POOLED_TRANSACTIONS);
 
-    private boolean eth65Enabled = EthProtocolConfiguration.DEFAULT_ETH_65_ENABLED;
+    private boolean legacyEth64ForkIdEnabled =
+        EthProtocolConfiguration.DEFAULT_LEGACY_ETH_64_FORK_ID_ENABLED;
 
     public Builder maxGetBlockHeaders(final PositiveNumber maxGetBlockHeaders) {
       this.maxGetBlockHeaders = maxGetBlockHeaders;
@@ -164,8 +165,8 @@ public class EthProtocolConfiguration {
       return this;
     }
 
-    public Builder eth65Enabled(final boolean eth65Enabled) {
-      this.eth65Enabled = eth65Enabled;
+    public Builder legacyEth64ForkIdEnabled(final boolean legacyEth64ForkIdEnabled) {
+      this.legacyEth64ForkIdEnabled = legacyEth64ForkIdEnabled;
       return this;
     }
 
@@ -176,7 +177,7 @@ public class EthProtocolConfiguration {
           maxGetReceipts.getValue(),
           maxGetNodeData.getValue(),
           maxGetPooledTransactions.getValue(),
-          eth65Enabled);
+          legacyEth64ForkIdEnabled);
     }
   }
 }

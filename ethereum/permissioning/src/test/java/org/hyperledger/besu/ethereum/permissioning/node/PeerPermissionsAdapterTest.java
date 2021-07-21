@@ -21,12 +21,13 @@ import static org.mockito.Mockito.when;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
-import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.p2p.peers.DefaultPeer;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissions.Action;
 import org.hyperledger.besu.ethereum.permissioning.node.provider.SyncStatusNodePermissioningProvider;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +45,7 @@ public class PeerPermissionsAdapterTest {
       mock(NodePermissioningController.class);
   private final BlockDataGenerator gen = new BlockDataGenerator();
   private final MutableBlockchain blockchain =
-      InMemoryStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
+      InMemoryKeyValueStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
   private final List<EnodeURL> bootNodes = new ArrayList<>();
   private final PeerPermissionsAdapter adapter =
       new PeerPermissionsAdapter(nodePermissioningController, bootNodes, blockchain);
@@ -106,6 +107,8 @@ public class PeerPermissionsAdapterTest {
   }
 
   @Test
+  // This test smart-contract backed permissioning where while we’re syncing,
+  // we can only trust bootnodes
   public void allowOutboundBonding_outOfSyncRemoteIsNotABootnode() {
     mockSyncStatusNodePermissioning(true, false);
 
@@ -359,10 +362,7 @@ public class PeerPermissionsAdapterTest {
   @Test
   public void subscribeUpdate_firesWhenBlockAdded() {
     final AtomicBoolean updateDispatched = new AtomicBoolean(false);
-    adapter.subscribeUpdate(
-        (restricted, peers) -> {
-          updateDispatched.set(true);
-        });
+    adapter.subscribeUpdate((restricted, peers) -> updateDispatched.set(true));
 
     final Block newBlock = gen.nextBlock(blockchain.getGenesisBlock());
     blockchain.appendBlock(newBlock, gen.receipts(newBlock));
@@ -398,7 +398,7 @@ public class PeerPermissionsAdapterTest {
 
   private Peer createPeer() {
     return DefaultPeer.fromEnodeURL(
-        EnodeURL.builder()
+        EnodeURLImpl.builder()
             .ipAddress("127.0.0.1")
             .nodeId(Peer.randomId())
             .useDefaultPorts()

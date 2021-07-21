@@ -14,10 +14,12 @@
  */
 package org.hyperledger.besu.ethereum.mainnet.headervalidationrules;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.fees.EIP1559;
+import org.hyperledger.besu.ethereum.mainnet.AbstractGasLimitSpecification;
 import org.hyperledger.besu.ethereum.mainnet.DetachedBlockHeaderValidationRule;
+
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,22 +29,21 @@ import org.apache.logging.log4j.Logger;
  * specified at construction. And that the gasLimit for this block is within certain bounds of its
  * parent block.
  */
-public class GasLimitRangeAndDeltaValidationRule implements DetachedBlockHeaderValidationRule {
+public class GasLimitRangeAndDeltaValidationRule extends AbstractGasLimitSpecification
+    implements DetachedBlockHeaderValidationRule {
 
   private static final Logger LOG = LogManager.getLogger(GasLimitRangeAndDeltaValidationRule.class);
-  private static final int GASLIMIT_BOUND_DIVISOR = 1024;
-  private final long minGasLimit;
-  private final long maxGasLimit;
+
+  private final Optional<EIP1559> eip1559;
+
+  public GasLimitRangeAndDeltaValidationRule(
+      final long minGasLimit, final long maxGasLimit, final Optional<EIP1559> eip1559) {
+    super(minGasLimit, maxGasLimit);
+    this.eip1559 = eip1559;
+  }
 
   public GasLimitRangeAndDeltaValidationRule(final long minGasLimit, final long maxGasLimit) {
-    checkArgument(
-        minGasLimit >= GASLIMIT_BOUND_DIVISOR,
-        "minGasLimit of "
-            + minGasLimit
-            + " is below the bound divisor of "
-            + GASLIMIT_BOUND_DIVISOR);
-    this.minGasLimit = minGasLimit;
-    this.maxGasLimit = maxGasLimit;
+    this(minGasLimit, maxGasLimit, Optional.empty());
   }
 
   @Override
@@ -50,17 +51,26 @@ public class GasLimitRangeAndDeltaValidationRule implements DetachedBlockHeaderV
     final long gasLimit = header.getGasLimit();
 
     if ((gasLimit < minGasLimit) || (gasLimit > maxGasLimit)) {
-      LOG.trace(
-          "Header gasLimit = {}, outside range {} --> {}", gasLimit, minGasLimit, maxGasLimit);
+      LOG.info(
+          "Invalid block header: gasLimit = {} is outside range {} --> {}",
+          gasLimit,
+          minGasLimit,
+          maxGasLimit);
       return false;
     }
 
-    final long parentGasLimit = parent.getGasLimit();
+    long parentGasLimit = parent.getGasLimit();
+
+    if (eip1559.isPresent() && eip1559.get().isForkBlock(header.getNumber())) {
+      parentGasLimit = parent.getGasLimit() * eip1559.get().getFeeMarket().getSlackCoefficient();
+    }
+
     final long difference = Math.abs(parentGasLimit - gasLimit);
-    final long bounds = Long.divideUnsigned(parentGasLimit, GASLIMIT_BOUND_DIVISOR);
+    final long bounds = deltaBound(parentGasLimit);
+    // this is an exclusive bound, so the difference should be strictly less:
     if (Long.compareUnsigned(difference, bounds) >= 0) {
-      LOG.trace(
-          "Invalid block header: gas limit delta {} is out of bounds of {}", gasLimit, bounds);
+      LOG.info(
+          "Invalid block header: gas limit delta {} is out of bounds of {}", difference, bounds);
       return false;
     }
 

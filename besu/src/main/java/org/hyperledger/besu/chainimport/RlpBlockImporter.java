@@ -15,7 +15,6 @@
 package org.hyperledger.besu.chainimport;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.logging.log4j.LogManager.getLogger;
 
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.ethereum.ProtocolContext;
@@ -32,6 +31,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.mainnet.ScheduleBasedBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.util.RawBlockIterator;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -40,18 +40,28 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Stopwatch;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /** Tool for importing rlp-encoded block data from files. */
-public class RlpBlockImporter {
-  private static final Logger LOG = getLogger();
+public class RlpBlockImporter implements Closeable {
+  private static final Logger LOG = LogManager.getFormatterLogger();
 
   private final Semaphore blockBacklog = new Semaphore(2);
 
   private final ExecutorService validationExecutor = Executors.newCachedThreadPool();
   private final ExecutorService importExecutor = Executors.newSingleThreadExecutor();
+
+  private long cumulativeGas;
+  private long segmentGas;
+  private final Stopwatch cumulativeTimer = Stopwatch.createUnstarted();
+  private final Stopwatch segmentTimer = Stopwatch.createUnstarted();
+  private static final long SEGMENT_SIZE = 1000;
 
   /**
    * Imports blocks that are stored as concatenated RLP sections in the given file into Besu's block
@@ -60,15 +70,24 @@ public class RlpBlockImporter {
    * @param blocks Path to the file containing the blocks
    * @param besuController the BesuController that defines blockchain behavior
    * @param skipPowValidation Skip proof of work validation (correct mix hash and difficulty)
-   * @param <C> the consensus context type
    * @return the import result
    * @throws IOException On Failure
    */
-  public <C> RlpBlockImporter.ImportResult importBlockchain(
-      final Path blocks, final BesuController<C> besuController, final boolean skipPowValidation)
+  public RlpBlockImporter.ImportResult importBlockchain(
+      final Path blocks, final BesuController besuController, final boolean skipPowValidation)
       throws IOException {
-    final ProtocolSchedule<C> protocolSchedule = besuController.getProtocolSchedule();
-    final ProtocolContext<C> context = besuController.getProtocolContext();
+    return importBlockchain(blocks, besuController, skipPowValidation, 0L, Long.MAX_VALUE);
+  }
+
+  public RlpBlockImporter.ImportResult importBlockchain(
+      final Path blocks,
+      final BesuController besuController,
+      final boolean skipPowValidation,
+      final long startBlock,
+      final long endBlock)
+      throws IOException {
+    final ProtocolSchedule protocolSchedule = besuController.getProtocolSchedule();
+    final ProtocolContext context = besuController.getProtocolContext();
     final MutableBlockchain blockchain = context.getBlockchain();
     int count = 0;
 
@@ -80,14 +99,15 @@ public class RlpBlockImporter {
                     rlp, ScheduleBasedBlockHeaderFunctions.create(protocolSchedule)))) {
       BlockHeader previousHeader = null;
       CompletableFuture<Void> previousBlockFuture = null;
+      final AtomicReference<Throwable> threadedException = new AtomicReference<>();
       while (iterator.hasNext()) {
         final Block block = iterator.next();
         final BlockHeader header = block.getHeader();
-        if (header.getNumber() == BlockHeader.GENESIS_BLOCK_NUMBER) {
+        final long blockNumber = header.getNumber();
+        if (blockNumber == BlockHeader.GENESIS_BLOCK_NUMBER
+            || blockNumber < startBlock
+            || blockNumber >= endBlock) {
           continue;
-        }
-        if (header.getNumber() % 100 == 0) {
-          LOG.info("Import at block {}", header.getNumber());
         }
         if (blockchain.contains(header.getHash())) {
           continue;
@@ -95,7 +115,7 @@ public class RlpBlockImporter {
         if (previousHeader == null) {
           previousHeader = lookupPreviousHeader(blockchain, header);
         }
-        final ProtocolSpec<C> protocolSpec = protocolSchedule.getByBlockNumber(header.getNumber());
+        final ProtocolSpec protocolSpec = protocolSchedule.getByBlockNumber(blockNumber);
         final BlockHeader lastHeader = previousHeader;
 
         final CompletableFuture<Void> validationFuture =
@@ -114,7 +134,12 @@ public class RlpBlockImporter {
         }
 
         try {
-          blockBacklog.acquire();
+          do {
+            final Throwable t = (Exception) threadedException.get();
+            if (t != null) {
+              throw new RuntimeException("Error importing block " + header.getNumber(), t);
+            }
+          } while (!blockBacklog.tryAcquire(1, SECONDS));
         } catch (final InterruptedException e) {
           LOG.error("Interrupted adding to backlog.", e);
           break;
@@ -124,6 +149,11 @@ public class RlpBlockImporter {
                 calculationFutures,
                 () -> evaluateBlock(context, block, header, protocolSpec, skipPowValidation),
                 importExecutor);
+        previousBlockFuture.exceptionally(
+            exception -> {
+              threadedException.set(exception);
+              return null;
+            });
 
         ++count;
         previousHeader = header;
@@ -131,22 +161,9 @@ public class RlpBlockImporter {
       if (previousBlockFuture != null) {
         previousBlockFuture.join();
       }
+      logProgress(blockchain.getChainHeadBlockNumber());
       return new RlpBlockImporter.ImportResult(
           blockchain.getChainHead().getTotalDifficulty(), count);
-    } finally {
-      validationExecutor.shutdownNow();
-      try {
-        validationExecutor.awaitTermination(5, SECONDS);
-      } catch (final Exception e) {
-        LOG.error("Error shutting down validatorExecutor.", e);
-      }
-      importExecutor.shutdownNow();
-      try {
-        importExecutor.awaitTermination(5, SECONDS);
-      } catch (final Exception e) {
-        LOG.error("Error shutting down importExecutor", e);
-      }
-      besuController.close();
     }
   }
 
@@ -161,13 +178,13 @@ public class RlpBlockImporter {
     }
   }
 
-  private <C> void validateBlock(
-      final ProtocolSpec<C> protocolSpec,
-      final ProtocolContext<C> context,
+  private void validateBlock(
+      final ProtocolSpec protocolSpec,
+      final ProtocolContext context,
       final BlockHeader previousHeader,
       final BlockHeader header,
       final boolean skipPowValidation) {
-    final BlockHeaderValidator<C> blockHeaderValidator = protocolSpec.getBlockHeaderValidator();
+    final BlockHeaderValidator blockHeaderValidator = protocolSpec.getBlockHeaderValidator();
     final boolean validHeader =
         blockHeaderValidator.validateHeader(
             header,
@@ -181,14 +198,16 @@ public class RlpBlockImporter {
     }
   }
 
-  private <C> void evaluateBlock(
-      final ProtocolContext<C> context,
+  private void evaluateBlock(
+      final ProtocolContext context,
       final Block block,
       final BlockHeader header,
-      final ProtocolSpec<C> protocolSpec,
+      final ProtocolSpec protocolSpec,
       final boolean skipPowValidation) {
     try {
-      final BlockImporter<C> blockImporter = protocolSpec.getBlockImporter();
+      cumulativeTimer.start();
+      segmentTimer.start();
+      final BlockImporter blockImporter = protocolSpec.getBlockImporter();
       final boolean blockImported =
           blockImporter.importBlock(
               context,
@@ -203,7 +222,29 @@ public class RlpBlockImporter {
       }
     } finally {
       blockBacklog.release();
+      cumulativeTimer.stop();
+      segmentTimer.stop();
+      final long thisGas = block.getHeader().getGasUsed();
+      cumulativeGas += thisGas;
+      segmentGas += thisGas;
+      if (header.getNumber() % SEGMENT_SIZE == 0) {
+        logProgress(header.getNumber());
+      }
     }
+  }
+
+  private void logProgress(final long blockNum) {
+    final long elapseMicros = segmentTimer.elapsed(TimeUnit.MICROSECONDS);
+    //noinspection PlaceholderCountMatchesArgumentCount
+    LOG.info(
+        "Import at block %8d / %,14d gas %,11d micros / Mgps %7.3f segment %6.3f cumulative",
+        blockNum,
+        segmentGas,
+        elapseMicros,
+        segmentGas / (double) elapseMicros,
+        cumulativeGas / (double) cumulativeTimer.elapsed(TimeUnit.MICROSECONDS));
+    segmentGas = 0;
+    segmentTimer.reset();
   }
 
   private BlockHeader lookupPreviousHeader(
@@ -216,6 +257,25 @@ public class RlpBlockImporter {
                     String.format(
                         "Block %s does not connect to the existing chain. Current chain head %s",
                         header.getNumber(), blockchain.getChainHeadBlockNumber())));
+  }
+
+  @Override
+  public void close() {
+    validationExecutor.shutdownNow();
+    try {
+      //noinspection ResultOfMethodCallIgnored
+      validationExecutor.awaitTermination(5, SECONDS);
+    } catch (final Exception e) {
+      LOG.error("Error shutting down validatorExecutor.", e);
+    }
+
+    importExecutor.shutdownNow();
+    try {
+      //noinspection ResultOfMethodCallIgnored
+      importExecutor.awaitTermination(5, SECONDS);
+    } catch (final Exception e) {
+      LOG.error("Error shutting down importExecutor", e);
+    }
   }
 
   public static final class ImportResult {

@@ -24,8 +24,10 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcRespon
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity;
 import org.hyperledger.besu.ethereum.blockcreation.MiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
 import org.hyperledger.besu.ethereum.mainnet.DirectAcyclicGraphSeed;
-import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
+import org.hyperledger.besu.ethereum.mainnet.EpochCalculator;
+import org.hyperledger.besu.ethereum.mainnet.PoWSolverInputs;
 
 import java.util.Optional;
 
@@ -36,9 +38,15 @@ public class EthGetWork implements JsonRpcMethod {
 
   private final MiningCoordinator miner;
   private static final Logger LOG = getLogger();
+  private final EpochCalculator epochCalculator;
 
   public EthGetWork(final MiningCoordinator miner) {
     this.miner = miner;
+    if (miner instanceof PoWMiningCoordinator) {
+      this.epochCalculator = ((PoWMiningCoordinator) miner).getEpochCalculator();
+    } else {
+      this.epochCalculator = new EpochCalculator.DefaultEpochCalculator();
+    }
   }
 
   @Override
@@ -48,12 +56,13 @@ public class EthGetWork implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
-    final Optional<EthHashSolverInputs> solver = miner.getWorkDefinition();
+    final Optional<PoWSolverInputs> solver = miner.getWorkDefinition();
     if (solver.isPresent()) {
-      final EthHashSolverInputs rawResult = solver.get();
-      final byte[] dagSeed = DirectAcyclicGraphSeed.dagSeed(rawResult.getBlockNumber());
+      final PoWSolverInputs rawResult = solver.get();
+      final byte[] dagSeed =
+          DirectAcyclicGraphSeed.dagSeed(rawResult.getBlockNumber(), epochCalculator);
       final String[] result = {
-        "0x" + BaseEncoding.base16().lowerCase().encode(rawResult.getPrePowHash()),
+        rawResult.getPrePowHash().toHexString(),
         "0x" + BaseEncoding.base16().lowerCase().encode(dagSeed),
         rawResult.getTarget().toHexString(),
         Quantity.create(rawResult.getBlockNumber())

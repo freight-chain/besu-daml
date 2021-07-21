@@ -18,8 +18,8 @@ package org.hyperledger.besu.ethereum.api.query;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Account;
@@ -204,8 +204,10 @@ public class BlockchainQueriesTest {
     final BlockchainWithData data = setupBlockchain(3, addresses, storageKeys);
     final BlockchainQueries queries = data.blockchainQueries;
 
-    final Hash latestStateRoot0 = data.blockData.get(2).block.getHeader().getStateRoot();
-    final WorldState worldState0 = data.worldStateArchive.get(latestStateRoot0).get();
+    final BlockHeader blockHeader0 = data.blockData.get(2).block.getHeader();
+    final Hash latestStateRoot0 = blockHeader0.getStateRoot();
+    final WorldState worldState0 =
+        data.worldStateArchive.get(latestStateRoot0, blockHeader0.getHash()).get();
     addresses.forEach(
         address ->
             storageKeys.forEach(
@@ -215,8 +217,10 @@ public class BlockchainQueriesTest {
                   assertThat(result).contains(actualAccount0.getStorageValue(storageKey));
                 }));
 
-    final Hash latestStateRoot1 = data.blockData.get(1).block.getHeader().getStateRoot();
-    final WorldState worldState1 = data.worldStateArchive.get(latestStateRoot1).get();
+    final BlockHeader header1 = data.blockData.get(1).block.getHeader();
+    final Hash latestStateRoot1 = header1.getStateRoot();
+    final WorldState worldState1 =
+        data.worldStateArchive.get(latestStateRoot1, header1.getHash()).get();
     addresses.forEach(
         address ->
             storageKeys.forEach(
@@ -236,8 +240,9 @@ public class BlockchainQueriesTest {
 
     for (int i = 0; i < blockCount; i++) {
       final long curBlockNumber = i;
-      final Hash stateRoot = data.blockData.get(i).block.getHeader().getStateRoot();
-      final WorldState worldState = data.worldStateArchive.get(stateRoot).get();
+      final BlockHeader header = data.blockData.get(i).block.getHeader();
+      final Hash stateRoot = header.getStateRoot();
+      final WorldState worldState = data.worldStateArchive.get(stateRoot, header.getHash()).get();
       assertThat(addresses).isNotEmpty();
 
       addresses.forEach(
@@ -321,7 +326,8 @@ public class BlockchainQueriesTest {
 
     // check that logs have removed = false
     List<LogWithMetadata> logs =
-        data.blockchainQueries.matchingLogs(targetBlock.getHash(), new LogsQuery.Builder().build());
+        data.blockchainQueries.matchingLogs(
+            targetBlock.getHash(), new LogsQuery.Builder().build(), () -> true);
     assertThat(logs).isNotEmpty();
     assertThat(logs).allMatch(l -> !l.isRemoved());
 
@@ -342,7 +348,8 @@ public class BlockchainQueriesTest {
 
     // check that logs have removed = true
     logs =
-        data.blockchainQueries.matchingLogs(targetBlock.getHash(), new LogsQuery.Builder().build());
+        data.blockchainQueries.matchingLogs(
+            targetBlock.getHash(), new LogsQuery.Builder().build(), () -> true);
     assertThat(logs).isNotEmpty();
     assertThat(logs).allMatch(LogWithMetadata::isRemoved);
   }
@@ -351,7 +358,8 @@ public class BlockchainQueriesTest {
   public void matchingLogsShouldReturnAnEmptyListWhenGivenAnInvalidBlockHash() {
     final BlockchainWithData data = setupBlockchain(3);
     final BlockchainQueries queries = data.blockchainQueries;
-    List<LogWithMetadata> logs = queries.matchingLogs(Hash.ZERO, new LogsQuery.Builder().build());
+    List<LogWithMetadata> logs =
+        queries.matchingLogs(Hash.ZERO, new LogsQuery.Builder().build(), () -> true);
     assertThat(logs).isEmpty();
   }
 
@@ -392,7 +400,7 @@ public class BlockchainQueriesTest {
 
   @Test
   public void getOmmerByBlockHashAndIndexShouldReturnExpectedOmmerHeader() {
-    final BlockchainWithData data = setupBlockchain(3);
+    final BlockchainWithData data = setupBlockchain(4);
     final BlockchainQueries queries = data.blockchainQueries;
     final Block targetBlock = data.blockData.get(data.blockData.size() - 1).block;
     final BlockHeader ommerBlockHeader = targetBlock.getBody().getOmmers().get(0);
@@ -440,15 +448,16 @@ public class BlockchainQueriesTest {
 
   @Test
   public void getOmmerByBlockNumberAndIndexShouldReturnExpectedOmmerHeader() {
-    final BlockchainWithData data = setupBlockchain(3);
+    final BlockchainWithData data = setupBlockchain(4);
     final BlockchainQueries queries = data.blockchainQueries;
     final Block targetBlock = data.blockData.get(data.blockData.size() - 1).block;
-    final BlockHeader ommerBlockHeader = targetBlock.getBody().getOmmers().get(1);
+    final List<BlockHeader> ommers = targetBlock.getBody().getOmmers();
+    final int ommerIndex = ommers.size() - 1;
 
     final BlockHeader retrievedOmmerBlockHeader =
-        queries.getOmmer(targetBlock.getHeader().getNumber(), 1).get();
+        queries.getOmmer(targetBlock.getHeader().getNumber(), ommerIndex).get();
 
-    assertThat(retrievedOmmerBlockHeader).isEqualTo(ommerBlockHeader);
+    assertThat(retrievedOmmerBlockHeader).isEqualTo(ommers.get(ommerIndex));
   }
 
   @Test
@@ -476,7 +485,7 @@ public class BlockchainQueriesTest {
 
   @Test
   public void getLatestBlockOmmerByIndexShouldReturnExpectedOmmerHeader() {
-    final BlockchainWithData data = setupBlockchain(3);
+    final BlockchainWithData data = setupBlockchain(4);
     final BlockchainQueries queries = data.blockchainQueries;
     final Block targetBlock = data.blockData.get(data.blockData.size() - 1).block;
     final BlockHeader ommerBlockHeader = targetBlock.getBody().getOmmers().get(0);

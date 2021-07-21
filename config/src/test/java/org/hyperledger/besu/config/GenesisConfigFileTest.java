@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hyperledger.besu.config.GenesisConfigFile.fromConfig;
 
+import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +40,7 @@ import org.junit.Test;
 public class GenesisConfigFileTest {
 
   private static final BigInteger MAINNET_CHAIN_ID = BigInteger.ONE;
-  private static final BigInteger DEVELOPMENT_CHAIN_ID = BigInteger.valueOf(2018);
+  private static final BigInteger DEVELOPMENT_CHAIN_ID = BigInteger.valueOf(1337);
   private static final GenesisConfigFile EMPTY_CONFIG = fromConfig("{}");
 
   @Test
@@ -140,6 +142,32 @@ public class GenesisConfigFileTest {
   @Test
   public void shouldGetTimestamp() {
     assertThat(configWithProperty("timestamp", "0x10").getTimestamp()).isEqualTo(16L);
+  }
+
+  @Test
+  public void shouldGetBaseFeeAtGenesis() {
+    GenesisConfigFile withBaseFeeAtGenesis =
+        GenesisConfigFile.fromConfig("{\"config\":{\"londonBlock\":0},\"baseFeePerGas\":\"0xa\"}");
+    assertThat(withBaseFeeAtGenesis.getBaseFeePerGas()).isPresent();
+    assertThat(withBaseFeeAtGenesis.getBaseFeePerGas().get()).isEqualTo(10L);
+    assertThat(withBaseFeeAtGenesis.getGenesisBaseFeePerGas()).isPresent();
+    assertThat(withBaseFeeAtGenesis.getGenesisBaseFeePerGas().get()).isEqualTo(10L);
+  }
+
+  @Test
+  public void shouldGetDefaultBaseFeeAtGenesis() {
+    GenesisConfigFile withBaseFeeAtGenesis =
+        GenesisConfigFile.fromConfig("{\"config\":{\"londonBlock\":0}}");
+    assertThat(withBaseFeeAtGenesis.getBaseFeePerGas()).isNotPresent();
+    assertThat(withBaseFeeAtGenesis.getGenesisBaseFeePerGas()).isPresent();
+    assertThat(withBaseFeeAtGenesis.getGenesisBaseFeePerGas().get())
+        .isEqualTo(ExperimentalEIPs.EIP1559_BASEFEE_DEFAULT_VALUE);
+  }
+
+  @Test
+  public void shouldNotGetBaseFeeAtGenesis() {
+    assertThat(EMPTY_CONFIG.getBaseFeePerGas()).isNotPresent();
+    assertThat(EMPTY_CONFIG.getGenesisBaseFeePerGas()).isNotPresent();
   }
 
   @Test
@@ -292,11 +320,12 @@ public class GenesisConfigFileTest {
   public void testNoOverride() {
     final GenesisConfigFile config = GenesisConfigFile.development();
 
-    assertThat(config.getConfigOptions().getConstantinopleFixBlockNumber()).hasValue(0);
+    assertThat(config.getConfigOptions().getPetersburgBlockNumber()).hasValue(0);
     assertThat(config.getConfigOptions().getIstanbulBlockNumber()).isNotPresent();
-    assertThat(config.getConfigOptions().getChainId()).hasValue(BigInteger.valueOf(2018));
+    assertThat(config.getConfigOptions().getChainId()).hasValue(BigInteger.valueOf(1337));
     assertThat(config.getConfigOptions().getContractSizeLimit()).hasValue(2147483647);
     assertThat(config.getConfigOptions().getEvmStackSize()).isNotPresent();
+    assertThat(config.getConfigOptions().getEcip1017EraRounds()).isNotPresent();
   }
 
   @Test
@@ -304,17 +333,16 @@ public class GenesisConfigFileTest {
     // petersburg node
     final GenesisConfigFile config = GenesisConfigFile.development();
 
-    assertThat(config.getConfigOptions().getConstantinopleFixBlockNumber()).hasValue(0);
+    assertThat(config.getConfigOptions().getPetersburgBlockNumber()).hasValue(0);
 
     // constantinopleFix node
     final Map<String, String> override = new HashMap<>();
     override.put("constantinopleFixBlock", "1000");
 
     assertThatExceptionOfType(RuntimeException.class)
-        .isThrownBy(() -> config.getConfigOptions(override).getConstantinopleFixBlockNumber())
+        .isThrownBy(() -> config.getConfigOptions(override).getPetersburgBlockNumber())
         .withMessage(
             "Genesis files cannot specify both petersburgBlock and constantinopleFixBlock.");
-    ;
   }
 
   @Test
@@ -334,8 +362,104 @@ public class GenesisConfigFileTest {
 
     final GenesisConfigFile config = fromConfig(configNode);
 
-    assertThat(config.getForks()).containsExactly(1L, 2L, 3L, 3L, 1035301L);
+    assertThat(config.getForks()).containsExactly(1L, 2L, 3L, 1035301L);
     assertThat(config.getConfigOptions().getChainId()).hasValue(BigInteger.valueOf(4));
+  }
+
+  @Test
+  public void shouldLoadForksIgnoreClassicForkBlock() throws IOException {
+    final ObjectNode configNode =
+        new ObjectMapper()
+            .createObjectNode()
+            .set(
+                "config",
+                JsonUtil.objectNodeFromString(
+                    Resources.toString(
+                        Resources.getResource(
+                            // If you inspect this config, you should see that classicForkBlock is
+                            // declared (which we want to ignore)
+                            "valid_config_with_etc_forks.json"),
+                        StandardCharsets.UTF_8)));
+    final GenesisConfigFile config = fromConfig(configNode);
+
+    assertThat(config.getForks()).containsExactly(1L, 2L, 3L, 1035301L);
+    assertThat(config.getConfigOptions().getChainId()).hasValue(BigInteger.valueOf(61));
+  }
+
+  @Test
+  public void shouldLoadForksIgnoreUnexpectedValues() throws IOException {
+    final ObjectNode configNoUnexpectedForks =
+        new ObjectMapper()
+            .createObjectNode()
+            .set(
+                "config",
+                JsonUtil.objectNodeFromString(
+                    Resources.toString(
+                        Resources.getResource("valid_config.json"), StandardCharsets.UTF_8)));
+
+    final ObjectNode configClassicFork =
+        new ObjectMapper()
+            .createObjectNode()
+            .set(
+                "config",
+                JsonUtil.objectNodeFromString(
+                    Resources.toString(
+                        Resources.getResource(
+                            // If you inspect this config, you should see that classicForkBlock is
+                            // declared (which we want to ignore)
+                            "valid_config_with_etc_forks.json"),
+                        StandardCharsets.UTF_8)));
+
+    final ObjectNode configMultipleUnexpectedForks =
+        new ObjectMapper()
+            .createObjectNode()
+            .set(
+                "config",
+                JsonUtil.objectNodeFromString(
+                    Resources.toString(
+                        Resources.getResource(
+                            // If you inspect this config, you should see that
+                            // 'unexpectedFork1Block',
+                            // 'unexpectedFork2Block' and 'unexpectedFork3Block' are
+                            // declared (which we want to ignore)
+                            "valid_config_with_unexpected_forks.json"),
+                        StandardCharsets.UTF_8)));
+
+    final GenesisConfigFile configFileNoUnexpectedForks = fromConfig(configNoUnexpectedForks);
+    final GenesisConfigFile configFileClassicFork = fromConfig(configClassicFork);
+    final GenesisConfigFile configFileMultipleUnexpectedForks =
+        fromConfig(configMultipleUnexpectedForks);
+
+    assertThat(configFileNoUnexpectedForks.getForks()).containsExactly(1L, 2L, 3L, 1035301L);
+    assertThat(configFileNoUnexpectedForks.getForks()).isEqualTo(configFileClassicFork.getForks());
+    assertThat(configFileNoUnexpectedForks.getForks())
+        .isEqualTo(configFileMultipleUnexpectedForks.getForks());
+    assertThat(configFileNoUnexpectedForks.getConfigOptions().getChainId())
+        .hasValue(BigInteger.valueOf(61));
+  }
+
+  /**
+   * The intent of this test is to catch encoding errors when a new hard fork is being added and the
+   * config is being inserted in all the places the prior fork was. The intent is that
+   * all_forks.json will also be updated.
+   *
+   * <p>This catches a common error in JsonGenesisConfigOptions where internally the names are all
+   * lower ase but 'canonicaly' they are mixed case, as well as being mixed case almost everywhere
+   * else in the code. Case differences are common in custom genesis files so historically we have
+   * been case agnostic.
+   */
+  @Test
+  public void roundTripForkIdBlocks() throws IOException {
+    final String configText =
+        Resources.toString(Resources.getResource("all_forks.json"), StandardCharsets.UTF_8);
+    final ObjectNode genesisNode = JsonUtil.objectNodeFromString(configText);
+
+    final GenesisConfigFile genesisConfig = fromConfig(genesisNode);
+
+    final ObjectNode output = JsonUtil.objectNodeFromMap(genesisConfig.getConfigOptions().asMap());
+
+    assertThat(JsonUtil.getJson(output, true))
+        .isEqualTo(JsonUtil.getJson(genesisNode.get("config"), true));
   }
 
   private GenesisConfigFile configWithProperty(final String key, final String value) {

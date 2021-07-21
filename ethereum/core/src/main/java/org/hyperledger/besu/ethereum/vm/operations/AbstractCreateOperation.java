@@ -26,16 +26,18 @@ import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.Words;
 
-import java.util.EnumSet;
 import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
 public abstract class AbstractCreateOperation extends AbstractOperation {
 
-  public AbstractCreateOperation(
+  protected static final OperationResult UNDERFLOW_RESPONSE =
+      new OperationResult(
+          Optional.empty(), Optional.of(ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS));
+
+  AbstractCreateOperation(
       final int opcode,
       final String name,
       final int stackItemsConsumed,
@@ -54,50 +56,64 @@ public abstract class AbstractCreateOperation extends AbstractOperation {
   }
 
   @Override
-  public void execute(final MessageFrame frame) {
-    final Wei value = Wei.wrap(frame.getStackItem(0));
-
-    final Address address = frame.getRecipientAddress();
-    final MutableAccount account = frame.getWorldState().getAccount(address).getMutable();
-
-    frame.clearReturnData();
-
-    if (value.compareTo(account.getBalance()) > 0 || frame.getMessageStackDepth() >= 1024) {
-      fail(frame);
-    } else {
-      spawnChildMessage(frame);
+  public OperationResult execute(final MessageFrame frame, final EVM evm) {
+    // manual check because some reads won't come until the "complete" step.
+    if (frame.stackSize() < getStackItemsConsumed()) {
+      return UNDERFLOW_RESPONSE;
     }
+
+    final Gas cost = cost(frame);
+    final Optional<Gas> optionalCost = Optional.ofNullable(cost);
+    if (cost != null) {
+      if (frame.isStatic()) {
+        return new OperationResult(
+            optionalCost, Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE));
+      } else if (frame.getRemainingGas().compareTo(cost) < 0) {
+        return new OperationResult(
+            optionalCost, Optional.of(ExceptionalHaltReason.INSUFFICIENT_GAS));
+      }
+      final Wei value = Wei.wrap(frame.getStackItem(0));
+
+      final Address address = frame.getRecipientAddress();
+      final MutableAccount account = frame.getWorldState().getAccount(address).getMutable();
+
+      frame.clearReturnData();
+
+      if (value.compareTo(account.getBalance()) > 0 || frame.getMessageStackDepth() >= 1024) {
+        fail(frame);
+      } else {
+        spawnChildMessage(frame);
+      }
+    }
+
+    return new OperationResult(optionalCost, Optional.empty());
   }
+
+  protected abstract Gas cost(final MessageFrame frame);
 
   protected abstract Address targetContractAddress(MessageFrame frame);
 
-  @Override
-  public Optional<ExceptionalHaltReason> exceptionalHaltCondition(
-      final MessageFrame frame,
-      final EnumSet<ExceptionalHaltReason> previousReasons,
-      final EVM evm) {
-    return frame.isStatic()
-        ? Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE)
-        : Optional.empty();
-  }
-
   private void fail(final MessageFrame frame) {
-    final UInt256 inputOffset = UInt256.fromBytes(frame.getStackItem(1));
-    final UInt256 inputSize = UInt256.fromBytes(frame.getStackItem(2));
+    final UInt256 inputOffset = frame.getStackItem(1);
+    final UInt256 inputSize = frame.getStackItem(2);
     frame.readMemory(inputOffset, inputSize);
     frame.popStackItems(getStackItemsConsumed());
-    frame.pushStackItem(Bytes32.ZERO);
+    frame.pushStackItem(UInt256.ZERO);
   }
 
   private void spawnChildMessage(final MessageFrame frame) {
+    // memory cost needs to be calculated prior to memory expansion
+    final Gas cost = cost(frame);
+    frame.decrementRemainingGas(cost);
+
     final Address address = frame.getRecipientAddress();
     final MutableAccount account = frame.getWorldState().getAccount(address).getMutable();
 
     account.incrementNonce();
 
     final Wei value = Wei.wrap(frame.getStackItem(0));
-    final UInt256 inputOffset = UInt256.fromBytes(frame.getStackItem(1));
-    final UInt256 inputSize = UInt256.fromBytes(frame.getStackItem(2));
+    final UInt256 inputOffset = frame.getStackItem(1);
+    final UInt256 inputSize = frame.getStackItem(2);
     final Bytes inputData = frame.readMemory(inputOffset, inputSize);
 
     final Address contractAddress = targetContractAddress(frame);
@@ -128,8 +144,10 @@ public abstract class AbstractCreateOperation extends AbstractOperation {
             .miningBeneficiary(frame.getMiningBeneficiary())
             .blockHashLookup(frame.getBlockHashLookup())
             .maxStackSize(frame.getMaxStackSize())
-            .returnStack(frame.getReturnStack())
             .build();
+
+    frame.incrementRemainingGas(cost);
+    childFrame.copyWarmedUpFields(frame);
 
     frame.getMessageFrameStack().addFirst(childFrame);
     frame.setState(MessageFrame.State.CODE_SUSPENDED);
@@ -142,14 +160,14 @@ public abstract class AbstractCreateOperation extends AbstractOperation {
     frame.addLogs(childFrame.getLogs());
     frame.addSelfDestructs(childFrame.getSelfDestructs());
     frame.incrementGasRefund(childFrame.getGasRefund());
-
     frame.popStackItems(getStackItemsConsumed());
 
     if (childFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
+      frame.mergeWarmedUpFields(childFrame);
       frame.pushStackItem(Words.fromAddress(childFrame.getContractAddress()));
     } else {
       frame.setReturnData(childFrame.getOutputData());
-      frame.pushStackItem(Bytes32.ZERO);
+      frame.pushStackItem(UInt256.ZERO);
     }
 
     final int currentPC = frame.getPC();

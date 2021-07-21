@@ -15,7 +15,10 @@
  */
 package org.hyperledger.besu.evmtool;
 
+import static picocli.CommandLine.ScopeType.INHERIT;
+
 import org.hyperledger.besu.cli.config.NetworkName;
+import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -33,12 +36,9 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.Code;
 import org.hyperledger.besu.ethereum.vm.EVM;
-import org.hyperledger.besu.ethereum.vm.ExceptionalHaltReason;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
-import org.hyperledger.besu.ethereum.vm.Operation;
 import org.hyperledger.besu.ethereum.vm.OperationTracer;
-import org.hyperledger.besu.ethereum.vm.ehalt.ExceptionalHaltException;
-import org.hyperledger.besu.ethereum.vm.operations.CallOperation;
+import org.hyperledger.besu.ethereum.vm.StandardJsonTracer;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,14 +51,12 @@ import java.util.List;
 import java.util.Optional;
 
 import com.google.common.base.Stopwatch;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -68,13 +66,15 @@ import picocli.CommandLine.Option;
     abbreviateSynopsis = true,
     name = "evm",
     mixinStandardHelpOptions = true,
+    versionProvider = VersionProvider.class,
     sortOptions = false,
     header = "Usage:",
     synopsisHeading = "%n",
     descriptionHeading = "%nDescription:%n%n",
     optionListHeading = "%nOptions:%n",
     footerHeading = "%n",
-    footer = "Hyperledger Besu is licensed under the Apache License 2.0")
+    footer = "Hyperledger Besu is licensed under the Apache License 2.0",
+    subcommands = {StateTestSubCommand.class})
 public class EvmToolCommand implements Runnable {
 
   private static final Logger LOG = LogManager.getLogger();
@@ -82,65 +82,70 @@ public class EvmToolCommand implements Runnable {
   @Option(
       names = {"--code"},
       paramLabel = "<code>",
-      description = "code to be executed")
+      description = "Byte stream of code to be executed.")
   private final Bytes codeHexString = Bytes.EMPTY;
 
   @Option(
       names = {"--gas"},
+      description = "Amount of gas for this invocation.",
       paramLabel = "<int>")
   private final Gas gas = Gas.of(10_000_000_000L);
 
   @Option(
       names = {"--price"},
+      description = "Price of gas (in GWei) for this invocation",
       paramLabel = "<int>")
   private final Wei gasPriceGWei = Wei.ZERO;
 
   @Option(
       names = {"--sender"},
       paramLabel = "<address>",
-      description = "address of ORIGIN")
+      description = "Calling address for this invocation.")
   private final Address sender = Address.fromHexString("0x00");
 
   @Option(
       names = {"--receiver"},
       paramLabel = "<address>",
-      description = "address of ADDRESS")
+      description = "Receiving address for this invocation.")
   private final Address receiver = Address.fromHexString("0x00");
 
   @Option(
       names = {"--input"},
       paramLabel = "<code>",
-      description = "CALLDATA")
+      description = "The CALLDATA for this invocation")
   private final Bytes callData = Bytes.EMPTY;
 
   @Option(
       names = {"--value"},
+      description = "The amount of ether attached to this invocation",
       paramLabel = "<int>")
   private final Wei ethValue = Wei.ZERO;
 
   @Option(
       names = {"--json"},
-      description = "output json output for each opcode")
-  private final Boolean showJsonResults = false;
+      description = "Trace each opcode as a json object.",
+      scope = INHERIT)
+  final Boolean showJsonResults = false;
 
   @Option(
       names = {"--nomemory"},
-      description = "disable showing the full memory output for each op")
-  private final Boolean showMemory = true;
+      description = "Disable showing the full memory output for each op.",
+      scope = INHERIT)
+  final Boolean noMemory = false;
 
   @Option(
       names = {"--prestate", "--genesis"},
-      description = "a chain specification, the same one that the client normally would use")
+      description = "The genesis file containing account data for this invocation.")
   private final File genesisFile = null;
 
   @Option(
       names = {"--chain"},
-      description = "Name of a well know chain")
+      description = "Name of a well known network that will be used for this invocation.")
   private final NetworkName network = null;
 
   @Option(
       names = {"--repeat"},
-      description = "Number of times to repeat before gathering timing")
+      description = "Number of times to repeat for benchmarking.")
   private final Integer repeat = 0;
 
   private final EvmToolCommandOptionsModule daggerOptions = new EvmToolCommandOptionsModule();
@@ -154,6 +159,8 @@ public class EvmToolCommand implements Runnable {
     out = resultHandler.out();
     final CommandLine commandLine = new CommandLine(this);
     commandLine.addMixin("Dagger Options", daggerOptions);
+    // Usage of static command line flags is strictly reserved for experimental EIPs
+    commandLine.addMixin("Experimental EIPs", ExperimentalEIPs.class);
 
     // add sub commands here
 
@@ -178,7 +185,7 @@ public class EvmToolCommand implements Runnable {
                           : GenesisFileModule.createGenesisModule(genesisFile)
                       : GenesisFileModule.createGenesisModule(network))
               .evmToolCommandOptionsModule(daggerOptions)
-              .metricsSystemModule(new PrometheusMetricsSystemModule())
+              .metricsSystemModule(new MetricsSystemModule())
               .build();
 
       final BlockHeader blockHeader =
@@ -203,15 +210,23 @@ public class EvmToolCommand implements Runnable {
 
       Configurator.setAllLevels("", repeat == 0 ? Level.INFO : Level.OFF);
       int repeat = this.repeat;
-      final ProtocolSpec<?> protocolSpec = component.getProtocolSpec().apply(0);
+      Configurator.setLevel(
+          "org.hyperledger.besu.ethereum.mainnet.ProtocolScheduleBuilder", Level.OFF);
+      final ProtocolSpec protocolSpec = component.getProtocolSpec().apply(0);
+      Configurator.setLevel("org.hyperledger.besu.ethereum.mainnet.ProtocolScheduleBuilder", null);
       final PrecompileContractRegistry precompileContractRegistry =
           protocolSpec.getPrecompileContractRegistry();
       final EVM evm = protocolSpec.getEvm();
       final Stopwatch stopwatch = Stopwatch.createUnstarted();
       long lastTime = 0;
       do {
-
         final boolean lastLoop = repeat == 0;
+
+        final OperationTracer tracer = // You should have picked Mercy.
+            lastLoop && showJsonResults
+                ? new StandardJsonTracer(System.out, !noMemory)
+                : OperationTracer.NO_TRACING;
+
         final Deque<MessageFrame> messageFrameStack = new ArrayDeque<>();
         messageFrameStack.add(
             MessageFrame.builder()
@@ -242,11 +257,10 @@ public class EvmToolCommand implements Runnable {
         stopwatch.start();
         while (!messageFrameStack.isEmpty()) {
           final MessageFrame messageFrame = messageFrameStack.peek();
-          mcp.process(
-              messageFrame, new EvmToolOperationTracer(lastLoop, precompileContractRegistry));
+          mcp.process(messageFrame, tracer);
           if (lastLoop) {
-            if (!messageFrame.getExceptionalHaltReasons().isEmpty()) {
-              out.println(messageFrame.getExceptionalHaltReasons());
+            if (messageFrame.getExceptionalHaltReason().isPresent()) {
+              out.println(messageFrame.getExceptionalHaltReason().get());
             }
             if (messageFrame.getRevertReason().isPresent()) {
               out.println(
@@ -275,7 +289,10 @@ public class EvmToolCommand implements Runnable {
                     Optional.empty());
 
             final Gas intrinsicGasCost =
-                protocolSpec.getGasCalculator().transactionIntrinsicGasCost(tx);
+                protocolSpec
+                    .getGasCalculator()
+                    .transactionIntrinsicGasCostAndAccessedState(tx)
+                    .getGas();
             final Gas evmGas = gas.minus(messageFrame.getRemainingGas());
             out.println();
             out.println(
@@ -292,101 +309,6 @@ public class EvmToolCommand implements Runnable {
 
     } catch (final IOException e) {
       LOG.fatal(e);
-    }
-  }
-
-  private JsonObject createEvmTraceOperation(
-      final MessageFrame messageFrame,
-      final PrecompileContractRegistry precompileContractRegistry) {
-    final JsonArray stack = new JsonArray();
-    for (int i = 0; i < messageFrame.stackSize(); i++) {
-      stack.add(messageFrame.getStackItem(i).toShortHexString());
-    }
-    final String error =
-        messageFrame.getExceptionalHaltReasons().stream()
-            .findFirst()
-            .map(ExceptionalHaltReason::getDescription)
-            .orElse(
-                messageFrame
-                    .getRevertReason()
-                    .map(bytes -> new String(bytes.toArrayUnsafe(), StandardCharsets.UTF_8))
-                    .orElse(""));
-
-    final JsonObject results = new JsonObject();
-    final Operation currentOp = messageFrame.getCurrentOperation();
-    if (currentOp != null) {
-      results.put("pc", messageFrame.getPC());
-      results.put("op", Bytes.of(currentOp.getOpcode()).toHexString());
-      results.put("opName", currentOp.getName());
-      results.put("gasCost", currentOp.cost(messageFrame).asUInt256().toShortHexString());
-    } else {
-      final MessageFrame caller =
-          messageFrame.getMessageFrameStack().toArray(new MessageFrame[0])[1];
-      final CallOperation callOp = (CallOperation) caller.getCurrentOperation();
-
-      results.put("address", messageFrame.getContractAddress().toShortHexString());
-      results.put(
-          "contract",
-          precompileContractRegistry
-              .get(messageFrame.getContractAddress(), Account.DEFAULT_VERSION)
-              .getName());
-      results.put(
-          "gasCost",
-          callOp
-              .gasAvailableForChildCall(caller)
-              .minus(messageFrame.getRemainingGas())
-              .toHexString());
-    }
-    results.put("gas", messageFrame.getRemainingGas().asUInt256().toShortHexString());
-    if (!showMemory) {
-      results.put(
-          "memory",
-          messageFrame.readMemory(UInt256.ZERO, messageFrame.memoryWordSize()).toHexString());
-    }
-    results.put("memSize", messageFrame.memoryByteSize());
-    results.put("depth", messageFrame.getMessageStackDepth() + 1);
-    results.put("stack", stack);
-    results.put("error", error);
-    return results;
-  }
-
-  private class EvmToolOperationTracer implements OperationTracer {
-    private final boolean lastLoop;
-    private final PrecompileContractRegistry precompiledContractRegistries;
-
-    EvmToolOperationTracer(
-        final boolean lastLoop, final PrecompileContractRegistry precompiledContractRegistries) {
-      this.lastLoop = lastLoop;
-      this.precompiledContractRegistries = precompiledContractRegistries;
-    }
-
-    @Override
-    public void traceExecution(
-        final MessageFrame frame,
-        final Optional<Gas> currentGasCost,
-        final ExecuteOperation executeOperation)
-        throws ExceptionalHaltException {
-      if (showJsonResults && lastLoop) {
-        final JsonObject op =
-            EvmToolCommand.this.createEvmTraceOperation(frame, precompiledContractRegistries);
-        final Stopwatch timer = Stopwatch.createStarted();
-        executeOperation.execute();
-        timer.stop();
-        op.put("timens", timer.elapsed().toNanos());
-        out.println(op);
-      } else {
-        executeOperation.execute();
-      }
-    }
-
-    @Override
-    public void tracePrecompileCall(
-        final MessageFrame frame, final Gas gasRequirement, final Bytes output) {
-      if (showJsonResults && lastLoop) {
-        final JsonObject op =
-            EvmToolCommand.this.createEvmTraceOperation(frame, precompiledContractRegistries);
-        out.println(op);
-      }
     }
   }
 }

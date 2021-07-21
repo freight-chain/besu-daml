@@ -15,16 +15,9 @@
 package org.hyperledger.besu.ethereum;
 
 import org.hyperledger.besu.ethereum.chain.Blockchain;
-import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
-import org.hyperledger.besu.ethereum.chain.DefaultBlockchain;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
-import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
-import org.hyperledger.besu.ethereum.storage.StorageProvider;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
-import org.hyperledger.besu.ethereum.worldstate.WorldStatePreimageStorage;
-import org.hyperledger.besu.ethereum.worldstate.WorldStateStorage;
-import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.util.function.BiFunction;
 
@@ -32,43 +25,31 @@ import java.util.function.BiFunction;
  * Holds the mutable state used to track the current context of the protocol. This is primarily the
  * blockchain and world state archive, but can also hold arbitrary context required by a particular
  * consensus algorithm.
- *
- * @param <C> the type of the consensus algorithm context
  */
-public class ProtocolContext<C> {
+public class ProtocolContext {
   private final MutableBlockchain blockchain;
   private final WorldStateArchive worldStateArchive;
-  private final C consensusState;
+  private final Object consensusState;
 
   public ProtocolContext(
       final MutableBlockchain blockchain,
       final WorldStateArchive worldStateArchive,
-      final C consensusState) {
+      final Object consensusState) {
     this.blockchain = blockchain;
     this.worldStateArchive = worldStateArchive;
     this.consensusState = consensusState;
   }
 
-  public static <T> ProtocolContext<T> init(
-      final StorageProvider storageProvider,
+  public static ProtocolContext init(
+      final MutableBlockchain blockchain,
+      final WorldStateArchive worldStateArchive,
       final GenesisState genesisState,
-      final ProtocolSchedule<T> protocolSchedule,
-      final MetricsSystem metricsSystem,
-      final BiFunction<Blockchain, WorldStateArchive, T> consensusContextFactory) {
-    final BlockchainStorage blockchainStorage =
-        storageProvider.createBlockchainStorage(protocolSchedule);
-    final WorldStateStorage worldStateStorage = storageProvider.createWorldStateStorage();
-    final WorldStatePreimageStorage preimageStorage =
-        storageProvider.createWorldStatePreimageStorage();
+      final BiFunction<Blockchain, WorldStateArchive, Object> consensusContextFactory) {
+    if (blockchain.getChainHeadBlockNumber() < 1) {
+      genesisState.writeStateTo(worldStateArchive.getMutable());
+    }
 
-    final MutableBlockchain blockchain =
-        DefaultBlockchain.createMutable(genesisState.getBlock(), blockchainStorage, metricsSystem);
-
-    final WorldStateArchive worldStateArchive =
-        new WorldStateArchive(worldStateStorage, preimageStorage);
-    genesisState.writeStateTo(worldStateArchive.getMutable());
-
-    return new ProtocolContext<>(
+    return new ProtocolContext(
         blockchain,
         worldStateArchive,
         consensusContextFactory.apply(blockchain, worldStateArchive));
@@ -82,7 +63,7 @@ public class ProtocolContext<C> {
     return worldStateArchive;
   }
 
-  public C getConsensusState() {
-    return consensusState;
+  public <C> C getConsensusState(final Class<C> klass) {
+    return klass.cast(consensusState);
   }
 }

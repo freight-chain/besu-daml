@@ -15,9 +15,10 @@
 package org.hyperledger.besu.ethereum.permissioning.node;
 
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.util.Subscribers;
 
 import java.util.Collection;
@@ -37,7 +38,7 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
    * Creates the provider observing the provided p2p network
    *
    * @param p2pNetwork the p2p network to observe
-   * @param bootnodeEnodes the bootnodes that this node is configured to connection to
+   * @param bootnodeEnodes the bootnodes that this node is configured to connect to
    */
   public InsufficientPeersPermissioningProvider(
       final P2PNetwork p2pNetwork, final Collection<EnodeURL> bootnodeEnodes) {
@@ -52,7 +53,7 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
     return bootnodeEnodes.stream()
         .noneMatch(
             (bootNode) ->
-                EnodeURL.sameListeningEndpoint(peerConnection.getRemoteEnode(), bootNode));
+                EnodeURLImpl.sameListeningEndpoint(peerConnection.getRemoteEnode(), bootNode));
   }
 
   private long countP2PNetworkNonBootnodeConnections() {
@@ -77,9 +78,9 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
   }
 
   private boolean checkEnode(final EnodeURL localEnode, final EnodeURL enode) {
-    return (EnodeURL.sameListeningEndpoint(localEnode, enode)
+    return (EnodeURLImpl.sameListeningEndpoint(localEnode, enode)
         || bootnodeEnodes.stream()
-            .anyMatch(bootNode -> EnodeURL.sameListeningEndpoint(bootNode, enode)));
+            .anyMatch(bootNode -> EnodeURLImpl.sameListeningEndpoint(bootNode, enode)));
   }
 
   private void handleConnect(final PeerConnection peerConnection) {

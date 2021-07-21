@@ -49,6 +49,7 @@ import org.web3j.protocol.core.Response;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.EthFilter;
 import org.web3j.protocol.core.methods.response.EthLog;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthUninstallFilter;
 import org.web3j.protocol.eea.crypto.PrivateTransactionEncoder;
 import org.web3j.protocol.eea.crypto.RawPrivateTransaction;
@@ -85,7 +86,7 @@ public class PrivacyRequestFactory {
 
     @JsonCreator
     public GetTransactionCountResponse(@JsonProperty("result") final String result) {
-      this.count = Integer.decode(result);
+      this.count = result == null ? null : Integer.decode(result);
     }
 
     public Integer getCount() {
@@ -94,6 +95,8 @@ public class PrivacyRequestFactory {
   }
 
   public static class GetCodeResponse extends Response<String> {}
+
+  public static class DebugGetStateRoot extends Response<Hash> {}
 
   public Request<?, PrivDistributeTransactionResponse> privDistributeTransaction(
       final String signedPrivateTransaction) {
@@ -127,18 +130,20 @@ public class PrivacyRequestFactory {
   }
 
   public String privxAddToPrivacyGroup(
-      final Base64String privacyGroupId, final PrivacyNode adder, final List<String> addresses)
-      throws IOException, TransactionException {
+      final Base64String privacyGroupId,
+      final PrivacyNode adder,
+      final Credentials signer,
+      final List<String> addresses)
+      throws IOException {
 
     final BigInteger nonce =
         besuClient
-            .privGetTransactionCount(adder.getAddress().toHexString(), privacyGroupId)
+            .privGetTransactionCount(signer.getAddress(), privacyGroupId)
             .send()
             .getTransactionCount();
 
     final Bytes payload =
         encodeAddToGroupFunctionCall(
-            Bytes.fromBase64String(adder.getEnclaveKey()),
             addresses.stream().map(Bytes::fromBase64String).collect(Collectors.toList()));
 
     final RawPrivateTransaction privateTransaction =
@@ -154,26 +159,25 @@ public class PrivacyRequestFactory {
 
     return besuClient
         .eeaSendRawTransaction(
-            Numeric.toHexString(
-                PrivateTransactionEncoder.signMessage(
-                    privateTransaction, Credentials.create(adder.getTransactionSigningKey()))))
+            Numeric.toHexString(PrivateTransactionEncoder.signMessage(privateTransaction, signer)))
         .send()
         .getTransactionHash();
   }
 
   public String privxRemoveFromPrivacyGroup(
-      final Base64String privacyGroupId, final PrivacyNode remover, final String toRemove)
-      throws IOException, TransactionException {
+      final Base64String privacyGroupId,
+      final String removerTenant,
+      final Credentials signer,
+      final String toRemove)
+      throws IOException {
 
     final BigInteger nonce =
         besuClient
-            .privGetTransactionCount(remover.getAddress().toHexString(), privacyGroupId)
+            .privGetTransactionCount(signer.getAddress(), privacyGroupId)
             .send()
             .getTransactionCount();
 
-    final Bytes payload =
-        encodeRemoveFromGroupFunctionCall(
-            Bytes.fromBase64String(remover.getEnclaveKey()), Bytes.fromBase64String(toRemove));
+    final Bytes payload = encodeRemoveFromGroupFunctionCall(Bytes.fromBase64String(toRemove));
 
     final RawPrivateTransaction privateTransaction =
         RawPrivateTransaction.createTransaction(
@@ -182,29 +186,27 @@ public class PrivacyRequestFactory {
             BigInteger.valueOf(3000000),
             Address.ONCHAIN_PRIVACY_PROXY.toHexString(),
             payload.toHexString(),
-            Base64String.wrap(remover.getEnclaveKey()),
+            Base64String.wrap(removerTenant),
             privacyGroupId,
             org.web3j.utils.Restriction.RESTRICTED);
 
     return besuClient
         .eeaSendRawTransaction(
-            Numeric.toHexString(
-                PrivateTransactionEncoder.signMessage(
-                    privateTransaction, Credentials.create(remover.getTransactionSigningKey()))))
+            Numeric.toHexString(PrivateTransactionEncoder.signMessage(privateTransaction, signer)))
         .send()
         .getTransactionHash();
   }
 
-  private Bytes encodeRemoveFromGroupFunctionCall(final Bytes remover, final Bytes toRemove) {
-    return Bytes.concatenate(
-        OnChainGroupManagement.REMOVE_PARTICIPANT_METHOD_SIGNATURE, remover, toRemove);
+  private Bytes encodeRemoveFromGroupFunctionCall(final Bytes toRemove) {
+    return Bytes.concatenate(OnChainGroupManagement.REMOVE_PARTICIPANT_METHOD_SIGNATURE, toRemove);
   }
 
-  public String privxLockPrivacyGroup(final PrivacyNode locker, final Base64String privacyGroupId)
+  public String privxLockPrivacyGroup(
+      final PrivacyNode locker, final Base64String privacyGroupId, final Credentials signer)
       throws IOException, TransactionException {
     final BigInteger nonce =
         besuClient
-            .privGetTransactionCount(locker.getAddress().toHexString(), privacyGroupId)
+            .privGetTransactionCount(signer.getAddress(), privacyGroupId)
             .send()
             .getTransactionCount();
 
@@ -223,8 +225,7 @@ public class PrivacyRequestFactory {
         besuClient
             .eeaSendRawTransaction(
                 Numeric.toHexString(
-                    PrivateTransactionEncoder.signMessage(
-                        privateTransaction, Credentials.create(locker.getTransactionSigningKey()))))
+                    PrivateTransactionEncoder.signMessage(privateTransaction, signer)))
             .send()
             .getTransactionHash();
 
@@ -238,45 +239,34 @@ public class PrivacyRequestFactory {
   }
 
   public PrivxCreatePrivacyGroupResponse privxCreatePrivacyGroup(
-      final PrivacyNode creator, final List<String> addresses) throws IOException {
+      final PrivacyNode creator, final String privateFrom, final List<String> addresses)
+      throws IOException {
 
     final byte[] bytes = new byte[32];
     secureRandom.nextBytes(bytes);
     final Bytes privacyGroupId = Bytes.wrap(bytes);
 
-    final BigInteger nonce =
-        besuClient
-            .privGetTransactionCount(
-                creator.getAddress().toHexString(),
-                Base64String.wrap(privacyGroupId.toArrayUnsafe()))
-            .send()
-            .getTransactionCount();
-
     final Bytes payload =
         encodeAddToGroupFunctionCall(
-            Bytes.fromBase64String(creator.getEnclaveKey()),
             addresses.stream().map(Bytes::fromBase64String).collect(Collectors.toList()));
 
     final RawPrivateTransaction privateTransaction =
         RawPrivateTransaction.createTransaction(
-            nonce,
+            BigInteger.ZERO,
             BigInteger.valueOf(1000),
             BigInteger.valueOf(3000000),
             Address.ONCHAIN_PRIVACY_PROXY.toHexString(),
             payload.toHexString(),
-            Base64String.wrap(creator.getEnclaveKey()),
+            Base64String.wrap(privateFrom),
             Base64String.wrap(privacyGroupId.toArrayUnsafe()),
             org.web3j.utils.Restriction.RESTRICTED);
 
-    final String transactionHash =
-        besuClient
-            .eeaSendRawTransaction(
-                Numeric.toHexString(
-                    PrivateTransactionEncoder.signMessage(
-                        privateTransaction,
-                        Credentials.create(creator.getTransactionSigningKey()))))
-            .send()
-            .getTransactionHash();
+    final Request<?, EthSendTransaction> ethSendTransactionRequest =
+        besuClient.eeaSendRawTransaction(
+            Numeric.toHexString(
+                PrivateTransactionEncoder.signMessage(
+                    privateTransaction, Credentials.create(creator.getTransactionSigningKey()))));
+    final String transactionHash = ethSendTransactionRequest.send().getTransactionHash();
     return new PrivxCreatePrivacyGroupResponse(privacyGroupId.toBase64String(), transactionHash);
   }
 
@@ -431,6 +421,15 @@ public class PrivacyRequestFactory {
         EthLog.class);
   }
 
+  public Request<?, DebugGetStateRoot> privDebugGetStateRoot(
+      final String privacyGroupId, final String blockParam) {
+    return new Request<>(
+        "priv_debugGetStateRoot",
+        Arrays.asList(privacyGroupId, blockParam),
+        web3jService,
+        DebugGetStateRoot.class);
+  }
+
   public static class PrivxFindPrivacyGroupResponse extends Response<List<OnChainPrivacyGroup>> {
 
     public List<OnChainPrivacyGroup> getGroups() {
@@ -531,16 +530,13 @@ public class PrivacyRequestFactory {
     }
   }
 
-  private Bytes encodeAddToGroupFunctionCall(
-      final Bytes privateFrom, final List<Bytes> participants) {
+  private Bytes encodeAddToGroupFunctionCall(final List<Bytes> participants) {
     return Bytes.concatenate(
-        OnChainGroupManagement.ADD_TO_GROUP_METHOD_SIGNATURE,
-        privateFrom,
-        encodeList(participants));
+        OnChainGroupManagement.ADD_PARTICIPANTS_METHOD_SIGNATURE, encodeList(participants));
   }
 
   private Bytes encodeList(final List<Bytes> participants) {
-    final Bytes dynamicParameterOffset = encodeLong(64);
+    final Bytes dynamicParameterOffset = encodeLong(32);
     final Bytes length = encodeLong(participants.size());
     return Bytes.concatenate(
         dynamicParameterOffset,

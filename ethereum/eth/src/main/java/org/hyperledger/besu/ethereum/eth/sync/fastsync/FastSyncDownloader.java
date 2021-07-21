@@ -37,12 +37,12 @@ import com.google.common.io.RecursiveDeleteOption;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class FastSyncDownloader<C> {
+public class FastSyncDownloader {
 
   private static final Duration FAST_SYNC_RETRY_DELAY = Duration.ofSeconds(5);
 
   private static final Logger LOG = LogManager.getLogger();
-  private final FastSyncActions<C> fastSyncActions;
+  private final FastSyncActions fastSyncActions;
   private final WorldStateDownloader worldStateDownloader;
   private final FastSyncStateStorage fastSyncStateStorage;
   private final TaskCollection<NodeDataRequest> taskCollection;
@@ -52,7 +52,7 @@ public class FastSyncDownloader<C> {
   private final AtomicBoolean running = new AtomicBoolean(false);
 
   public FastSyncDownloader(
-      final FastSyncActions<C> fastSyncActions,
+      final FastSyncActions fastSyncActions,
       final WorldStateDownloader worldStateDownloader,
       final FastSyncStateStorage fastSyncStateStorage,
       final TaskCollection<NodeDataRequest> taskCollection,
@@ -91,8 +91,7 @@ public class FastSyncDownloader<C> {
     if (ExceptionUtils.rootCause(error) instanceof FastSyncException) {
       return CompletableFuture.failedFuture(error);
     } else if (ExceptionUtils.rootCause(error) instanceof StalledDownloadException) {
-      LOG.warn(
-          "Fast sync was unable to download the world state. Retrying with a new pivot block.");
+      LOG.info("Re-pivoting to newer block.");
       return start(FastSyncState.EMPTY_SYNC_STATE);
     } else {
       LOG.error(

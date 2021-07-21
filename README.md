@@ -4,10 +4,10 @@
  [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/hyperledger/besu.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hyperledger/besu/context:java)
  [![Documentation Status](https://readthedocs.org/projects/hyperledger-besu/badge/?version=latest)](https://besu.hyperledger.org/en/latest/?badge=latest)
  [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3174/badge)](https://bestpractices.coreinfrastructure.org/projects/3174)
- [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/PegasysEng/besu/blob/master/LICENSE)
- [ ![Download](https://api.bintray.com/packages/hyperledger-org/besu-repo/besu/images/download.svg) ](https://bintray.com/hyperledger-org/besu-repo/besu/_latestVersion)
+ [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/hyperledger/besu/blob/master/LICENSE)
  [![RocketChat chat](https://open.rocket.chat/images/join-chat.svg)](https://chat.hyperledger.org/channel/besu)
 
+[Download](https://hyperledger.jfrog.io/artifactory/besu-binaries/besu/)
 
 Besu is an Apache 2.0 licensed, MainNet compatible, Ethereum client written in Java.
 
@@ -30,7 +30,7 @@ If you have any questions, queries or comments, [RocketChat] is the place to fin
 
 ## Besu Users
 
-Users wanting to install Besu should install the Besu binary by following [these instructions](https://besu.hyperledger.org/HowTo/Get-Started/Install-Binaries/).    
+To install the Besu binary, follow [these instructions](https://besu.hyperledger.org/HowTo/Get-Started/Install-Binaries/).    
 
 ## Besu Developers
 
@@ -44,7 +44,6 @@ Users wanting to install Besu should install the Besu binary by following [these
 
 Instructions for how to get started with developing on the Besu codebase. Please also read the
 [wiki](https://wiki.hyperledger.org/display/BESU/Pull+Requests) for more details on how to submit a pull request (PR).  
-Also feel free to [contact our Developer Advocate](https://chat.hyperledger.org/direct/faraggi) with any questions about contributing to the project.
 
 * [Checking Out and Building](https://wiki.hyperledger.org/display/BESU/Building+from+source)
 * [Running Developer Builds](https://wiki.hyperledger.org/display/BESU/Building+from+source#running-developer-builds)

@@ -14,14 +14,14 @@
  */
 package org.hyperledger.besu.ethereum.blockcreation;
 
-import org.hyperledger.besu.ethereum.chain.EthHashObserver;
+import org.hyperledger.besu.ethereum.chain.PoWObserver;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
-import org.hyperledger.besu.ethereum.mainnet.EthHashSolution;
-import org.hyperledger.besu.ethereum.mainnet.EthHashSolverInputs;
+import org.hyperledger.besu.ethereum.mainnet.PoWSolution;
+import org.hyperledger.besu.ethereum.mainnet.PoWSolverInputs;
 
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +52,10 @@ public interface MiningCoordinator {
 
   boolean isMining();
 
+  default void onResumeMining() {}
+
+  default void onPauseMining() {}
+
   Wei getMinTransactionGasPrice();
 
   void setExtraData(Bytes extraData);
@@ -67,14 +71,25 @@ public interface MiningCoordinator {
     return Optional.empty();
   }
 
-  default Optional<EthHashSolverInputs> getWorkDefinition() {
+  default Optional<PoWSolverInputs> getWorkDefinition() {
     throw new UnsupportedOperationException(
         "Current consensus mechanism prevents querying work definition.");
   }
 
-  default boolean submitWork(final EthHashSolution solution) {
+  default boolean submitWork(final PoWSolution solution) {
     throw new UnsupportedOperationException(
         "Current consensus mechanism prevents submission of work solutions.");
+  }
+
+  /**
+   * Allows to submit the hashrate of a sealer with a specific id
+   *
+   * @param id of the sealer
+   * @param hashrate of the sealer
+   * @return true if the hashrate has been added otherwise false
+   */
+  default boolean submitHashRate(final String id, final Long hashrate) {
+    return false;
   }
 
   /**
@@ -90,5 +105,7 @@ public interface MiningCoordinator {
       final List<Transaction> transactions,
       final List<BlockHeader> ommers);
 
-  default void addEthHashObserver(final EthHashObserver observer) {}
+  default void addEthHashObserver(final PoWObserver observer) {}
+
+  void changeTargetGasLimit(final Long targetGasLimit);
 }

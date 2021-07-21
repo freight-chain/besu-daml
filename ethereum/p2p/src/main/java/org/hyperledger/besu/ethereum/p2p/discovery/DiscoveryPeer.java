@@ -15,12 +15,16 @@
 package org.hyperledger.besu.ethereum.p2p.discovery;
 
 import org.hyperledger.besu.ethereum.p2p.peers.DefaultPeer;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.peers.PeerId;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
+import org.hyperledger.besu.plugin.data.EnodeURL;
+
+import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.ethereum.beacon.discovery.schema.NodeRecord;
 
 /**
  * Represents an Ethereum node that we interacting with through the discovery and wire protocols.
@@ -36,6 +40,8 @@ public class DiscoveryPeer extends DefaultPeer {
   private long lastSeen = 0;
   private long lastAttemptedConnection = 0;
 
+  private NodeRecord nodeRecord;
+
   private DiscoveryPeer(final EnodeURL enode, final Endpoint endpoint) {
     super(enode);
     this.endpoint = endpoint;
@@ -43,6 +49,17 @@ public class DiscoveryPeer extends DefaultPeer {
 
   public static DiscoveryPeer fromEnode(final EnodeURL enode) {
     return new DiscoveryPeer(enode, Endpoint.fromEnode(enode));
+  }
+
+  public static Optional<DiscoveryPeer> from(final Peer peer) {
+    if (peer instanceof DiscoveryPeer) {
+      return Optional.of((DiscoveryPeer) peer);
+    }
+
+    return Optional.of(peer)
+        .map(Peer::getEnodeURL)
+        .filter(EnodeURL::isRunningDiscovery)
+        .map(DiscoveryPeer::fromEnode);
   }
 
   public static DiscoveryPeer fromIdAndEndpoint(final Bytes id, final Endpoint endpoint) {
@@ -110,6 +127,14 @@ public class DiscoveryPeer extends DefaultPeer {
 
   public Endpoint getEndpoint() {
     return endpoint;
+  }
+
+  public Optional<NodeRecord> getNodeRecord() {
+    return Optional.ofNullable(nodeRecord);
+  }
+
+  public void setNodeRecord(final NodeRecord nodeRecord) {
+    this.nodeRecord = nodeRecord;
   }
 
   public boolean discoveryEndpointMatches(final DiscoveryPeer peer) {

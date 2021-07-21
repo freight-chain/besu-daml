@@ -14,8 +14,8 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
 import org.hyperledger.besu.config.StubGenesisConfigOptions;
@@ -26,15 +26,15 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.methods.JsonRpcMethodsFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
-import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockImporter;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
@@ -47,6 +47,7 @@ import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.nat.NatService;
 
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,33 +62,71 @@ public class JsonRpcTestMethodsFactory {
   private static final BigInteger NETWORK_ID = BigInteger.valueOf(123);
 
   private final BlockchainImporter importer;
+  private final MutableBlockchain blockchain;
+  private final WorldStateArchive stateArchive;
+  private final ProtocolContext context;
+  private final BlockchainQueries blockchainQueries;
+  private final Synchronizer synchronizer;
 
   public JsonRpcTestMethodsFactory(final BlockchainImporter importer) {
     this.importer = importer;
+    this.blockchain = createInMemoryBlockchain(importer.getGenesisBlock());
+    this.stateArchive = createInMemoryWorldStateArchive();
+    this.importer.getGenesisState().writeStateTo(stateArchive.getMutable());
+    this.context = new ProtocolContext(blockchain, stateArchive, null);
+
+    final ProtocolSchedule protocolSchedule = importer.getProtocolSchedule();
+    this.synchronizer = mock(Synchronizer.class);
+
+    for (final Block block : importer.getBlocks()) {
+      final ProtocolSpec protocolSpec =
+          protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
+      final BlockImporter blockImporter = protocolSpec.getBlockImporter();
+      blockImporter.importBlock(context, block, HeaderValidationMode.FULL);
+    }
+    this.blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+  }
+
+  public JsonRpcTestMethodsFactory(
+      final BlockchainImporter importer,
+      final MutableBlockchain blockchain,
+      final WorldStateArchive stateArchive,
+      final ProtocolContext context) {
+    this.importer = importer;
+    this.blockchain = blockchain;
+    this.stateArchive = stateArchive;
+    this.context = context;
+    this.blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+    this.synchronizer = mock(Synchronizer.class);
+  }
+
+  public JsonRpcTestMethodsFactory(
+      final BlockchainImporter importer,
+      final MutableBlockchain blockchain,
+      final WorldStateArchive stateArchive,
+      final ProtocolContext context,
+      final Synchronizer synchronizer) {
+    this.importer = importer;
+    this.blockchain = blockchain;
+    this.stateArchive = stateArchive;
+    this.context = context;
+    this.synchronizer = synchronizer;
+    this.blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+  }
+
+  public BlockchainQueries getBlockchainQueries() {
+    return blockchainQueries;
+  }
+
+  public WorldStateArchive getStateArchive() {
+    return stateArchive;
   }
 
   public Map<String, JsonRpcMethod> methods() {
-    final WorldStateArchive stateArchive = createInMemoryWorldStateArchive();
-
-    importer.getGenesisState().writeStateTo(stateArchive.getMutable());
-
-    final MutableBlockchain blockchain = createInMemoryBlockchain(importer.getGenesisBlock());
-    final ProtocolContext<Void> context = new ProtocolContext<>(blockchain, stateArchive, null);
-
-    for (final Block block : importer.getBlocks()) {
-      final ProtocolSchedule<Void> protocolSchedule = importer.getProtocolSchedule();
-      final ProtocolSpec<Void> protocolSpec =
-          protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
-      final BlockImporter<Void> blockImporter = protocolSpec.getBlockImporter();
-      blockImporter.importBlock(context, block, HeaderValidationMode.FULL);
-    }
-
-    final BlockchainQueries blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
-
-    final Synchronizer synchronizer = mock(Synchronizer.class);
     final P2PNetwork peerDiscovery = mock(P2PNetwork.class);
+    final EthPeers ethPeers = mock(EthPeers.class);
     final TransactionPool transactionPool = mock(TransactionPool.class);
-    final EthHashMiningCoordinator miningCoordinator = mock(EthHashMiningCoordinator.class);
+    final PoWMiningCoordinator miningCoordinator = mock(PoWMiningCoordinator.class);
     final ObservableMetricsSystem metricsSystem = new NoOpMetricsSystem();
     final Optional<AccountLocalConfigPermissioningController> accountWhitelistController =
         Optional.of(mock(AccountLocalConfigPermissioningController.class));
@@ -112,6 +151,10 @@ public class JsonRpcTestMethodsFactory {
     apis.add(RpcApis.NET);
     apis.add(RpcApis.WEB3);
     apis.add(RpcApis.PRIV);
+    apis.add(RpcApis.DEBUG);
+
+    final Path dataDir = mock(Path.class);
+
     return new JsonRpcMethodsFactory()
         .methods(
             CLIENT_VERSION,
@@ -120,7 +163,7 @@ public class JsonRpcTestMethodsFactory {
             peerDiscovery,
             blockchainQueries,
             synchronizer,
-            MainnetProtocolSchedule.create(),
+            importer.getProtocolSchedule(),
             filterManager,
             transactionPool,
             miningCoordinator,
@@ -134,6 +177,8 @@ public class JsonRpcTestMethodsFactory {
             webSocketConfiguration,
             metricsConfiguration,
             natService,
-            new HashMap<>());
+            new HashMap<>(),
+            dataDir,
+            ethPeers);
   }
 }

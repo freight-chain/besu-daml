@@ -68,11 +68,9 @@ public final class GenesisState {
    *
    * @param json A JSON string describing the genesis block
    * @param protocolSchedule A protocol Schedule associated with
-   * @param <C> The consensus context type
    * @return A new {@link GenesisState}.
    */
-  public static <C> GenesisState fromJson(
-      final String json, final ProtocolSchedule<C> protocolSchedule) {
+  public static GenesisState fromJson(final String json, final ProtocolSchedule protocolSchedule) {
     return fromConfig(GenesisConfigFile.fromConfig(json), protocolSchedule);
   }
 
@@ -81,11 +79,10 @@ public final class GenesisState {
    *
    * @param config A {@link GenesisConfigFile} describing the genesis block.
    * @param protocolSchedule A protocol Schedule associated with
-   * @param <C> The consensus context type
    * @return A new {@link GenesisState}.
    */
-  public static <C> GenesisState fromConfig(
-      final GenesisConfigFile config, final ProtocolSchedule<C> protocolSchedule) {
+  public static GenesisState fromConfig(
+      final GenesisConfigFile config, final ProtocolSchedule protocolSchedule) {
     final List<GenesisAccount> genesisAccounts =
         parseAllocations(config).collect(Collectors.toList());
     final Block block =
@@ -105,11 +102,13 @@ public final class GenesisState {
    * @param target WorldView to write genesis state to
    */
   public void writeStateTo(final MutableWorldState target) {
-    writeAccountsTo(target, genesisAccounts);
+    writeAccountsTo(target, genesisAccounts, block.getHeader());
   }
 
   private static void writeAccountsTo(
-      final MutableWorldState target, final List<GenesisAccount> genesisAccounts) {
+      final MutableWorldState target,
+      final List<GenesisAccount> genesisAccounts,
+      final BlockHeader rootHeader) {
     final WorldUpdater updater = target.updater();
     genesisAccounts.forEach(
         genesisAccount -> {
@@ -121,7 +120,7 @@ public final class GenesisState {
           genesisAccount.storage.forEach(account::setStorageValue);
         });
     updater.commit();
-    target.persist();
+    target.persist(rootHeader);
   }
 
   private static Hash calculateGenesisStateHash(final List<GenesisAccount> genesisAccounts) {
@@ -131,14 +130,14 @@ public final class GenesisState {
         new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage());
     final MutableWorldState worldState =
         new DefaultMutableWorldState(stateStorage, preimageStorage);
-    writeAccountsTo(worldState, genesisAccounts);
+    writeAccountsTo(worldState, genesisAccounts, null);
     return worldState.rootHash();
   }
 
-  private static <C> BlockHeader buildHeader(
+  private static BlockHeader buildHeader(
       final GenesisConfigFile genesis,
       final Hash genesisRootHash,
-      final ProtocolSchedule<C> protocolSchedule) {
+      final ProtocolSchedule protocolSchedule) {
 
     return BlockHeaderBuilder.create()
         .parentHash(parseParentHash(genesis))
@@ -157,6 +156,7 @@ public final class GenesisState {
         .mixHash(parseMixHash(genesis))
         .nonce(parseNonce(genesis))
         .blockHeaderFunctions(ScheduleBasedBlockHeaderFunctions.create(protocolSchedule))
+        .baseFee(genesis.getGenesisBaseFeePerGas().orElse(null))
         .buildBlockHeader();
   }
 

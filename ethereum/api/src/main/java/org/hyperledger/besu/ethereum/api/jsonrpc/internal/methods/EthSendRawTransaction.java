@@ -17,29 +17,27 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcErrorConverter;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcRequestException;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
+import org.hyperledger.besu.ethereum.api.util.DomainObjectDecodeUtils;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
-import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 
 import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
 
 public class EthSendRawTransaction implements JsonRpcMethod {
-
   private static final Logger LOG = LogManager.getLogger();
+
   private final boolean sendEmptyHashOnInvalidBlock;
 
   private final Supplier<TransactionPool> transactionPool;
@@ -69,11 +67,13 @@ public class EthSendRawTransaction implements JsonRpcMethod {
 
     final Transaction transaction;
     try {
-      transaction = decodeRawTransaction(rawTransaction);
-    } catch (final InvalidJsonRpcRequestException e) {
+      transaction = DomainObjectDecodeUtils.decodeRawTransaction(rawTransaction);
+    } catch (final RLPException | IllegalArgumentException e) {
       return new JsonRpcErrorResponse(
           requestContext.getRequest().getId(), JsonRpcError.INVALID_PARAMS);
     }
+
+    LOG.trace("Received local transaction {}", transaction);
 
     final ValidationResult<TransactionInvalidReason> validationResult =
         transactionPool.get().addLocalTransaction(transaction);
@@ -88,15 +88,5 @@ public class EthSendRawTransaction implements JsonRpcMethod {
                 : new JsonRpcErrorResponse(
                     requestContext.getRequest().getId(),
                     JsonRpcErrorConverter.convertTransactionInvalidReason(errorReason)));
-  }
-
-  private Transaction decodeRawTransaction(final String hash)
-      throws InvalidJsonRpcRequestException {
-    try {
-      return Transaction.readFrom(RLP.input(Bytes.fromHexString(hash)));
-    } catch (final IllegalArgumentException | RLPException e) {
-      LOG.debug(e);
-      throw new InvalidJsonRpcRequestException("Invalid raw transaction hex", e);
-    }
   }
 }

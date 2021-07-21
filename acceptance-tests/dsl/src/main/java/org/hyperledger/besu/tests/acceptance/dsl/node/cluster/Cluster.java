@@ -85,16 +85,25 @@ public class Cluster implements AutoCloseable {
 
     final Optional<? extends RunnableNode> bootnode = selectAndStartBootnode(nodes);
 
-    nodes.stream()
-        .filter(node -> bootnode.map(boot -> boot != node).orElse(true))
+    nodes
+        .parallelStream()
+        .filter(
+            node -> {
+              LOG.info("starting non-bootnode {}", node.getName());
+              return bootnode.map(boot -> boot != node).orElse(true);
+            })
         .forEach(this::startNode);
 
     if (clusterConfiguration.isAwaitPeerDiscovery()) {
       for (final RunnableNode node : nodes) {
-        LOG.info("Awaiting peer discovery for node {}", node.getName());
+        LOG.info(
+            "Awaiting peer discovery for node {}, expecting {} peers",
+            node.getName(),
+            nodes.size() - 1);
         node.awaitPeerDiscovery(net.awaitPeerCount(nodes.size() - 1));
       }
     }
+    LOG.info("Cluster startup complete.");
   }
 
   private Optional<? extends RunnableNode> selectAndStartBootnode(
@@ -128,7 +137,7 @@ public class Cluster implements AutoCloseable {
     }
   }
 
-  private void startNode(final RunnableNode node) {
+  public void startNode(final RunnableNode node) {
     this.startNode(node, false);
   }
 
@@ -154,11 +163,15 @@ public class Cluster implements AutoCloseable {
   public void stop() {
     // stops nodes but do not shutdown besuNodeRunner
     for (final RunnableNode node : nodes.values()) {
-      if (node instanceof BesuNode) {
-        besuNodeRunner.stopNode((BesuNode) node); // besuNodeRunner.stopNode also calls node.stop
-      } else {
-        node.stop();
-      }
+      stopNode(node);
+    }
+  }
+
+  public void stopNode(final RunnableNode node) {
+    if (node instanceof BesuNode) {
+      besuNodeRunner.stopNode((BesuNode) node); // besuNodeRunner.stopNode also calls node.stop
+    } else {
+      node.stop();
     }
   }
 
@@ -185,5 +198,22 @@ public class Cluster implements AutoCloseable {
     nodes.values().stream()
         .filter(node -> besuNodeRunner.isActive(node.getName()))
         .forEach(condition::verify);
+  }
+
+  /**
+   * Starts a capture of System.out and System.err. Once getConsole is called the capture will end.
+   */
+  public void startConsoleCapture() {
+    besuNodeRunner.startConsoleCapture();
+  }
+
+  /**
+   * If no capture was started an empty string is returned. After the call the original System.err
+   * and out are restored.
+   *
+   * @return The console output since startConsoleCapture() was called.
+   */
+  public String getConsoleContents() {
+    return besuNodeRunner.getConsoleContents();
   }
 }

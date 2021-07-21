@@ -14,11 +14,14 @@
  */
 package org.hyperledger.besu.consensus.ibft.messagewrappers;
 
-import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
-import org.hyperledger.besu.consensus.ibft.IbftBlockHeaderFunctions;
+import org.hyperledger.besu.consensus.common.bft.BftBlockHeaderFunctions;
+import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier;
+import org.hyperledger.besu.consensus.common.bft.messagewrappers.BftMessage;
+import org.hyperledger.besu.consensus.common.bft.payload.SignedData;
+import org.hyperledger.besu.consensus.ibft.IbftExtraDataCodec;
+import org.hyperledger.besu.consensus.ibft.payload.PayloadDeserializers;
 import org.hyperledger.besu.consensus.ibft.payload.PreparedCertificate;
 import org.hyperledger.besu.consensus.ibft.payload.RoundChangePayload;
-import org.hyperledger.besu.consensus.ibft.payload.SignedData;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
 import org.hyperledger.besu.ethereum.rlp.RLP;
@@ -28,8 +31,9 @@ import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
 
-public class RoundChange extends IbftMessage<RoundChangePayload> {
+public class RoundChange extends BftMessage<RoundChangePayload> {
 
+  private static final IbftExtraDataCodec BFT_EXTRA_DATA_ENCODER = new IbftExtraDataCodec();
   private final Optional<Block> proposedBlock;
 
   public RoundChange(
@@ -70,10 +74,13 @@ public class RoundChange extends IbftMessage<RoundChangePayload> {
     final RLPInput rlpIn = RLP.input(data);
     rlpIn.enterList();
     final SignedData<RoundChangePayload> payload =
-        SignedData.readSignedRoundChangePayloadFrom(rlpIn);
+        PayloadDeserializers.readSignedRoundChangePayloadFrom(rlpIn);
     Optional<Block> block = Optional.empty();
     if (!rlpIn.nextIsNull()) {
-      block = Optional.of(Block.readFrom(rlpIn, IbftBlockHeaderFunctions.forCommittedSeal()));
+      block =
+          Optional.of(
+              Block.readFrom(
+                  rlpIn, BftBlockHeaderFunctions.forCommittedSeal(BFT_EXTRA_DATA_ENCODER)));
     } else {
       rlpIn.skipNext();
     }

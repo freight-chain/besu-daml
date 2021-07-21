@@ -25,11 +25,11 @@ import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.mainnet.AbstractBlockProcessor;
-import org.hyperledger.besu.ethereum.mainnet.MainnetBlockProcessor;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MiningBeneficiaryCalculator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 
 import java.util.ArrayList;
@@ -44,15 +44,15 @@ public class PrivateMigrationBlockProcessor {
 
   static final int MAX_GENERATION = 6;
 
-  private final TransactionProcessor transactionProcessor;
-  private final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private final MainnetTransactionProcessor transactionProcessor;
+  private final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
   final Wei blockReward;
   private final boolean skipZeroBlockRewards;
   private final MiningBeneficiaryCalculator miningBeneficiaryCalculator;
 
   public PrivateMigrationBlockProcessor(
-      final TransactionProcessor transactionProcessor,
-      final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
+      final MainnetTransactionProcessor transactionProcessor,
+      final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
       final Wei blockReward,
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
       final boolean skipZeroBlockRewards) {
@@ -63,7 +63,7 @@ public class PrivateMigrationBlockProcessor {
     this.skipZeroBlockRewards = skipZeroBlockRewards;
   }
 
-  public PrivateMigrationBlockProcessor(final ProtocolSpec<?> protocolSpec) {
+  public PrivateMigrationBlockProcessor(final ProtocolSpec protocolSpec) {
     this(
         protocolSpec.getTransactionProcessor(),
         protocolSpec.getTransactionReceiptFactory(),
@@ -85,7 +85,8 @@ public class PrivateMigrationBlockProcessor {
       final long remainingGasBudget = blockHeader.getGasLimit() - gasUsed;
       if (Long.compareUnsigned(transaction.getGasLimit(), remainingGasBudget) > 0) {
         LOG.warn(
-            "Transaction processing error: transaction gas limit {} exceeds available block budget remaining {}",
+            "Transaction processing error: transaction gas limit {} exceeds available block budget"
+                + " remaining {}",
             transaction.getGasLimit(),
             remainingGasBudget);
         return AbstractBlockProcessor.Result.failed();
@@ -96,7 +97,7 @@ public class PrivateMigrationBlockProcessor {
       final Address miningBeneficiary =
           miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
 
-      final TransactionProcessor.Result result =
+      final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
               blockchain,
               worldStateUpdater,
@@ -113,7 +114,7 @@ public class PrivateMigrationBlockProcessor {
       worldStateUpdater.commit();
       gasUsed = transaction.getGasLimit() - result.getGasRemaining() + gasUsed;
       final TransactionReceipt transactionReceipt =
-          transactionReceiptFactory.create(result, worldState, gasUsed);
+          transactionReceiptFactory.create(transaction.getType(), result, worldState, gasUsed);
       receipts.add(transactionReceipt);
     }
 
@@ -141,7 +142,8 @@ public class PrivateMigrationBlockProcessor {
     for (final BlockHeader ommerHeader : ommers) {
       if (ommerHeader.getNumber() - header.getNumber() > MAX_GENERATION) {
         LOG.warn(
-            "Block processing error: ommer block number {} more than {} generations current block number {}",
+            "Block processing error: ommer block number {} more than {} generations current block"
+                + " number {}",
             ommerHeader.getNumber(),
             MAX_GENERATION,
             header.getNumber());

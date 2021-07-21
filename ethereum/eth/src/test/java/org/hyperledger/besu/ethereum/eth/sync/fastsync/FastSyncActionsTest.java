@@ -37,9 +37,12 @@ import org.hyperledger.besu.ethereum.eth.sync.SyncMode;
 import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
@@ -47,22 +50,37 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class FastSyncActionsTest {
 
-  private final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
   private final SynchronizerConfiguration.Builder syncConfigBuilder =
       new SynchronizerConfiguration.Builder().syncMode(SyncMode.FAST).fastSyncPivotDistance(1000);
 
   private final FastSyncStateStorage fastSyncStateStorage = mock(FastSyncStateStorage.class);
   private final AtomicInteger timeoutCount = new AtomicInteger(0);
   private SynchronizerConfiguration syncConfig = syncConfigBuilder.build();
-  private FastSyncActions<Void> fastSyncActions;
+  private FastSyncActions fastSyncActions;
   private EthProtocolManager ethProtocolManager;
   private MutableBlockchain blockchain;
+  private BlockchainSetupUtil blockchainSetupUtil;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {{DataStorageFormat.BONSAI}, {DataStorageFormat.FOREST}});
+  }
+
+  private final DataStorageFormat storageFormat;
+
+  public FastSyncActionsTest(final DataStorageFormat storageFormat) {
+    this.storageFormat = storageFormat;
+  }
 
   @Before
   public void setUp() {
+    blockchainSetupUtil = BlockchainSetupUtil.forTesting(storageFormat);
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     ethProtocolManager =
@@ -388,11 +406,11 @@ public class FastSyncActionsTest {
     assertThat(result).isCompletedWithValue(new FastSyncState(blockchain.getBlockHeader(1).get()));
   }
 
-  private FastSyncActions<Void> createFastSyncActions(final SynchronizerConfiguration syncConfig) {
-    final ProtocolSchedule<Void> protocolSchedule = blockchainSetupUtil.getProtocolSchedule();
-    final ProtocolContext<Void> protocolContext = blockchainSetupUtil.getProtocolContext();
+  private FastSyncActions createFastSyncActions(final SynchronizerConfiguration syncConfig) {
+    final ProtocolSchedule protocolSchedule = blockchainSetupUtil.getProtocolSchedule();
+    final ProtocolContext protocolContext = blockchainSetupUtil.getProtocolContext();
     final EthContext ethContext = ethProtocolManager.ethContext();
-    return new FastSyncActions<>(
+    return new FastSyncActions(
         syncConfig,
         protocolSchedule,
         protocolContext,

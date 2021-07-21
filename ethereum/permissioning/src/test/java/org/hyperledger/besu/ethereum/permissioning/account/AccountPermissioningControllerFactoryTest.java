@@ -20,6 +20,7 @@ import static org.assertj.core.api.ThrowableAssert.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.permissioning.LocalPermissioningConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
@@ -43,13 +44,15 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class AccountPermissioningControllerFactoryTest {
 
   @Mock private TransactionSimulator transactionSimulator;
+  @Mock private Blockchain blockchain;
 
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   @Test
   public void createWithNullPermissioningConfigShouldReturnEmpty() {
     Optional<AccountPermissioningController> controller =
-        AccountPermissioningControllerFactory.create(null, transactionSimulator, metricsSystem);
+        AccountPermissioningControllerFactory.create(
+            null, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isEmpty();
   }
@@ -57,14 +60,15 @@ public class AccountPermissioningControllerFactoryTest {
   @Test
   public void createLocalConfigWithAccountPermissioningDisabledShouldReturnEmpty() {
     LocalPermissioningConfiguration localConfig = LocalPermissioningConfiguration.createDefault();
-    assertThat(localConfig.isAccountWhitelistEnabled()).isFalse();
+    assertThat(localConfig.isAccountAllowlistEnabled()).isFalse();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.of(localConfig), Optional.empty());
+        new PermissioningConfiguration(
+            Optional.of(localConfig), Optional.empty(), Optional.empty());
 
     Optional<AccountPermissioningController> controller =
         AccountPermissioningControllerFactory.create(
-            permissioningConfiguration, transactionSimulator, metricsSystem);
+            permissioningConfiguration, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isEmpty();
   }
@@ -72,14 +76,15 @@ public class AccountPermissioningControllerFactoryTest {
   @Test
   public void createLocalConfigOnlyControllerShouldReturnExpectedController() {
     LocalPermissioningConfiguration localConfig = localConfig();
-    assertThat(localConfig.isAccountWhitelistEnabled()).isTrue();
+    assertThat(localConfig.isAccountAllowlistEnabled()).isTrue();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.of(localConfig), Optional.empty());
+        new PermissioningConfiguration(
+            Optional.of(localConfig), Optional.empty(), Optional.empty());
 
     Optional<AccountPermissioningController> controller =
         AccountPermissioningControllerFactory.create(
-            permissioningConfiguration, transactionSimulator, metricsSystem);
+            permissioningConfiguration, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isNotEmpty();
     assertThat(controller.get().getAccountLocalConfigPermissioningController()).isNotEmpty();
@@ -90,14 +95,15 @@ public class AccountPermissioningControllerFactoryTest {
   public void createOnchainConfigWithAccountPermissioningDisabledShouldReturnEmpty() {
     SmartContractPermissioningConfiguration onchainConfig =
         SmartContractPermissioningConfiguration.createDefault();
-    assertThat(onchainConfig.isSmartContractAccountWhitelistEnabled()).isFalse();
+    assertThat(onchainConfig.isSmartContractAccountAllowlistEnabled()).isFalse();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.empty(), Optional.of(onchainConfig));
+        new PermissioningConfiguration(
+            Optional.empty(), Optional.of(onchainConfig), Optional.empty());
 
     Optional<AccountPermissioningController> controller =
         AccountPermissioningControllerFactory.create(
-            permissioningConfiguration, transactionSimulator, metricsSystem);
+            permissioningConfiguration, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isEmpty();
   }
@@ -105,14 +111,15 @@ public class AccountPermissioningControllerFactoryTest {
   @Test
   public void createOnchainConfigOnlyControllerShouldReturnExpectedController() {
     SmartContractPermissioningConfiguration onchainConfig = onchainConfig();
-    assertThat(onchainConfig.isSmartContractAccountWhitelistEnabled()).isTrue();
+    assertThat(onchainConfig.isSmartContractAccountAllowlistEnabled()).isTrue();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.empty(), Optional.of(onchainConfig));
+        new PermissioningConfiguration(
+            Optional.empty(), Optional.of(onchainConfig), Optional.empty());
 
     Optional<AccountPermissioningController> controller =
         AccountPermissioningControllerFactory.create(
-            permissioningConfiguration, transactionSimulator, metricsSystem);
+            permissioningConfiguration, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isNotEmpty();
     assertThat(controller.get().getAccountLocalConfigPermissioningController()).isEmpty();
@@ -122,10 +129,11 @@ public class AccountPermissioningControllerFactoryTest {
   @Test
   public void createOnchainShouldFailIfValidationFails() {
     SmartContractPermissioningConfiguration onchainConfig = onchainConfig();
-    assertThat(onchainConfig.isSmartContractAccountWhitelistEnabled()).isTrue();
+    assertThat(onchainConfig.isSmartContractAccountAllowlistEnabled()).isTrue();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.empty(), Optional.of(onchainConfig));
+        new PermissioningConfiguration(
+            Optional.empty(), Optional.of(onchainConfig), Optional.empty());
 
     when(transactionSimulator.processAtHead(any())).thenThrow(new RuntimeException());
 
@@ -133,7 +141,7 @@ public class AccountPermissioningControllerFactoryTest {
         catchThrowable(
             () ->
                 AccountPermissioningControllerFactory.create(
-                    permissioningConfiguration, transactionSimulator, metricsSystem));
+                    permissioningConfiguration, transactionSimulator, metricsSystem, blockchain));
 
     assertThat(thrown)
         .isInstanceOf(IllegalStateException.class)
@@ -143,17 +151,18 @@ public class AccountPermissioningControllerFactoryTest {
   @Test
   public void createLocalAndOnchainControllerShouldReturnExpectedControllers() {
     LocalPermissioningConfiguration localConfig = localConfig();
-    assertThat(localConfig.isAccountWhitelistEnabled()).isTrue();
+    assertThat(localConfig.isAccountAllowlistEnabled()).isTrue();
 
     SmartContractPermissioningConfiguration onchainConfig = onchainConfig();
-    assertThat(onchainConfig.isSmartContractAccountWhitelistEnabled()).isTrue();
+    assertThat(onchainConfig.isSmartContractAccountAllowlistEnabled()).isTrue();
 
     PermissioningConfiguration permissioningConfiguration =
-        new PermissioningConfiguration(Optional.of(localConfig), Optional.of(onchainConfig));
+        new PermissioningConfiguration(
+            Optional.of(localConfig), Optional.of(onchainConfig), Optional.empty());
 
     Optional<AccountPermissioningController> controller =
         AccountPermissioningControllerFactory.create(
-            permissioningConfiguration, transactionSimulator, metricsSystem);
+            permissioningConfiguration, transactionSimulator, metricsSystem, blockchain);
 
     Assertions.assertThat(controller).isNotEmpty();
     assertThat(controller.get().getAccountLocalConfigPermissioningController()).isNotEmpty();
@@ -163,7 +172,7 @@ public class AccountPermissioningControllerFactoryTest {
   private LocalPermissioningConfiguration localConfig() {
     LocalPermissioningConfiguration localPermissioningConfiguration =
         LocalPermissioningConfiguration.createDefault();
-    localPermissioningConfiguration.setAccountWhitelist(
+    localPermissioningConfiguration.setAccountAllowlist(
         Arrays.asList(Address.fromHexString("0x00").toString()));
     localPermissioningConfiguration.setAccountPermissioningConfigFilePath(
         createTempFile().getPath());
@@ -175,7 +184,7 @@ public class AccountPermissioningControllerFactoryTest {
         SmartContractPermissioningConfiguration.createDefault();
     onchainPermissioningConfiguration.setAccountSmartContractAddress(
         Address.fromHexString("0x0000000000000000000000000000000000008888"));
-    onchainPermissioningConfiguration.setSmartContractAccountWhitelistEnabled(true);
+    onchainPermissioningConfiguration.setSmartContractAccountAllowlistEnabled(true);
     return onchainPermissioningConfiguration;
   }
 

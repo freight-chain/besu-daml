@@ -28,16 +28,17 @@ public class GasUsageValidationRule implements DetachedBlockHeaderValidationRule
 
   private static final Logger LOG = LogManager.getLogger();
 
+  public GasUsageValidationRule() {}
+
   @Override
   public boolean validate(final BlockHeader header, final BlockHeader parent) {
     if (header.getGasUsed() > header.getGasLimit()) {
-      LOG.trace(
+      LOG.info(
           "Invalid block header: gas used {} exceeds gas limit {}",
           header.getGasUsed(),
           header.getGasLimit());
       return false;
     }
-
     return true;
   }
 }

@@ -23,6 +23,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.Subscrip
 import java.net.InetSocketAddress;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -30,6 +31,7 @@ import com.google.common.collect.Iterables;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
@@ -48,6 +50,9 @@ public class WebSocketService {
 
   private static final InetSocketAddress EMPTY_SOCKET_ADDRESS = new InetSocketAddress("0.0.0.0", 0);
   private static final String APPLICATION_JSON = "application/json";
+
+  private final int maxActiveConnections;
+  private final AtomicInteger activeConnectionsCount = new AtomicInteger();
 
   private final Vertx vertx;
   private final WebSocketConfiguration configuration;
@@ -77,6 +82,7 @@ public class WebSocketService {
     this.configuration = configuration;
     this.websocketRequestHandler = websocketRequestHandler;
     this.authenticationService = authenticationService;
+    this.maxActiveConnections = configuration.getMaxActiveConnections();
   }
 
   public CompletableFuture<?> start() {
@@ -91,8 +97,11 @@ public class WebSocketService {
                 new HttpServerOptions()
                     .setHost(configuration.getHost())
                     .setPort(configuration.getPort())
-                    .setWebsocketSubProtocols("undefined"))
-            .websocketHandler(websocketHandler())
+                    .setHandle100ContinueAutomatically(true)
+                    .setCompressionSupported(true)
+                    .addWebSocketSubProtocol("undefined"))
+            .webSocketHandler(websocketHandler())
+            .connectionHandler(connectionHandler())
             .requestHandler(httpHandler())
             .listen(startHandler(resultFuture));
 
@@ -108,7 +117,7 @@ public class WebSocketService {
         LOG.trace("Websocket authentication token {}", token);
       }
 
-      if (!hasWhitelistedHostnameHeader(Optional.ofNullable(websocket.headers().get("Host")))) {
+      if (!hasAllowedHostnameHeader(Optional.ofNullable(websocket.headers().get("Host")))) {
         websocket.reject(403);
       }
 
@@ -148,11 +157,39 @@ public class WebSocketService {
     };
   }
 
+  private Handler<HttpConnection> connectionHandler() {
+
+    return connection -> {
+      if (activeConnectionsCount.get() >= maxActiveConnections) {
+        // disallow new connections to prevent DoS
+        LOG.warn(
+            "Rejecting new connection from {}. {}/{} max active connections limit reached.",
+            connection.remoteAddress(),
+            activeConnectionsCount.getAndIncrement(),
+            maxActiveConnections);
+        connection.close();
+      } else {
+        LOG.debug(
+            "Opened connection from {}. Total of active connections: {}/{}",
+            connection.remoteAddress(),
+            activeConnectionsCount.incrementAndGet(),
+            maxActiveConnections);
+      }
+      connection.closeHandler(
+          c ->
+              LOG.debug(
+                  "Connection closed from {}. Total of active connections: {}/{}",
+                  connection.remoteAddress(),
+                  activeConnectionsCount.decrementAndGet(),
+                  maxActiveConnections));
+    };
+  }
+
   private Handler<HttpServerRequest> httpHandler() {
     final Router router = Router.router(vertx);
 
     // Verify Host header to avoid rebind attack.
-    router.route().handler(checkWhitelistHostHeader());
+    router.route().handler(checkAllowlistHostHeader());
 
     if (authenticationService.isPresent()) {
       router.route("/login").handler(BodyHandler.create());
@@ -231,9 +268,9 @@ public class WebSocketService {
         websocket.headers().get("Authorization"));
   }
 
-  private Handler<RoutingContext> checkWhitelistHostHeader() {
+  private Handler<RoutingContext> checkAllowlistHostHeader() {
     return event -> {
-      if (hasWhitelistedHostnameHeader(Optional.ofNullable(event.request().host()))) {
+      if (hasAllowedHostnameHeader(Optional.ofNullable(event.request().host()))) {
         event.next();
       } else {
         final HttpServerResponse response = event.response();
@@ -248,9 +285,9 @@ public class WebSocketService {
   }
 
   @VisibleForTesting
-  public boolean hasWhitelistedHostnameHeader(final Optional<String> header) {
-    return configuration.getHostsWhitelist().contains("*")
-        || header.map(value -> checkHostInWhitelist(validateHostHeader(value))).orElse(false);
+  public boolean hasAllowedHostnameHeader(final Optional<String> header) {
+    return configuration.getHostsAllowlist().contains("*")
+        || header.map(value -> checkHostInAllowlist(validateHostHeader(value))).orElse(false);
   }
 
   private Optional<String> validateHostHeader(final String header) {
@@ -265,14 +302,14 @@ public class WebSocketService {
     return Optional.ofNullable(Iterables.get(splitHostHeader, 0));
   }
 
-  private boolean checkHostInWhitelist(final Optional<String> hostHeader) {
+  private boolean checkHostInAllowlist(final Optional<String> hostHeader) {
     return hostHeader
         .map(
             header ->
-                configuration.getHostsWhitelist().stream()
+                configuration.getHostsAllowlist().stream()
                     .anyMatch(
-                        whitelistEntry ->
-                            whitelistEntry.toLowerCase().equals(header.toLowerCase())))
+                        allowlistEntry ->
+                            allowlistEntry.toLowerCase().equals(header.toLowerCase())))
         .orElse(false);
   }
 }

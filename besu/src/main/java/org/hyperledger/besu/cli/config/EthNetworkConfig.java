@@ -15,15 +15,21 @@
 package org.hyperledger.besu.cli.config;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.ASTOR_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.CALAVERAS_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.CLASSIC_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.GOERLI_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.GOERLI_DISCOVERY_URL;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.KOTTI_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.MAINNET_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.MAINNET_DISCOVERY_URL;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.MORDOR_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.RINKEBY_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.RINKEBY_DISCOVERY_URL;
 import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.ROPSTEN_BOOTSTRAP_NODES;
+import static org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration.ROPSTEN_DISCOVERY_URL;
 
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -41,29 +47,41 @@ public class EthNetworkConfig {
   public static final BigInteger ROPSTEN_NETWORK_ID = BigInteger.valueOf(3);
   public static final BigInteger RINKEBY_NETWORK_ID = BigInteger.valueOf(4);
   public static final BigInteger GOERLI_NETWORK_ID = BigInteger.valueOf(5);
+  public static final BigInteger CALAVERAS_NETWORK_ID = BigInteger.valueOf(123);
   public static final BigInteger DEV_NETWORK_ID = BigInteger.valueOf(2018);
+  public static final BigInteger ECIP1049_DEV_NETWORK_ID = BigInteger.valueOf(2021);
   public static final BigInteger CLASSIC_NETWORK_ID = BigInteger.valueOf(1);
   public static final BigInteger KOTTI_NETWORK_ID = BigInteger.valueOf(6);
   public static final BigInteger MORDOR_NETWORK_ID = BigInteger.valueOf(7);
+  private static final BigInteger ASTOR_NETWORK_ID = BigInteger.valueOf(212);
   private static final String MAINNET_GENESIS = "/mainnet.json";
   private static final String ROPSTEN_GENESIS = "/ropsten.json";
   private static final String RINKEBY_GENESIS = "/rinkeby.json";
   private static final String GOERLI_GENESIS = "/goerli.json";
+  private static final String CALAVERAS_GENESIS = "/calaveras.json";
   private static final String DEV_GENESIS = "/dev.json";
+  private static final String DEV_ECIP1049_GENESIS = "/ecip1049_dev.json";
   private static final String CLASSIC_GENESIS = "/classic.json";
   private static final String KOTTI_GENESIS = "/kotti.json";
   private static final String MORDOR_GENESIS = "/mordor.json";
+  private static final String ASTOR_GENESIS = "/astor.json";
+
   private final String genesisConfig;
   private final BigInteger networkId;
   private final List<EnodeURL> bootNodes;
+  private final String dnsDiscoveryUrl;
 
   public EthNetworkConfig(
-      final String genesisConfig, final BigInteger networkId, final List<EnodeURL> bootNodes) {
+      final String genesisConfig,
+      final BigInteger networkId,
+      final List<EnodeURL> bootNodes,
+      final String dnsDiscoveryUrl) {
     Preconditions.checkNotNull(genesisConfig);
     Preconditions.checkNotNull(bootNodes);
     this.genesisConfig = genesisConfig;
     this.networkId = networkId;
     this.bootNodes = bootNodes;
+    this.dnsDiscoveryUrl = dnsDiscoveryUrl;
   }
 
   public String getGenesisConfig() {
@@ -78,6 +96,10 @@ public class EthNetworkConfig {
     return bootNodes;
   }
 
+  public String getDnsDiscoveryUrl() {
+    return dnsDiscoveryUrl;
+  }
+
   @Override
   public boolean equals(final Object o) {
     if (this == o) {
@@ -89,12 +111,13 @@ public class EthNetworkConfig {
     final EthNetworkConfig that = (EthNetworkConfig) o;
     return networkId.equals(that.networkId)
         && Objects.equals(genesisConfig, that.genesisConfig)
-        && Objects.equals(bootNodes, that.bootNodes);
+        && Objects.equals(bootNodes, that.bootNodes)
+        && Objects.equals(dnsDiscoveryUrl, that.dnsDiscoveryUrl);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(genesisConfig, networkId, bootNodes);
+    return Objects.hash(genesisConfig, networkId, bootNodes, dnsDiscoveryUrl);
   }
 
   @Override
@@ -106,6 +129,8 @@ public class EthNetworkConfig {
         + networkId
         + ", bootNodes="
         + bootNodes
+        + ", dnsDiscoveryUrl="
+        + dnsDiscoveryUrl
         + '}';
   }
 
@@ -113,28 +138,50 @@ public class EthNetworkConfig {
     switch (networkName) {
       case ROPSTEN:
         return new EthNetworkConfig(
-            jsonConfig(ROPSTEN_GENESIS), ROPSTEN_NETWORK_ID, ROPSTEN_BOOTSTRAP_NODES);
+            jsonConfig(ROPSTEN_GENESIS),
+            ROPSTEN_NETWORK_ID,
+            ROPSTEN_BOOTSTRAP_NODES,
+            ROPSTEN_DISCOVERY_URL);
       case RINKEBY:
         return new EthNetworkConfig(
-            jsonConfig(RINKEBY_GENESIS), RINKEBY_NETWORK_ID, RINKEBY_BOOTSTRAP_NODES);
+            jsonConfig(RINKEBY_GENESIS),
+            RINKEBY_NETWORK_ID,
+            RINKEBY_BOOTSTRAP_NODES,
+            RINKEBY_DISCOVERY_URL);
       case GOERLI:
         return new EthNetworkConfig(
-            jsonConfig(GOERLI_GENESIS), GOERLI_NETWORK_ID, GOERLI_BOOTSTRAP_NODES);
+            jsonConfig(GOERLI_GENESIS),
+            GOERLI_NETWORK_ID,
+            GOERLI_BOOTSTRAP_NODES,
+            GOERLI_DISCOVERY_URL);
+      case CALAVERAS:
+        return new EthNetworkConfig(
+            jsonConfig(CALAVERAS_GENESIS), CALAVERAS_NETWORK_ID, CALAVERAS_BOOTSTRAP_NODES, null);
       case DEV:
-        return new EthNetworkConfig(jsonConfig(DEV_GENESIS), DEV_NETWORK_ID, new ArrayList<>());
+        return new EthNetworkConfig(
+            jsonConfig(DEV_GENESIS), DEV_NETWORK_ID, new ArrayList<>(), null);
       case CLASSIC:
         return new EthNetworkConfig(
-            jsonConfig(CLASSIC_GENESIS), CLASSIC_NETWORK_ID, CLASSIC_BOOTSTRAP_NODES);
+            jsonConfig(CLASSIC_GENESIS), CLASSIC_NETWORK_ID, CLASSIC_BOOTSTRAP_NODES, null);
+      case ECIP1049_DEV:
+        return new EthNetworkConfig(
+            jsonConfig(DEV_ECIP1049_GENESIS), ECIP1049_DEV_NETWORK_ID, new ArrayList<>(), null);
       case KOTTI:
         return new EthNetworkConfig(
-            jsonConfig(KOTTI_GENESIS), KOTTI_NETWORK_ID, KOTTI_BOOTSTRAP_NODES);
+            jsonConfig(KOTTI_GENESIS), KOTTI_NETWORK_ID, KOTTI_BOOTSTRAP_NODES, null);
       case MORDOR:
         return new EthNetworkConfig(
-            jsonConfig(MORDOR_GENESIS), MORDOR_NETWORK_ID, MORDOR_BOOTSTRAP_NODES);
+            jsonConfig(MORDOR_GENESIS), MORDOR_NETWORK_ID, MORDOR_BOOTSTRAP_NODES, null);
+      case ASTOR:
+        return new EthNetworkConfig(
+            jsonConfig(ASTOR_GENESIS), ASTOR_NETWORK_ID, ASTOR_BOOTSTRAP_NODES, null);
       case MAINNET:
       default:
         return new EthNetworkConfig(
-            jsonConfig(MAINNET_GENESIS), MAINNET_NETWORK_ID, MAINNET_BOOTSTRAP_NODES);
+            jsonConfig(MAINNET_GENESIS),
+            MAINNET_NETWORK_ID,
+            MAINNET_BOOTSTRAP_NODES,
+            MAINNET_DISCOVERY_URL);
     }
   }
 
@@ -159,6 +206,8 @@ public class EthNetworkConfig {
         return jsonConfig(GOERLI_GENESIS);
       case DEV:
         return jsonConfig(DEV_GENESIS);
+      case ECIP1049_DEV:
+        return jsonConfig(DEV_ECIP1049_GENESIS);
       case CLASSIC:
         return jsonConfig(CLASSIC_GENESIS);
       case KOTTI:
@@ -172,6 +221,7 @@ public class EthNetworkConfig {
 
   public static class Builder {
 
+    private String dnsDiscoveryUrl;
     private String genesisConfig;
     private BigInteger networkId;
     private List<EnodeURL> bootNodes;
@@ -180,6 +230,7 @@ public class EthNetworkConfig {
       this.genesisConfig = ethNetworkConfig.genesisConfig;
       this.networkId = ethNetworkConfig.networkId;
       this.bootNodes = ethNetworkConfig.bootNodes;
+      this.dnsDiscoveryUrl = ethNetworkConfig.dnsDiscoveryUrl;
     }
 
     public Builder setGenesisConfig(final String genesisConfig) {
@@ -197,8 +248,13 @@ public class EthNetworkConfig {
       return this;
     }
 
+    public Builder setDnsDiscoveryUrl(final String dnsDiscoveryUrl) {
+      this.dnsDiscoveryUrl = dnsDiscoveryUrl;
+      return this;
+    }
+
     public EthNetworkConfig build() {
-      return new EthNetworkConfig(genesisConfig, networkId, bootNodes);
+      return new EthNetworkConfig(genesisConfig, networkId, bootNodes, dnsDiscoveryUrl);
     }
   }
 }

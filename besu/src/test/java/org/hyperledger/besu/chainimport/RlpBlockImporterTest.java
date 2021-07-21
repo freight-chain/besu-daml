@@ -20,9 +20,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.controller.BesuController;
-import org.hyperledger.besu.controller.GasLimitCalculator;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
-import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
+import org.hyperledger.besu.ethereum.blockcreation.GasLimitCalculator;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.MiningParametersTestBuilder;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
@@ -57,12 +57,12 @@ public final class RlpBlockImporterTest {
     final Path dataDir = folder.newFolder().toPath();
     final Path source = dataDir.resolve("1000.blocks");
     BlockTestUtil.write1000Blocks(source);
-    final BesuController<?> targetController =
+    final BesuController targetController =
         new BesuController.Builder()
             .fromGenesisConfig(GenesisConfigFile.mainnet())
             .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
             .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
-            .storageProvider(new InMemoryStorageProvider())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
             .networkId(BigInteger.ONE)
             .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
             .nodeKey(NodeKeyUtils.generate())
@@ -70,8 +70,8 @@ public final class RlpBlockImporterTest {
             .privacyParameters(PrivacyParameters.DEFAULT)
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build();
     final RlpBlockImporter.ImportResult result =
         rlpBlockImporter.importBlockchain(source, targetController, false);
@@ -85,12 +85,12 @@ public final class RlpBlockImporterTest {
     final Path dataDir = folder.newFolder().toPath();
     final Path source = dataDir.resolve("badpow.blocks");
     BlockTestUtil.writeBadPowBlocks(source);
-    final BesuController<?> targetController =
+    final BesuController targetController =
         new BesuController.Builder()
             .fromGenesisConfig(GenesisConfigFile.mainnet())
             .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
             .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
-            .storageProvider(new InMemoryStorageProvider())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
             .networkId(BigInteger.ONE)
             .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
             .nodeKey(NodeKeyUtils.generate())
@@ -98,8 +98,8 @@ public final class RlpBlockImporterTest {
             .privacyParameters(PrivacyParameters.DEFAULT)
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build();
 
     assertThatThrownBy(
@@ -113,12 +113,12 @@ public final class RlpBlockImporterTest {
     final Path dataDir = folder.newFolder().toPath();
     final Path source = dataDir.resolve("badpow.blocks");
     BlockTestUtil.writeBadPowBlocks(source);
-    final BesuController<?> targetController =
+    final BesuController targetController =
         new BesuController.Builder()
             .fromGenesisConfig(GenesisConfigFile.mainnet())
             .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
             .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
-            .storageProvider(new InMemoryStorageProvider())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
             .networkId(BigInteger.ONE)
             .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
             .nodeKey(NodeKeyUtils.generate())
@@ -126,8 +126,8 @@ public final class RlpBlockImporterTest {
             .privacyParameters(PrivacyParameters.DEFAULT)
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build();
 
     final RlpBlockImporter.ImportResult result =
@@ -153,12 +153,12 @@ public final class RlpBlockImporterTest {
       throw new IllegalStateException(ex);
     }
 
-    final BesuController<?> controller =
+    final BesuController controller =
         new BesuController.Builder()
             .fromGenesisConfig(GenesisConfigFile.fromConfig(config))
             .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
             .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
-            .storageProvider(new InMemoryStorageProvider())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
             .networkId(BigInteger.valueOf(10))
             .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
             .nodeKey(NodeKeyUtils.generate())
@@ -166,8 +166,8 @@ public final class RlpBlockImporterTest {
             .privacyParameters(PrivacyParameters.DEFAULT)
             .dataDirectory(dataDir)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build();
     final RlpBlockImporter.ImportResult result =
         rlpBlockImporter.importBlockchain(source, controller, false);

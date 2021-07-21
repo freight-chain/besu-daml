@@ -23,7 +23,6 @@ import org.hyperledger.besu.cli.config.EthNetworkConfig;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.config.JsonUtil;
 import org.hyperledger.besu.controller.BesuController;
-import org.hyperledger.besu.controller.GasLimitCalculator;
 import org.hyperledger.besu.controller.MainnetBesuControllerBuilder;
 import org.hyperledger.besu.crypto.KeyPairUtil;
 import org.hyperledger.besu.crypto.NodeKey;
@@ -32,10 +31,11 @@ import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.graphql.GraphQLConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
+import org.hyperledger.besu.ethereum.blockcreation.GasLimitCalculator;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockImporter;
 import org.hyperledger.besu.ethereum.core.BlockSyncTestUtils;
-import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.MiningParametersTestBuilder;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
@@ -45,18 +45,20 @@ import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfigurati
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.ethereum.storage.StorageProvider;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStorageProviderBuilder;
 import org.hyperledger.besu.metrics.ObservableMetricsSystem;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBKeyValueStorageFactory;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBMetricsFactory;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
 import org.hyperledger.besu.services.BesuConfigurationImpl;
 import org.hyperledger.besu.services.BesuPluginContextImpl;
+import org.hyperledger.besu.services.PermissioningServiceImpl;
 import org.hyperledger.besu.testutil.TestClock;
 
 import java.math.BigInteger;
@@ -82,6 +84,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.awaitility.Awaitility;
 import org.junit.After;
@@ -115,10 +118,10 @@ public final class RunnerTest {
   @Test
   public void getFixedNodes() {
     final EnodeURL staticNode =
-        EnodeURL.fromString(
+        EnodeURLImpl.fromString(
             "enode://8f4b88336cc40ef2516d8b27df812e007fb2384a61e93635f1899051311344f3dcdbb49a4fe49a79f66d2f589a9f282e8cc4f1d7381e8ef7e4fcc6b0db578c77@127.0.0.1:30301");
     final EnodeURL bootnode =
-        EnodeURL.fromString(
+        EnodeURLImpl.fromString(
             "enode://8f4b88336cc40ef2516d8b27df812e007fb2384a61e93635f1899051311344f3dcdbb49a4fe49a79f66d2f589a9f282e8cc4f1d7381e8ef7e4fcc6b0db578c77@127.0.0.1:30302");
     final List<EnodeURL> bootnodes = new ArrayList<>();
     bootnodes.add(bootnode);
@@ -132,7 +135,7 @@ public final class RunnerTest {
 
   @Test
   public void fullSyncFromGenesis() throws Exception {
-    syncFromGenesis(SyncMode.FULL, GenesisConfigFile.mainnet());
+    syncFromGenesis(SyncMode.FULL, getFastSyncGenesis());
   }
 
   @Test
@@ -152,7 +155,7 @@ public final class RunnerTest {
     final BigInteger networkId = BigInteger.valueOf(2929);
 
     // Setup state with block data
-    try (final BesuController<Void> controller =
+    try (final BesuController controller =
         new MainnetBesuControllerBuilder()
             .genesisConfigFile(genesisConfig)
             .synchronizerConfiguration(syncConfigAhead)
@@ -164,15 +167,15 @@ public final class RunnerTest {
             .metricsSystem(noOpMetricsSystem)
             .privacyParameters(PrivacyParameters.DEFAULT)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
             .storageProvider(createKeyValueStorageProvider(dataDirAhead, dbAhead))
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build()) {
       setupState(blockCount, controller.getProtocolSchedule(), controller.getProtocolContext());
     }
 
     // Setup Runner with blocks
-    final BesuController<Void> controllerAhead =
+    final BesuController controllerAhead =
         new MainnetBesuControllerBuilder()
             .genesisConfigFile(genesisConfig)
             .synchronizerConfiguration(syncConfigAhead)
@@ -184,9 +187,9 @@ public final class RunnerTest {
             .metricsSystem(noOpMetricsSystem)
             .privacyParameters(PrivacyParameters.DEFAULT)
             .clock(TestClock.fixed())
-            .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
+            .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
             .storageProvider(createKeyValueStorageProvider(dataDirAhead, dbAhead))
-            .targetGasLimit(GasLimitCalculator.DEFAULT)
+            .gasLimitCalculator(GasLimitCalculator.constant())
             .build();
     final String listenHost = InetAddress.getLoopbackAddress().getHostAddress();
     final JsonRpcConfiguration aheadJsonRpcConfiguration = jsonRpcConfiguration();
@@ -202,7 +205,10 @@ public final class RunnerTest {
             .p2pListenPort(0)
             .maxPeers(3)
             .metricsSystem(noOpMetricsSystem)
-            .staticNodes(emptySet());
+            .permissioningService(new PermissioningServiceImpl())
+            .staticNodes(emptySet())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
+            .forkIdSupplier(() -> Collections.singletonList(Bytes.EMPTY));
 
     Runner runnerBehind = null;
     final Runner runnerAhead =
@@ -216,6 +222,7 @@ public final class RunnerTest {
             .dataDir(dbAhead)
             .pidPath(pidPath)
             .besuPluginContext(new BesuPluginContextImpl())
+            .forkIdSupplier(() -> controllerAhead.getProtocolManager().getForkIdAsBytesList())
             .build();
     try {
 
@@ -235,7 +242,7 @@ public final class RunnerTest {
       final MetricsConfiguration behindMetricsConfiguration = metricsConfiguration();
 
       // Setup runner with no block data
-      final BesuController<Void> controllerBehind =
+      final BesuController controllerBehind =
           new MainnetBesuControllerBuilder()
               .genesisConfigFile(genesisConfig)
               .synchronizerConfiguration(syncConfigBehind)
@@ -244,17 +251,20 @@ public final class RunnerTest {
               .networkId(networkId)
               .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
               .nodeKey(NodeKeyUtils.generate())
-              .storageProvider(new InMemoryStorageProvider())
+              .storageProvider(new InMemoryKeyValueStorageProvider())
               .metricsSystem(noOpMetricsSystem)
               .privacyParameters(PrivacyParameters.DEFAULT)
               .clock(TestClock.fixed())
-              .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-              .targetGasLimit(GasLimitCalculator.DEFAULT)
+              .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+              .gasLimitCalculator(GasLimitCalculator.constant())
               .build();
       final EnodeURL enode = runnerAhead.getLocalEnode().get();
       final EthNetworkConfig behindEthNetworkConfiguration =
           new EthNetworkConfig(
-              EthNetworkConfig.jsonConfig(DEV), DEV_NETWORK_ID, Collections.singletonList(enode));
+              EthNetworkConfig.jsonConfig(DEV),
+              DEV_NETWORK_ID,
+              Collections.singletonList(enode),
+              null);
       runnerBehind =
           runnerBuilder
               .besuController(controllerBehind)
@@ -265,6 +275,7 @@ public final class RunnerTest {
               .metricsConfiguration(behindMetricsConfiguration)
               .dataDir(temp.newFolder().toPath())
               .metricsSystem(noOpMetricsSystem)
+              .forkIdSupplier(() -> controllerBehind.getProtocolManager().getForkIdAsBytesList())
               .build();
 
       runnerBehind.start();
@@ -311,13 +322,13 @@ public final class RunnerTest {
                       UInt256.fromHexString(
                               new JsonObject(resp.body().string()).getString("result"))
                           .intValue();
+                  final JsonObject responseJson = new JsonObject(syncingResp.body().string());
                   if (currentBlock < blockCount) {
                     // if not yet at blockCount, we should get a sync result from eth_syncing
+                    assertThat(responseJson.getValue("result")).isInstanceOf(JsonObject.class);
                     final int syncResultCurrentBlock =
                         UInt256.fromHexString(
-                                new JsonObject(syncingResp.body().string())
-                                    .getJsonObject("result")
-                                    .getString("currentBlock"))
+                                responseJson.getJsonObject("result").getString("currentBlock"))
                             .intValue();
                     assertThat(syncResultCurrentBlock).isLessThan(blockCount);
                   }
@@ -325,8 +336,7 @@ public final class RunnerTest {
                   resp.close();
 
                   // when we have synced to blockCount, eth_syncing should return false
-                  final boolean syncResult =
-                      new JsonObject(syncingResp.body().string()).getBoolean("result");
+                  final boolean syncResult = responseJson.getBoolean("result");
                   assertThat(syncResult).isFalse();
                   syncingResp.close();
                 }
@@ -373,7 +383,6 @@ public final class RunnerTest {
         (node) -> {
           // Clear DAO block so that inability to validate DAO block won't interfere with fast sync
           node.remove("daoForkBlock");
-          node.put("daoForkSupport", false);
         });
     return GenesisConfigFile.fromConfig(jsonNode);
   }
@@ -399,7 +408,7 @@ public final class RunnerTest {
     final JsonRpcConfiguration configuration = JsonRpcConfiguration.createDefault();
     configuration.setPort(0);
     configuration.setEnabled(true);
-    configuration.setHostsWhitelist(Collections.singletonList("*"));
+    configuration.setHostsAllowlist(Collections.singletonList("*"));
     return configuration;
   }
 
@@ -414,7 +423,7 @@ public final class RunnerTest {
     final WebSocketConfiguration configuration = WebSocketConfiguration.createDefault();
     configuration.setPort(0);
     configuration.setEnabled(true);
-    configuration.setHostsWhitelist(Collections.singletonList("*"));
+    configuration.setHostsAllowlist(Collections.singletonList("*"));
     return configuration;
   }
 
@@ -424,15 +433,15 @@ public final class RunnerTest {
 
   private static void setupState(
       final int count,
-      final ProtocolSchedule<Void> protocolSchedule,
-      final ProtocolContext<Void> protocolContext) {
+      final ProtocolSchedule protocolSchedule,
+      final ProtocolContext protocolContext) {
     final List<Block> blocks = BlockSyncTestUtils.firstBlocks(count + 1);
 
     for (int i = 1; i < count + 1; ++i) {
       final Block block = blocks.get(i);
-      final ProtocolSpec<Void> protocolSpec =
+      final ProtocolSpec protocolSpec =
           protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
-      final BlockImporter<Void> blockImporter = protocolSpec.getBlockImporter();
+      final BlockImporter blockImporter = protocolSpec.getBlockImporter();
       final boolean result =
           blockImporter.importBlock(protocolContext, block, HeaderValidationMode.FULL);
       if (!result) {

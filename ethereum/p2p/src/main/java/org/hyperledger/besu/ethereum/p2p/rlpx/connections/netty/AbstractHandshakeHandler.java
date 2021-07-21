@@ -97,7 +97,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
         return;
       }
 
-      LOG.debug("Sending framed hello");
+      LOG.trace("Sending framed hello");
 
       // Exchange keys done
       final Framer framer = new Framer(handshaker.secrets());
@@ -114,14 +114,14 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
 
       ctx.channel()
           .pipeline()
-          .addFirst(new ValidateFirstOutboundMessage(framer))
-          .replace(this, "DeFramer", deFramer);
+          .replace(this, "DeFramer", deFramer)
+          .addBefore("DeFramer", "validate", new ValidateFirstOutboundMessage(framer));
 
       ctx.writeAndFlush(new OutboundMessage(null, HelloMessage.create(localNode.getPeerInfo())))
           .addListener(
               ff -> {
                 if (ff.isSuccess()) {
-                  LOG.debug("Successfully wrote hello message");
+                  LOG.trace("Successfully wrote hello message");
                 }
               });
       msg.retain();

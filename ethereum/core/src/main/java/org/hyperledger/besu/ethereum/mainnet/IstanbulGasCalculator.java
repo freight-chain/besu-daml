@@ -16,15 +16,16 @@ package org.hyperledger.besu.ethereum.mainnet;
 
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Gas;
+import org.hyperledger.besu.ethereum.core.GasAndAccessedState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class IstanbulGasCalculator extends ConstantinopleFixGasCalculator {
+public class IstanbulGasCalculator extends PetersburgGasCalculator {
 
   private static final Gas TX_DATA_ZERO_COST = Gas.of(4L);
-  private static final Gas TX_DATA_NON_ZERO_COST = Gas.of(16L);
+  private static final Gas ISTANBUL_TX_DATA_NON_ZERO_COST = Gas.of(16L);
   private static final Gas TX_BASE_COST = Gas.of(21_000L);
 
   private static final Gas SLOAD_GAS = Gas.of(800);
@@ -40,7 +41,8 @@ public class IstanbulGasCalculator extends ConstantinopleFixGasCalculator {
   private static final Gas NEGATIVE_SSTORE_CLEARS_SCHEDULE = Gas.ZERO.minus(SSTORE_CLEARS_SCHEDULE);
 
   @Override
-  public Gas transactionIntrinsicGasCost(final Transaction transaction) {
+  public GasAndAccessedState transactionIntrinsicGasCostAndAccessedState(
+      final Transaction transaction) {
     final Bytes payload = transaction.getPayload();
     int zeros = 0;
     for (int i = 0; i < payload.size(); i++) {
@@ -51,16 +53,15 @@ public class IstanbulGasCalculator extends ConstantinopleFixGasCalculator {
     final int nonZeros = payload.size() - zeros;
 
     Gas cost =
-        Gas.ZERO
-            .plus(TX_BASE_COST)
+        TX_BASE_COST
             .plus(TX_DATA_ZERO_COST.times(zeros))
-            .plus(TX_DATA_NON_ZERO_COST.times(nonZeros));
+            .plus(ISTANBUL_TX_DATA_NON_ZERO_COST.times(nonZeros));
 
     if (transaction.isContractCreation()) {
       cost = cost.plus(txCreateExtraGasCost());
     }
 
-    return cost;
+    return new GasAndAccessedState(cost);
   }
 
   @Override
@@ -137,5 +138,11 @@ public class IstanbulGasCalculator extends ConstantinopleFixGasCalculator {
   // As per https://eips.ethereum.org/EIPS/eip-1884
   public Gas extCodeHashOperationGasCost() {
     return EXTCODE_HASH_COST;
+  }
+
+  @Override
+  public Gas getMaximumPmtCost() {
+    int nonZeros = 64;
+    return TX_BASE_COST.plus(ISTANBUL_TX_DATA_NON_ZERO_COST.times(nonZeros));
   }
 }

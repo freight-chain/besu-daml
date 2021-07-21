@@ -13,12 +13,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-spotless {
-  groovyGradle {
-    paddedCell()
-  }
-}
-
 sourceSets {
   test {
     resources {
@@ -29,4 +23,55 @@ sourceSets {
 
 configurations { testOutput }
 
-dependencies { testOutput sourceSets.test.output }
+dependencies {
+  implementation project(':config')
+  implementation project(':crypto')
+  implementation project(':ethereum:core')
+  implementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
+  implementation project(':ethereum:rlp')
+  implementation project(':services:kvstore')
+
+  implementation 'com.fasterxml.jackson.core:jackson-databind'
+  implementation 'com.google.guava:guava'
+
+  testOutput sourceSets.test.output
+}
+
+task ('validateReferenceTestSubmodule') {
+  description = "Checks that the reference tests submodule is not accidentally changed"
+  doLast {
+    def result = new ByteArrayOutputStream()
+    def expectedHash = 'e0a8b2f9292fbaeb6ca2d69d461794e587aa123b'
+    def submodulePath = java.nio.file.Path.of("${rootProject.projectDir}", "ethereum/referencetests/src/test/resources").toAbsolutePath()
+    try {
+      exec {
+        commandLine 'git', 'submodule', 'status', submodulePath
+        standardOutput = result
+        errorOutput = result
+      }
+    } catch (Exception ignore) {
+      // Ignore it.  We want to fail in a friendly fashion if they don't have git installed.
+      // The CI servers have git and that is the only critical place for this failure
+      expectedHash = ''
+    }
+
+    if (!result.toString().contains(expectedHash)) {
+      throw new GradleException("""For the Ethereum Reference Tests the git commit did not match what was expected.
+  
+If this is a deliberate change where you are updating the reference tests 
+then update "expectedHash" in `ethereum/referencetests/build.gradle` as the 
+commit hash for this task.
+Expected hash   :  ${expectedHash}
+Full git output : ${result}
+
+If this is accidental you can correct the reference test versions with the 
+following commands:
+    pushd ${submodulePath}
+    git checkout ${expectedHash}
+    cd ..
+    git add resources
+    popd""")
+    }
+  }
+}
+processResources.dependsOn('validateReferenceTestSubmodule')

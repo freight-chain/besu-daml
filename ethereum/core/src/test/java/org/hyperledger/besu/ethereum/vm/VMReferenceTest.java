@@ -17,6 +17,7 @@ package org.hyperledger.besu.ethereum.vm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assume.assumeTrue;
 
+import org.hyperledger.besu.ethereum.chain.BadBlockManager;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
@@ -24,8 +25,9 @@ import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSpecs;
 import org.hyperledger.besu.ethereum.mainnet.MutableProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransactionValidator;
-import org.hyperledger.besu.ethereum.vm.ehalt.ExceptionalHaltException;
-import org.hyperledger.besu.ethereum.vm.operations.ReturnStack;
+import org.hyperledger.besu.ethereum.referencetests.EnvironmentInformation;
+import org.hyperledger.besu.ethereum.referencetests.ReferenceTestBlockchain;
+import org.hyperledger.besu.ethereum.referencetests.VMReferenceTestCaseSpec;
 import org.hyperledger.besu.ethereum.worldstate.DefaultMutableWorldState;
 import org.hyperledger.besu.testutil.JsonTestParameters;
 
@@ -45,17 +47,20 @@ public class VMReferenceTest extends AbstractRetryingTest {
 
   /** The path where all of the VM test configuration files live. */
   private static final String[] TEST_CONFIG_FILE_DIR_PATHS = {
-    "VMTests/vmArithmeticTest",
-    "VMTests/vmBitwiseLogicOperation",
-    "VMTests/vmBlockInfoTest",
-    "VMTests/vmEnvironmentalInfo",
-    "VMTests/vmIOandFlowOperations",
-    "VMTests/vmLogTest",
-    "VMTests/vmSha3Test",
-    "VMTests/vmSystemOperations"
+    "LegacyTests/Constantinople/VMTests/vmArithmeticTest",
+    "LegacyTests/Constantinople/VMTests/vmBitwiseLogicOperation",
+    "LegacyTests/Constantinople/VMTests/vmBlockInfoTest",
+    "LegacyTests/Constantinople/VMTests/vmEnvironmentalInfo",
+    "LegacyTests/Constantinople/VMTests/vmIOandFlowOperations",
+    "LegacyTests/Constantinople/VMTests/vmLogTest",
+    "LegacyTests/Constantinople/VMTests/vmPushDupSwapTest",
+    "LegacyTests/Constantinople/VMTests/vmRandomTest",
+    "LegacyTests/Constantinople/VMTests/vmSha3Test",
+    "LegacyTests/Constantinople/VMTests/vmTests",
+    "LegacyTests/Constantinople/VMTests/vmSystemOperations"
   };
 
-  // The blacklisted test cases fall into two categories:
+  // The ignored test cases fall into two categories:
   //
   // 1. Incorrect Test Cases: The VMTests have known bugs with accessing
   // non-existent accounts. This corresponds to test cases involving
@@ -65,53 +70,24 @@ public class VMReferenceTest extends AbstractRetryingTest {
   // fully test these operations and the mocking does not add much value.
   // Additionally, the GeneralStateTests provide coverage of these
   // operations so the proper functionality does get tested somewhere.
-  private static final String[] BLACKLISTED_TESTS = {
-    "balance0",
-    "balanceAddressInputTooBig",
-    "balanceCaller3",
-    "balanceAddressInputTooBigRightMyAddress",
-    "ExtCodeSizeAddressInputTooBigRightMyAddress",
-    "env1",
-    "extcodecopy0AddressTooBigRight",
-    "PostToNameRegistrator0",
-    "CallToReturn1",
-    "CallRecursiveBomb0",
-    "createNameRegistratorValueTooHigh",
-    "suicideNotExistingAccount",
-    "callstatelessToReturn1",
-    "CallRecursiveBomb1",
-    "ABAcallsSuicide1",
-    "suicideSendEtherToMe",
-    "suicide0",
-    "CallToNameRegistrator0",
-    "callstatelessToNameRegistrator0",
-    "PostToReturn1",
-    "callcodeToReturn1",
-    "ABAcalls0",
-    "CallRecursiveBomb2",
-    "CallRecursiveBomb3",
-    "ABAcallsSuicide0",
-    "callcodeToNameRegistrator0",
-    "CallToPrecompiledContract",
-    "createNameRegistrator"
+  private static final String[] IGNORED_TESTS = {
+    "push32AndSuicide", "suicide", "suicide0", "suicideNotExistingAccount", "suicideSendEtherToMe",
   };
   private static final Optional<BigInteger> CHAIN_ID = Optional.of(BigInteger.ONE);
-  private final String name;
 
   private final VMReferenceTestCaseSpec spec;
 
   @Parameters(name = "Name: {0}")
-  public static Collection<Object[]> getTestParametersForConfig() throws Exception {
+  public static Collection<Object[]> getTestParametersForConfig() {
     return JsonTestParameters.create(VMReferenceTestCaseSpec.class)
-        .blacklist(BLACKLISTED_TESTS)
+        .ignore(IGNORED_TESTS)
         .generate(TEST_CONFIG_FILE_DIR_PATHS);
   }
 
   public VMReferenceTest(
       final String name, final VMReferenceTestCaseSpec spec, final boolean runTest) {
-    this.name = name;
     this.spec = spec;
-    assumeTrue("Test was blacklisted", runTest);
+    assumeTrue("Test " + name + " was ignored", runTest);
   }
 
   @Override
@@ -119,15 +95,15 @@ public class VMReferenceTest extends AbstractRetryingTest {
     final MutableWorldState worldState = new DefaultMutableWorldState(spec.getInitialWorldState());
     final EnvironmentInformation execEnv = spec.getExec();
 
-    final ProtocolSpec<Void> protocolSpec =
-        MainnetProtocolSpecs.frontierDefinition(OptionalInt.empty(), OptionalInt.empty())
+    final ProtocolSpec protocolSpec =
+        MainnetProtocolSpecs.frontierDefinition(OptionalInt.empty(), OptionalInt.empty(), false)
             .privacyParameters(PrivacyParameters.DEFAULT)
             .privateTransactionValidatorBuilder(() -> new PrivateTransactionValidator(CHAIN_ID))
-            .build(new MutableProtocolSchedule<>(CHAIN_ID));
+            .badBlocksManager(new BadBlockManager())
+            .build(new MutableProtocolSchedule(CHAIN_ID));
 
-    final ReturnStack returnStack = new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
-
-    final TestBlockchain blockchain = new TestBlockchain(execEnv.getBlockHeader().getNumber());
+    final ReferenceTestBlockchain blockchain =
+        new ReferenceTestBlockchain(execEnv.getBlockHeader().getNumber());
     final MessageFrame frame =
         MessageFrame.builder()
             .type(MessageFrame.Type.MESSAGE_CALL)
@@ -151,21 +127,12 @@ public class VMReferenceTest extends AbstractRetryingTest {
             .miningBeneficiary(execEnv.getBlockHeader().getCoinbase())
             .blockHashLookup(new BlockHashLookup(execEnv.getBlockHeader(), blockchain))
             .maxStackSize(MessageFrame.DEFAULT_MAX_STACK_SIZE)
-            .returnStack(returnStack)
             .build();
 
     // This is normally set inside the containing message executing the code.
     frame.setState(MessageFrame.State.CODE_EXECUTING);
 
-    try {
-      protocolSpec.getEvm().runToHalt(frame, OperationTracer.NO_TRACING);
-    } catch (final ExceptionalHaltException ehe) {
-      if (!spec.isExceptionHaltExpected())
-        System.err.println(
-            String.format(
-                "Test %s incurred in an exceptional halt exception for reasons: %s.",
-                name, ehe.getReasons()));
-    }
+    protocolSpec.getEvm().runToHalt(frame, OperationTracer.NO_TRACING);
 
     if (spec.isExceptionHaltExpected()) {
       assertThat(frame.getState() == MessageFrame.State.EXCEPTIONAL_HALT)
@@ -177,7 +144,8 @@ public class VMReferenceTest extends AbstractRetryingTest {
       frame.getWorldState().commit();
 
       assertThat(frame.getState() == MessageFrame.State.EXCEPTIONAL_HALT)
-          .withFailMessage("VM should not have exceptionally halted")
+          .withFailMessage(
+              "VM should not have exceptionally halted with " + frame.getExceptionalHaltReason())
           .isFalse();
       assertThat(frame.getOutputData())
           .withFailMessage("VM output differs")

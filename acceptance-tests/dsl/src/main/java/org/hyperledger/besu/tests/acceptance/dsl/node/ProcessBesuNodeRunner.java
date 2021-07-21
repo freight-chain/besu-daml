@@ -17,18 +17,21 @@ package org.hyperledger.besu.tests.acceptance.dsl.node;
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import org.hyperledger.besu.cli.options.NetworkingOptions;
+import org.hyperledger.besu.cli.options.unstable.NetworkingOptions;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApi;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
+import org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.TLSConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 import org.hyperledger.besu.tests.acceptance.dsl.StaticNodesUtils;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.URI;
 import java.nio.file.Files;
@@ -57,6 +60,9 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
   private final Map<String, Process> besuProcesses = new HashMap<>();
   private final ExecutorService outputProcessorExecutor = Executors.newCachedThreadPool();
+  private boolean capturingConsole;
+  private final ByteArrayOutputStream consoleContents = new ByteArrayOutputStream();
+  private final PrintStream consoleOut = new PrintStream(consoleContents);
 
   ProcessBesuNodeRunner() {
     Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
@@ -64,11 +70,6 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
   @Override
   public void startNode(final BesuNode node) {
-
-    if (ThreadContext.containsKey("node")) {
-      LOG.error("ThreadContext node is already set to {}", ThreadContext.get("node"));
-    }
-    ThreadContext.put("node", node.getName());
 
     final Path dataDir = node.homeDirectory();
 
@@ -78,12 +79,16 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     params.add("--data-path");
     params.add(dataDir.toAbsolutePath().toString());
 
-    node.getRunCommand().ifPresent(params::add);
-
     if (node.isDevMode()) {
       params.add("--network");
       params.add("DEV");
+    } else if (node.getNetwork() != null) {
+      params.add("--network");
+      params.add(node.getNetwork().name());
     }
+
+    params.add("--sync-mode");
+    params.add("FULL");
 
     params.add("--discovery-enabled");
     params.add(Boolean.toString(node.isDiscoveryEnabled()));
@@ -105,6 +110,10 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       params.add("--min-gas-price");
       params.add(
           Integer.toString(node.getMiningParameters().getMinTransactionGasPrice().intValue()));
+      params.add("--Xminer-remote-sealers-limit");
+      params.add(Integer.toString(node.getMiningParameters().getRemoteSealersLimit()));
+      params.add("--Xminer-remote-sealers-hashrate-ttl");
+      params.add(Long.toString(node.getMiningParameters().getRemoteSealersTimeToLive()));
     }
     if (node.getMiningParameters().isStratumMiningEnabled()) {
       params.add("--miner-stratum-enabled");
@@ -112,21 +121,26 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
     if (node.getPrivacyParameters().isEnabled()) {
       params.add("--privacy-enabled");
+
       params.add("--privacy-url");
       params.add(node.getPrivacyParameters().getEnclaveUri().toString());
+
       if (node.getPrivacyParameters().isMultiTenancyEnabled()) {
         params.add("--privacy-multi-tenancy-enabled");
       } else {
         params.add("--privacy-public-key-file");
         params.add(node.getPrivacyParameters().getEnclavePublicKeyFile().getAbsolutePath());
       }
-      params.add("--privacy-precompiled-address");
-      params.add(String.valueOf(node.getPrivacyParameters().getPrivacyAddress()));
+
       params.add("--privacy-marker-transaction-signing-key-file");
       params.add(node.homeDirectory().resolve("key").toString());
 
       if (node.getPrivacyParameters().isOnchainPrivacyGroupsEnabled()) {
         params.add("--privacy-onchain-groups-enabled");
+      }
+
+      if (node.getPrivacyParameters().isPrivacyPluginEnabled()) {
+        params.add("--Xprivacy-plugin-enabled");
       }
     }
 
@@ -138,6 +152,13 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
 
     if (node.hasStaticNodes()) {
       createStaticNodes(node);
+    }
+
+    if (node.isDnsEnabled()) {
+      params.add("--Xdns-enabled");
+      params.add("true");
+      params.add("--Xdns-update-enabled");
+      params.add("true");
     }
 
     if (node.isJsonRpcEnabled()) {
@@ -194,6 +215,10 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
         params.add("--metrics-category");
         params.add(((Enum<?>) category).name());
       }
+      if (node.isMetricsEnabled() || metricsConfiguration.isPushEnabled()) {
+        params.add("--metrics-protocol");
+        params.add(metricsConfiguration.getProtocol().name());
+      }
       if (metricsConfiguration.isPushEnabled()) {
         params.add("--metrics-push-enabled");
         params.add("--metrics-push-host");
@@ -222,6 +247,26 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
       final List<String> networkConfigParams =
           NetworkingOptions.fromConfig(node.getNetworkingConfiguration()).getCLIOptions();
       params.addAll(networkConfigParams);
+      if (node.getTLSConfiguration().isPresent()) {
+        final TLSConfiguration config = node.getTLSConfiguration().get();
+        params.add("--Xp2p-tls-enabled");
+        params.add("--Xp2p-tls-keystore-type");
+        params.add(config.getKeyStoreType());
+        params.add("--Xp2p-tls-keystore-file");
+        params.add(config.getKeyStorePath().toAbsolutePath().toString());
+        params.add("--Xp2p-tls-keystore-password-file");
+        params.add(config.getKeyStorePasswordPath().toAbsolutePath().toString());
+        params.add("--Xp2p-tls-crl-file");
+        params.add(config.getCrlPath().toAbsolutePath().toString());
+        if (null != config.getTrustStoreType()) {
+          params.add("--Xp2p-tls-truststore-type");
+          params.add(config.getTrustStoreType());
+          params.add("--Xp2p-tls-truststore-file");
+          params.add(config.getTrustStorePath().toAbsolutePath().toString());
+          params.add("--Xp2p-tls-truststore-password-file");
+          params.add(config.getTrustStorePasswordPath().toAbsolutePath().toString());
+        }
+      }
     }
 
     if (node.isRevertReasonEnabled()) {
@@ -235,14 +280,14 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
         .flatMap(PermissioningConfiguration::getLocalConfig)
         .ifPresent(
             permissioningConfiguration -> {
-              if (permissioningConfiguration.isNodeWhitelistEnabled()) {
+              if (permissioningConfiguration.isNodeAllowlistEnabled()) {
                 params.add("--permissions-nodes-config-file-enabled");
               }
               if (permissioningConfiguration.getNodePermissioningConfigFilePath() != null) {
                 params.add("--permissions-nodes-config-file");
                 params.add(permissioningConfiguration.getNodePermissioningConfigFilePath());
               }
-              if (permissioningConfiguration.isAccountWhitelistEnabled()) {
+              if (permissioningConfiguration.isAccountAllowlistEnabled()) {
                 params.add("--permissions-accounts-config-file-enabled");
               }
               if (permissioningConfiguration.getAccountPermissioningConfigFilePath() != null) {
@@ -255,20 +300,24 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
         .flatMap(PermissioningConfiguration::getSmartContractConfig)
         .ifPresent(
             permissioningConfiguration -> {
-              if (permissioningConfiguration.isSmartContractNodeWhitelistEnabled()) {
+              if (permissioningConfiguration.isSmartContractNodeAllowlistEnabled()) {
                 params.add("--permissions-nodes-contract-enabled");
               }
               if (permissioningConfiguration.getNodeSmartContractAddress() != null) {
                 params.add("--permissions-nodes-contract-address");
                 params.add(permissioningConfiguration.getNodeSmartContractAddress().toString());
               }
-              if (permissioningConfiguration.isSmartContractAccountWhitelistEnabled()) {
+              if (permissioningConfiguration.isSmartContractAccountAllowlistEnabled()) {
                 params.add("--permissions-accounts-contract-enabled");
               }
               if (permissioningConfiguration.getAccountSmartContractAddress() != null) {
                 params.add("--permissions-accounts-contract-address");
                 params.add(permissioningConfiguration.getAccountSmartContractAddress().toString());
               }
+              params.add("--permissions-nodes-contract-version");
+              params.add(
+                  String.valueOf(
+                      permissioningConfiguration.getNodeSmartContractInterfaceVersion()));
             });
     params.addAll(node.getExtraCLIOptions());
 
@@ -278,10 +327,12 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
     params.add("--auto-log-bloom-caching-enabled");
     params.add("false");
 
-    String level = System.getProperty("root.log.level");
+    final String level = System.getProperty("root.log.level");
     if (level != null) {
       params.add("--logging=" + level);
     }
+
+    params.addAll(node.getRunCommand());
 
     LOG.info("Creating besu process with params {}", params);
     final ProcessBuilder processBuilder =
@@ -296,7 +347,13 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
               "BESU_OPTS",
               "-Dbesu.plugins.dir=" + dataDir.resolve("plugins").toAbsolutePath().toString());
     }
-
+    // Use non-blocking randomness for acceptance tests
+    processBuilder
+        .environment()
+        .put(
+            "JAVA_OPTS",
+            "-Djava.security.properties="
+                + "acceptance-tests/tests/build/resources/test/acceptanceTesting.security");
     try {
       checkState(
           isNotAliveOrphan(node.getName()),
@@ -326,10 +383,16 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
   private void printOutput(final BesuNode node, final Process process) {
     try (final BufferedReader in =
         new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
+
+      ThreadContext.put("node", node.getName());
+
       String line = in.readLine();
       while (line != null) {
         // would be nice to pass up the log level of the incoming log line
         PROCESS_LOG.info(line);
+        if (capturingConsole) {
+          consoleOut.println(line);
+        }
         line = in.readLine();
       }
     } catch (final IOException e) {
@@ -394,30 +457,43 @@ public class ProcessBesuNodeRunner implements BesuNodeRunner {
   private void killBesuProcess(final String name) {
     final Process process = besuProcesses.remove(name);
     if (process == null) {
-      LOG.error("Process {} wasn't in our list", name);
+      LOG.error("Process {} wasn't in our list, pid {}", name, process.pid());
+      return;
     }
     if (!process.isAlive()) {
-      LOG.info("Process {} already exited", name);
+      LOG.info("Process {} already exited, pid {}", name, process.pid());
       return;
     }
 
-    LOG.info("Killing {} process", name);
+    LOG.info("Killing {} process, pid {}", name, process.pid());
 
     process.destroy();
     try {
-      process.waitFor(2, TimeUnit.SECONDS);
+      process.waitFor(30, TimeUnit.SECONDS);
     } catch (final InterruptedException e) {
       LOG.warn("Wait for death of process {} was interrupted", name, e);
     }
 
     if (process.isAlive()) {
-      LOG.warn("Process {} still alive, destroying forcibly now", name);
+      LOG.warn("Process {} still alive, destroying forcibly now, pid {}", name, process.pid());
       try {
-        process.destroyForcibly().waitFor(2, TimeUnit.SECONDS);
+        process.destroyForcibly().waitFor(30, TimeUnit.SECONDS);
       } catch (final Exception e) {
         // just die already
       }
       LOG.info("Process exited with code {}", process.exitValue());
     }
+  }
+
+  @Override
+  public void startConsoleCapture() {
+    consoleContents.reset();
+    capturingConsole = true;
+  }
+
+  @Override
+  public String getConsoleContents() {
+    capturingConsole = false;
+    return consoleContents.toString(UTF_8);
   }
 }

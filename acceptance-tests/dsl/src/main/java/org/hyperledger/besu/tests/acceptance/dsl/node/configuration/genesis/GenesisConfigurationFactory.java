@@ -17,7 +17,8 @@ package org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis;
 import static java.util.stream.Collectors.toList;
 
 import org.hyperledger.besu.consensus.clique.CliqueExtraData;
-import org.hyperledger.besu.consensus.ibft.IbftExtraData;
+import org.hyperledger.besu.consensus.ibft.IbftExtraDataCodec;
+import org.hyperledger.besu.consensus.qbft.QbftExtraDataCodec;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.tests.acceptance.dsl.node.RunnableNode;
 
@@ -43,16 +44,39 @@ public class GenesisConfigurationFactory {
 
   public Optional<String> createIbft2GenesisConfig(
       final Collection<? extends RunnableNode> validators) {
-    final String template = readGenesisFile("/ibft/ibft.json");
+    return createIbft2GenesisConfig(validators, "/ibft/ibft.json");
+  }
+
+  public Optional<String> createIbft2GenesisConfig(
+      final Collection<? extends RunnableNode> validators, final String genesisFile) {
+    final String template = readGenesisFile(genesisFile);
     return updateGenesisExtraData(
-        validators, template, IbftExtraData::createGenesisExtraDataString);
+        validators, template, IbftExtraDataCodec::createGenesisExtraDataString);
+  }
+
+  public Optional<String> createIbft2GenesisConfigFilterBootnode(
+      final Collection<? extends RunnableNode> validators, final String genesisFile) {
+    final String template = readGenesisFile(genesisFile);
+    final List<? extends RunnableNode> filteredList =
+        validators.stream()
+            .filter(node -> !node.getConfiguration().isBootnodeEligible())
+            .collect(toList());
+    return updateGenesisExtraData(
+        filteredList, template, IbftExtraDataCodec::createGenesisExtraDataString);
   }
 
   public Optional<String> createPrivacyIbft2GenesisConfig(
       final Collection<? extends RunnableNode> validators) {
     final String template = readGenesisFile("/ibft/privacy-ibft.json");
     return updateGenesisExtraData(
-        validators, template, IbftExtraData::createGenesisExtraDataString);
+        validators, template, IbftExtraDataCodec::createGenesisExtraDataString);
+  }
+
+  public Optional<String> createQbftGenesisConfig(
+      final Collection<? extends RunnableNode> validators) {
+    final String template = readGenesisFile("/qbft/qbft.json");
+    return updateGenesisExtraData(
+        validators, template, QbftExtraDataCodec::createGenesisExtraDataString);
   }
 
   private Optional<String> updateGenesisExtraData(

@@ -28,7 +28,7 @@ public class FixedProtocolScheduleTest {
   @Test
   public void reportedDifficultyForAllBlocksIsAFixedValue() {
 
-    final ProtocolSchedule<Void> schedule =
+    final ProtocolSchedule schedule =
         FixedDifficultyProtocolSchedule.create(GenesisConfigFile.development().getConfigOptions());
 
     final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
@@ -55,5 +55,37 @@ public class FixedProtocolScheduleTest {
                 .getDifficultyCalculator()
                 .nextDifficulty(1, parentHeader, null))
         .isEqualTo(FixedDifficultyCalculators.DEFAULT_DIFFICULTY);
+  }
+
+  @Test
+  public void reportedDifficultyForAllBlocksIsAFixedValueKeccak() {
+
+    final ProtocolSchedule schedule =
+        FixedDifficultyProtocolSchedule.create(GenesisConfigFile.ecip1049dev().getConfigOptions());
+
+    final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
+
+    final BlockHeader parentHeader = headerBuilder.number(1).buildHeader();
+
+    assertThat(
+            schedule
+                .getByBlockNumber(0)
+                .getDifficultyCalculator()
+                .nextDifficulty(1, parentHeader, null))
+        .isEqualTo(10000);
+
+    assertThat(
+            schedule
+                .getByBlockNumber(500)
+                .getDifficultyCalculator()
+                .nextDifficulty(1, parentHeader, null))
+        .isEqualTo(10000);
+
+    assertThat(
+            schedule
+                .getByBlockNumber(500_000)
+                .getDifficultyCalculator()
+                .nextDifficulty(1, parentHeader, null))
+        .isEqualTo(10000);
   }
 }

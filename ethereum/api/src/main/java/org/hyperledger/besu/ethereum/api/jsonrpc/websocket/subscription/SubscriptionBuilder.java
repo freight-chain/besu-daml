@@ -53,11 +53,13 @@ public class SubscriptionBuilder {
   private Subscription logsSubscription(
       final long subscriptionId, final String connectionId, final SubscribeRequest request) {
     if (request instanceof PrivateSubscribeRequest) {
+      final PrivateSubscribeRequest privateSubscribeRequest = (PrivateSubscribeRequest) request;
       return new PrivateLogsSubscription(
           subscriptionId,
           connectionId,
-          request.getFilterParameter(),
-          ((PrivateSubscribeRequest) request).getPrivacyGroupId());
+          privateSubscribeRequest.getFilterParameter(),
+          privateSubscribeRequest.getPrivacyGroupId(),
+          privateSubscribeRequest.getPrivacyUserId());
     } else {
       return new LogsSubscription(subscriptionId, connectionId, request.getFilterParameter());
     }

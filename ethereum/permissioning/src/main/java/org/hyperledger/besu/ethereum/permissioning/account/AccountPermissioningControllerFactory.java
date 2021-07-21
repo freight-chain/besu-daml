@@ -14,16 +14,21 @@
  */
 package org.hyperledger.besu.ethereum.permissioning.account;
 
-import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.SECPSignature;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
+import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.permissioning.AccountLocalConfigPermissioningController;
+import org.hyperledger.besu.ethereum.permissioning.GoQuorumQip714Gate;
 import org.hyperledger.besu.ethereum.permissioning.LocalPermissioningConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.PermissioningConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.SmartContractPermissioningConfiguration;
 import org.hyperledger.besu.ethereum.permissioning.TransactionSmartContractPermissioningController;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
+import org.hyperledger.besu.plugin.data.TransactionType;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.util.Optional;
@@ -39,7 +44,8 @@ public class AccountPermissioningControllerFactory {
   public static Optional<AccountPermissioningController> create(
       final PermissioningConfiguration permissioningConfiguration,
       final TransactionSimulator transactionSimulator,
-      final MetricsSystem metricsSystem) {
+      final MetricsSystem metricsSystem,
+      final Blockchain blockchain) {
 
     if (permissioningConfiguration == null) {
       return Optional.empty();
@@ -56,10 +62,25 @@ public class AccountPermissioningControllerFactory {
 
     if (accountLocalConfigPermissioningController.isPresent()
         || transactionSmartContractPermissioningController.isPresent()) {
+
+      final Optional<GoQuorumQip714Gate> goQuorumQip714Gate =
+          permissioningConfiguration
+              .getQuorumPermissioningConfig()
+              .flatMap(
+                  config -> {
+                    if (config.isEnabled()) {
+                      return Optional.of(
+                          GoQuorumQip714Gate.getInstance(config.getQip714Block(), blockchain));
+                    } else {
+                      return Optional.empty();
+                    }
+                  });
+
       final AccountPermissioningController controller =
           new AccountPermissioningController(
               accountLocalConfigPermissioningController,
-              transactionSmartContractPermissioningController);
+              transactionSmartContractPermissioningController,
+              goQuorumQip714Gate);
 
       return Optional.of(controller);
     } else {
@@ -77,7 +98,7 @@ public class AccountPermissioningControllerFactory {
       final SmartContractPermissioningConfiguration smartContractPermissioningConfiguration =
           permissioningConfiguration.getSmartContractConfig().get();
 
-      if (smartContractPermissioningConfiguration.isSmartContractAccountWhitelistEnabled()) {
+      if (smartContractPermissioningConfiguration.isSmartContractAccountAllowlistEnabled()) {
         final Address accountSmartContractAddress =
             smartContractPermissioningConfiguration.getAccountSmartContractAddress();
 
@@ -104,7 +125,7 @@ public class AccountPermissioningControllerFactory {
       final LocalPermissioningConfiguration localPermissioningConfiguration =
           permissioningConfiguration.getLocalConfig().get();
 
-      if (localPermissioningConfiguration.isAccountWhitelistEnabled()) {
+      if (localPermissioningConfiguration.isAccountAllowlistEnabled()) {
         return Optional.of(
             new AccountLocalConfigPermissioningController(
                 localPermissioningConfiguration, metricsSystem));
@@ -120,12 +141,17 @@ public class AccountPermissioningControllerFactory {
     try {
       LOG.debug("Validating onchain account permissioning smart contract configuration");
 
-      final SECP256K1.Signature FAKE_SIGNATURE =
-          SECP256K1.Signature.create(
-              SECP256K1.HALF_CURVE_ORDER, SECP256K1.HALF_CURVE_ORDER, (byte) 0);
+      final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithmFactory.getInstance();
+
+      final SECPSignature FAKE_SIGNATURE =
+          signatureAlgorithm.createSignature(
+              signatureAlgorithm.getHalfCurveOrder(),
+              signatureAlgorithm.getHalfCurveOrder(),
+              (byte) 0);
 
       final Transaction transaction =
           Transaction.builder()
+              .type(TransactionType.FRONTIER)
               .sender(Address.ZERO)
               .gasLimit(0)
               .gasPrice(Wei.ZERO)

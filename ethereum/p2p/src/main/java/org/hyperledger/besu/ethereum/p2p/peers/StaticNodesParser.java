@@ -18,6 +18,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptySet;
 
+import org.hyperledger.besu.plugin.data.EnodeURL;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,11 +37,12 @@ public class StaticNodesParser {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  public static Set<EnodeURL> fromPath(final Path path)
+  public static Set<EnodeURL> fromPath(
+      final Path path, final EnodeDnsConfiguration enodeDnsConfiguration)
       throws IOException, IllegalArgumentException {
 
     try {
-      return readEnodesFromPath(path);
+      return readEnodesFromPath(path, enodeDnsConfiguration);
     } catch (FileNotFoundException | NoSuchFileException ex) {
       LOG.info("StaticNodes file {} does not exist, no static connections will be created.", path);
       return emptySet();
@@ -55,7 +58,8 @@ public class StaticNodesParser {
     }
   }
 
-  private static Set<EnodeURL> readEnodesFromPath(final Path path) throws IOException {
+  private static Set<EnodeURL> readEnodesFromPath(
+      final Path path, final EnodeDnsConfiguration enodeDnsConfiguration) throws IOException {
     final byte[] staticNodesContent = Files.readAllBytes(path);
     if (staticNodesContent.length == 0) {
       return emptySet();
@@ -63,13 +67,14 @@ public class StaticNodesParser {
 
     final JsonArray enodeJsonArray = new JsonArray(new String(staticNodesContent, UTF_8));
     return enodeJsonArray.stream()
-        .map(obj -> decodeString((String) obj))
+        .map(obj -> decodeString((String) obj, enodeDnsConfiguration))
         .collect(Collectors.toSet());
   }
 
-  private static EnodeURL decodeString(final String input) {
+  private static EnodeURL decodeString(
+      final String input, final EnodeDnsConfiguration enodeDnsConfiguration) {
     try {
-      final EnodeURL enode = EnodeURL.fromString(input);
+      final EnodeURL enode = EnodeURLImpl.fromString(input, enodeDnsConfiguration);
       checkArgument(
           enode.isListening(), "Static node must be configured with a valid listening port.");
       return enode;

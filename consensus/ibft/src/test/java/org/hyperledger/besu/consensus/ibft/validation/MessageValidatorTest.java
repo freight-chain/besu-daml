@@ -17,15 +17,16 @@ package org.hyperledger.besu.consensus.ibft.validation;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.consensus.ibft.ConsensusRoundIdentifier;
-import org.hyperledger.besu.consensus.ibft.IbftContext;
-import org.hyperledger.besu.consensus.ibft.TestHelpers;
+import org.hyperledger.besu.consensus.common.bft.BftContext;
+import org.hyperledger.besu.consensus.common.bft.ConsensusRoundIdentifier;
+import org.hyperledger.besu.consensus.common.bft.ProposedBlockHelpers;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Commit;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Prepare;
 import org.hyperledger.besu.consensus.ibft.messagewrappers.Proposal;
@@ -63,8 +64,8 @@ public class MessageValidatorTest {
   private final ProposalBlockConsistencyValidator proposalBlockConsistencyValidator =
       mock(ProposalBlockConsistencyValidator.class);
 
-  @Mock private BlockValidator<IbftContext> blockValidator;
-  private ProtocolContext<IbftContext> protocolContext;
+  @Mock private BlockValidator blockValidator;
+  private ProtocolContext protocolContext;
   private final RoundChangeCertificateValidator roundChangeCertificateValidator =
       mock(RoundChangeCertificateValidator.class);
 
@@ -77,7 +78,7 @@ public class MessageValidatorTest {
           AddressHelpers.ofValue(2),
           AddressHelpers.ofValue(3));
 
-  private final Block block = TestHelpers.createProposalBlock(validators, roundIdentifier);
+  private final Block block = ProposedBlockHelpers.createProposalBlock(validators, roundIdentifier);
 
   @Before
   public void setup() {
@@ -85,12 +86,12 @@ public class MessageValidatorTest {
     when(signedDataValidator.validatePrepare(any())).thenReturn(true);
     when(signedDataValidator.validateCommit(any())).thenReturn(true);
 
-    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any()))
+    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any(), any()))
         .thenReturn(true);
 
     protocolContext =
-        new ProtocolContext<>(
-            mock(MutableBlockchain.class), mock(WorldStateArchive.class), mock(IbftContext.class));
+        new ProtocolContext(
+            mock(MutableBlockchain.class), mock(WorldStateArchive.class), mock(BftContext.class));
 
     when(blockValidator.validateAndProcessBlock(any(), any(), any(), any()))
         .thenReturn(Optional.of(new BlockProcessingOutputs(null, null)));
@@ -136,12 +137,13 @@ public class MessageValidatorTest {
   public void ifProposalConsistencyChecksFailProposalIsIllegal() {
     final Proposal proposal =
         messageFactory.createProposal(roundIdentifier, block, Optional.empty());
-    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any()))
+    when(proposalBlockConsistencyValidator.validateProposalMatchesBlock(any(), any(), any()))
         .thenReturn(false);
 
     assertThat(messageValidator.validateProposal(proposal)).isFalse();
     verify(proposalBlockConsistencyValidator, times(1))
-        .validateProposalMatchesBlock(proposal.getSignedPayload(), proposal.getBlock());
+        .validateProposalMatchesBlock(
+            eq(proposal.getSignedPayload()), eq(proposal.getBlock()), any());
   }
 
   @Test

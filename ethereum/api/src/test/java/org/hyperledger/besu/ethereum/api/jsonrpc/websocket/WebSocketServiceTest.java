@@ -15,13 +15,16 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import org.hyperledger.besu.ethereum.api.handlers.TimeoutOptions;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.methods.WebSocketMethodsFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.subscription.SubscriptionManager;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
 import java.util.Arrays;
@@ -56,6 +59,7 @@ public class WebSocketServiceTest {
   private WebSocketRequestHandler webSocketRequestHandlerSpy;
   private WebSocketService websocketService;
   private HttpClient httpClient;
+  private final int maxConnections = 3;
 
   @Before
   public void before() {
@@ -63,13 +67,20 @@ public class WebSocketServiceTest {
 
     websocketConfiguration = WebSocketConfiguration.createDefault();
     websocketConfiguration.setPort(0);
-    websocketConfiguration.setHostsWhitelist(Collections.singletonList("*"));
+    websocketConfiguration.setHostsAllowlist(Collections.singletonList("*"));
+    websocketConfiguration.setMaxActiveConnections(maxConnections);
 
     final Map<String, JsonRpcMethod> websocketMethods =
         new WebSocketMethodsFactory(
                 new SubscriptionManager(new NoOpMetricsSystem()), new HashMap<>())
             .methods();
-    webSocketRequestHandlerSpy = spy(new WebSocketRequestHandler(vertx, websocketMethods));
+    webSocketRequestHandlerSpy =
+        spy(
+            new WebSocketRequestHandler(
+                vertx,
+                websocketMethods,
+                mock(EthScheduler.class),
+                TimeoutOptions.defaultOptions().getTimeoutSeconds()));
 
     websocketService =
         new WebSocketService(vertx, websocketConfiguration, webSocketRequestHandlerSpy);
@@ -92,22 +103,66 @@ public class WebSocketServiceTest {
   }
 
   @Test
+  public void limitActiveConnections(final TestContext context) {
+    // expecting maxConnections successful responses
+    final Async asyncResponse = context.async(maxConnections);
+    // and a number of rejections
+    final int countRejections = 2;
+    final Async asyncRejected = context.async(countRejections);
+
+    final String request = "{\"id\": 1, \"method\": \"eth_subscribe\", \"params\": [\"syncing\"]}";
+    // the number in the response is the subscription ID, so in successive responses this increments
+    final String expectedResponse1 = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x1\"}";
+
+    // attempt to exceed max connections - but only maxConnections should succeed
+    for (int i = 0; i < maxConnections + countRejections; i++) {
+      httpClient.webSocket(
+          "/",
+          future -> {
+            if (future.succeeded()) {
+              WebSocket ws = future.result();
+              ws.handler(
+                  buffer -> {
+                    context.assertNotNull(buffer.toString());
+                    // assert a successful response
+                    context.assertTrue(
+                        buffer.toString().startsWith(expectedResponse1.substring(0, 36)));
+                    asyncResponse.countDown();
+                  });
+              ws.writeTextMessage(request);
+            } else {
+              // count down the rejected WS connections
+              asyncRejected.countDown();
+            }
+          });
+    }
+    // wait for successful responses AND rejected connections
+    asyncResponse.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
+    asyncRejected.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
+  }
+
+  @Test
   public void websocketServiceExecutesHandlerOnMessage(final TestContext context) {
     final Async async = context.async();
 
     final String request = "{\"id\": 1, \"method\": \"eth_subscribe\", \"params\": [\"syncing\"]}";
     final String expectedResponse = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x1\"}";
 
-    httpClient.websocket(
+    httpClient.webSocket(
         "/",
-        webSocket -> {
-          webSocket.handler(
-              buffer -> {
-                context.assertEquals(expectedResponse, buffer.toString());
-                async.complete();
-              });
+        future -> {
+          if (future.succeeded()) {
+            WebSocket ws = future.result();
+            ws.handler(
+                buffer -> {
+                  context.assertEquals(expectedResponse, buffer.toString());
+                  async.complete();
+                });
 
-          webSocket.writeTextMessage(request);
+            ws.writeTextMessage(request);
+          } else {
+            context.fail("websocket connection failed");
+          }
         });
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
@@ -137,11 +192,16 @@ public class WebSocketServiceTest {
     final byte[] bigMessage = new byte[HttpServerOptions.DEFAULT_MAX_WEBSOCKET_MESSAGE_SIZE + 1];
     Arrays.fill(bigMessage, (byte) 1);
 
-    httpClient.websocket(
+    httpClient.webSocket(
         "/",
-        webSocket -> {
-          webSocket.write(Buffer.buffer(bigMessage));
-          webSocket.closeHandler(v -> async.complete());
+        future -> {
+          if (future.succeeded()) {
+            WebSocket ws = future.result();
+            ws.write(Buffer.buffer(bigMessage));
+            ws.closeHandler(v -> async.complete());
+          } else {
+            context.fail("websocket connection failed");
+          }
         });
 
     async.awaitSuccess(VERTX_AWAIT_TIMEOUT_MILLIS);
@@ -187,7 +247,7 @@ public class WebSocketServiceTest {
   }
 
   @Test
-  public void webSocketDoesNotToHandlePingPayloadAsJsonRpcRequest(final TestContext context) {
+  public void webSocketDoesNotHandlePingPayloadAsJsonRpcRequest(final TestContext context) {
     final Async async = context.async();
 
     httpClient.webSocket(

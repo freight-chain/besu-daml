@@ -15,12 +15,17 @@
 package org.hyperledger.besu.ethereum.p2p.peers;
 
 import org.hyperledger.besu.crypto.SecureRandomProvider;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import org.apache.tuweni.bytes.Bytes;
 
 public interface Peer extends PeerId {
 
-  /** @return The enode representing the location of this peer. */
+  /**
+   * ENode URL of this peer.
+   *
+   * @return The enode representing the location of this peer.
+   */
   EnodeURL getEnodeURL();
 
   /**
@@ -29,7 +34,7 @@ public interface Peer extends PeerId {
    * @return The generated peer ID.
    */
   static Bytes randomId() {
-    final byte[] id = new byte[EnodeURL.NODE_ID_SIZE];
+    final byte[] id = new byte[EnodeURLImpl.NODE_ID_SIZE];
     SecureRandomProvider.publicSecureRandom().nextBytes(id);
     return Bytes.wrap(id);
   }

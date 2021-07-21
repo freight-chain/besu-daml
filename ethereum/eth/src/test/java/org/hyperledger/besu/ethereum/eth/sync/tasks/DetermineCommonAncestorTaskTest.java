@@ -16,8 +16,8 @@ package org.hyperledger.besu.ethereum.eth.sync.tasks;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -33,6 +33,7 @@ import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
@@ -44,7 +45,6 @@ import org.hyperledger.besu.ethereum.eth.manager.exceptions.EthTaskException;
 import org.hyperledger.besu.ethereum.eth.manager.task.EthTask;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
@@ -62,7 +62,7 @@ import org.junit.Test;
 
 public class DetermineCommonAncestorTaskTest {
 
-  private final ProtocolSchedule<?> protocolSchedule = MainnetProtocolSchedule.create();
+  private final ProtocolSchedule protocolSchedule = ProtocolScheduleFixture.MAINNET;
   private final BlockDataGenerator blockDataGenerator = new BlockDataGenerator();
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
   private final int defaultHeaderRequestSize = 10;
@@ -70,7 +70,7 @@ public class DetermineCommonAncestorTaskTest {
   private Block localGenesisBlock;
   private EthProtocolManager ethProtocolManager;
   private EthContext ethContext;
-  private ProtocolContext<?> protocolContext;
+  private ProtocolContext protocolContext;
 
   @Before
   public void setup() {
@@ -84,7 +84,7 @@ public class DetermineCommonAncestorTaskTest {
             mock(TransactionPool.class),
             EthProtocolConfiguration.defaultConfig());
     ethContext = ethProtocolManager.ethContext();
-    protocolContext = new ProtocolContext<>(localBlockchain, worldStateArchive, null);
+    protocolContext = new ProtocolContext(localBlockchain, worldStateArchive, null);
   }
 
   @Test
@@ -272,7 +272,7 @@ public class DetermineCommonAncestorTaskTest {
    *     remoteBlockCount} - 1.
    * @param blocksInCommon The number of blocks shared between local and remote. If a common
    *     ancestor exists, its block number will be: {@code blocksInCommon} - 1
-   * @return
+   * @return the test blockchain
    */
   private Blockchain setupLocalAndRemoteChains(
       final int localBlockCount, final int remoteBlockCount, final int blocksInCommon) {

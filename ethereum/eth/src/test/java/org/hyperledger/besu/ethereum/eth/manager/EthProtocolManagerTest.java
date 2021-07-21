@@ -15,13 +15,14 @@
 package org.hyperledger.besu.ethereum.eth.manager;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -33,6 +34,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.Hash;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.Wei;
@@ -56,13 +58,13 @@ import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolFactory;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.DefaultMessage;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.RawMessage;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
@@ -97,21 +99,22 @@ public final class EthProtocolManagerTest {
 
   private static Blockchain blockchain;
   private static TransactionPool transactionPool;
-  private static ProtocolSchedule<Void> protocolSchedule;
+  private static ProtocolSchedule protocolSchedule;
   private static BlockDataGenerator gen;
-  private static ProtocolContext<Void> protocolContext;
+  private static ProtocolContext protocolContext;
   private static final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   @BeforeClass
   public static void setup() {
     gen = new BlockDataGenerator(0);
-    final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil blockchainSetupUtil =
+        BlockchainSetupUtil.forTesting(DataStorageFormat.FOREST);
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     transactionPool = blockchainSetupUtil.getTransactionPool();
     protocolSchedule = blockchainSetupUtil.getProtocolSchedule();
     protocolContext = blockchainSetupUtil.getProtocolContext();
-    assert (blockchainSetupUtil.getMaxBlockNumber() >= 20L);
+    assertThat(blockchainSetupUtil.getMaxBlockNumber()).isGreaterThanOrEqualTo(20L);
   }
 
   @Test
@@ -172,6 +175,25 @@ public final class EthProtocolManagerTest {
               blockchain.getChainHeadHash(),
               blockchain.getBlockHeader(BlockHeader.GENESIS_BLOCK_NUMBER).get().getHash());
       ethManager.processMessage(EthProtocol.ETH63, new DefaultMessage(peer, statusMessage));
+
+      ethManager.processMessage(EthProtocol.ETH63, new DefaultMessage(peer, messageData));
+      assertThat(peer.isDisconnected()).isTrue();
+    }
+  }
+
+  @Test
+  public void disconnectOnVeryLargeMessage() {
+    try (final EthProtocolManager ethManager =
+        EthProtocolManagerTestUtil.create(
+            blockchain,
+            () -> false,
+            protocolContext.getWorldStateArchive(),
+            transactionPool,
+            EthProtocolConfiguration.defaultConfig())) {
+      final MessageData messageData = mock(MessageData.class);
+      when(messageData.getSize()).thenReturn(10 * 1_000_000 + 1 /* just over 10MB*/);
+      when(messageData.getCode()).thenReturn(EthPV62.TRANSACTIONS);
+      final MockPeerConnection peer = setupPeer(ethManager, (cap, msg, conn) -> {});
 
       ethManager.processMessage(EthProtocol.ETH63, new DefaultMessage(peer, messageData));
       assertThat(peer.isDisconnected()).isTrue();
@@ -273,7 +295,7 @@ public final class EthProtocolManagerTest {
             () -> false,
             protocolContext.getWorldStateArchive(),
             transactionPool,
-            new EthProtocolConfiguration(limit, limit, limit, limit, limit, true))) {
+            new EthProtocolConfiguration(limit, limit, limit, limit, limit, false))) {
       final long startBlock = 5L;
       final int blockCount = 10;
       final MessageData messageData =
@@ -565,7 +587,7 @@ public final class EthProtocolManagerTest {
             () -> false,
             protocolContext.getWorldStateArchive(),
             transactionPool,
-            new EthProtocolConfiguration(limit, limit, limit, limit, limit, true))) {
+            new EthProtocolConfiguration(limit, limit, limit, limit, limit, false))) {
       // Setup blocks query
       final int blockCount = 10;
       final long startBlock = blockchain.getChainHeadBlockNumber() - blockCount;
@@ -703,7 +725,7 @@ public final class EthProtocolManagerTest {
             () -> false,
             protocolContext.getWorldStateArchive(),
             transactionPool,
-            new EthProtocolConfiguration(limit, limit, limit, limit, limit, true))) {
+            new EthProtocolConfiguration(limit, limit, limit, limit, limit, false))) {
       // Setup blocks query
       final int blockCount = 10;
       final long startBlock = blockchain.getChainHeadBlockNumber() - blockCount;
@@ -880,7 +902,7 @@ public final class EthProtocolManagerTest {
           .isEqualTo(Collections.singletonList(EthProtocol.ETH63));
 
       // assert that all messages transmitted contain the expected block & total difficulty.
-      final ProtocolSchedule<Void> protocolSchdeule = MainnetProtocolSchedule.create();
+      final ProtocolSchedule protocolSchdeule = ProtocolScheduleFixture.MAINNET;
       for (final NewBlockMessage msg : messageSentCaptor.getAllValues()) {
         assertThat(msg.block(protocolSchdeule)).isEqualTo(minedBlock);
         assertThat(msg.totalDifficulty(protocolSchdeule)).isEqualTo(expectedTotalDifficulty);
@@ -987,8 +1009,7 @@ public final class EthProtocolManagerTest {
           metricsSystem,
           mock(SyncState.class),
           Wei.ZERO,
-          TransactionPoolConfiguration.builder().build(),
-          true,
+          TransactionPoolConfiguration.DEFAULT,
           Optional.empty());
 
       // Send just a transaction message.

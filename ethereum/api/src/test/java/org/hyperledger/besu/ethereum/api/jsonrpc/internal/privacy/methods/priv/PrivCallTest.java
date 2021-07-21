@@ -15,10 +15,12 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.priv;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,16 +29,19 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.exception.InvalidJsonRpcParameters;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonCallParameter;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.EnclavePublicKeyProvider;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.PrivacyIdProvider;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
+import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.core.Gas;
+import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
-import org.hyperledger.besu.ethereum.privacy.DefaultPrivacyController;
+import org.hyperledger.besu.ethereum.privacy.MultiTenancyValidationException;
 import org.hyperledger.besu.ethereum.privacy.PrivacyController;
-import org.hyperledger.besu.ethereum.privacy.PrivateTransactionProcessor;
-import org.hyperledger.besu.ethereum.privacy.PrivateTransactionSimulator;
+import org.hyperledger.besu.ethereum.privacy.RestrictedDefaultPrivacyController;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.transaction.CallParameter;
 
 import java.util.Optional;
@@ -56,14 +61,14 @@ public class PrivCallTest {
   private static final String ENCLAVE_PUBLIC_KEY = "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
 
   @Mock private BlockchainQueries blockchainQueries;
-  @Mock private PrivateTransactionSimulator privateTransactionSimulator;
   String privacyGroupId = "privacyGroupId";
-  private final EnclavePublicKeyProvider enclavePublicKeyProvider = (user) -> ENCLAVE_PUBLIC_KEY;
-  private final PrivacyController privacyController = mock(DefaultPrivacyController.class);
+  private final PrivacyIdProvider privacyIdProvider = (user) -> ENCLAVE_PUBLIC_KEY;
+  private final PrivacyController privacyController =
+      mock(RestrictedDefaultPrivacyController.class);
 
   @Before
   public void setUp() {
-    method = new PrivCall(blockchainQueries, privacyController, enclavePublicKeyProvider);
+    method = new PrivCall(blockchainQueries, privacyController, privacyIdProvider);
   }
 
   @Test
@@ -73,7 +78,17 @@ public class PrivCallTest {
 
   @Test
   public void shouldThrowInvalidJsonRpcParametersExceptionWhenMissingToField() {
-    final CallParameter callParameter = new JsonCallParameter("0x0", null, "0x0", "0x0", "0x0", "");
+    final JsonCallParameter callParameter =
+        new JsonCallParameter(
+            Address.fromHexString("0x0"),
+            null,
+            Gas.ZERO,
+            Wei.ZERO,
+            null,
+            null,
+            Wei.ZERO,
+            Bytes.EMPTY,
+            null);
     final JsonRpcRequestContext request = ethCallRequest(privacyGroupId, callParameter, "latest");
 
     final Throwable thrown = catchThrowable(() -> method.response(request));
@@ -97,7 +112,9 @@ public class PrivCallTest {
 
   @Test
   public void shouldAcceptRequestWhenMissingOptionalFields() {
-    final CallParameter callParameter = new JsonCallParameter(null, "0x0", null, null, null, null);
+    final JsonCallParameter callParameter =
+        new JsonCallParameter(
+            null, Address.fromHexString("0x0"), null, null, null, null, null, null, null);
     final JsonRpcRequestContext request = ethCallRequest(privacyGroupId, callParameter, "latest");
     final JsonRpcResponse expectedResponse =
         new JsonRpcSuccessResponse(null, Bytes.of().toString());
@@ -166,8 +183,30 @@ public class PrivCallTest {
         .hasMessage("Missing required json rpc parameter at index 0");
   }
 
-  private CallParameter callParameter() {
-    return new JsonCallParameter("0x0", "0x0", "0x0", "0x0", "0x0", "");
+  @Test
+  public void multiTenancyCheckFailure() {
+    doThrow(new MultiTenancyValidationException("msg"))
+        .when(privacyController)
+        .verifyPrivacyGroupContainsPrivacyUserId(
+            eq(privacyGroupId), eq(ENCLAVE_PUBLIC_KEY), eq(Optional.of(1L)));
+
+    final JsonRpcRequestContext request = ethCallRequest(privacyGroupId, callParameter(), "0x02");
+
+    assertThatThrownBy(() -> method.response(request))
+        .isInstanceOf(MultiTenancyValidationException.class);
+  }
+
+  private JsonCallParameter callParameter() {
+    return new JsonCallParameter(
+        Address.fromHexString("0x0"),
+        Address.fromHexString("0x0"),
+        Gas.ZERO,
+        Wei.ZERO,
+        null,
+        null,
+        Wei.ZERO,
+        Bytes.EMPTY,
+        null);
   }
 
   private JsonRpcRequestContext ethCallRequest(
@@ -180,8 +219,7 @@ public class PrivCallTest {
   }
 
   private void mockTransactionProcessorSuccessResult(final Bytes output) {
-    final PrivateTransactionProcessor.Result result =
-        mock(PrivateTransactionProcessor.Result.class);
+    final TransactionProcessingResult result = mock(TransactionProcessingResult.class);
 
     when(result.getValidationResult()).thenReturn(ValidationResult.valid());
     when(result.getOutput()).thenReturn(output);

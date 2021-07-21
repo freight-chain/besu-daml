@@ -110,8 +110,8 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
       LOG.trace("Executing contract-creation");
     }
     try {
-      final MutableAccount sender =
-          frame.getWorldState().getAccount(frame.getSenderAddress()).getMutable();
+
+      final MutableAccount sender = frame.getWorldState().getSenderAccount(frame).getMutable();
       sender.decrementBalance(frame.getValue());
 
       final MutableAccount contract =
@@ -129,7 +129,7 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
         contract.clearStorage();
         frame.setState(MessageFrame.State.CODE_EXECUTING);
       }
-    } catch (ModificationNotAllowedException ex) {
+    } catch (final ModificationNotAllowedException ex) {
       LOG.trace("Contract creation error: illegal modification not allowed from private state");
       frame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
     }
@@ -173,6 +173,8 @@ public class MainnetContractCreationProcessor extends AbstractMessageProcessor {
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       } else {
         frame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
+        operationTracer.traceAccountCreationResult(
+            frame, Optional.of(ExceptionalHaltReason.INSUFFICIENT_GAS));
       }
     }
   }

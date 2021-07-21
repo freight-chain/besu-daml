@@ -20,13 +20,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.hyperledger.besu.chainimport.RlpBlockImporter;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.controller.BesuController;
-import org.hyperledger.besu.controller.GasLimitCalculator;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
+import org.hyperledger.besu.ethereum.blockcreation.GasLimitCalculator;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.core.InMemoryStorageProvider;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.MiningParametersTestBuilder;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
@@ -56,11 +56,11 @@ public final class RlpBlockExporterTest {
   @ClassRule public static final TemporaryFolder folder = new TemporaryFolder();
   private static Blockchain blockchain;
   private static long chainHead;
-  private static ProtocolSchedule<?> protocolSchedule;
+  private static ProtocolSchedule protocolSchedule;
 
   @BeforeClass
   public static void setupBlockchain() throws IOException {
-    final BesuController<?> controller = createController();
+    final BesuController controller = createController();
     final Path blocks = folder.newFile("1000.blocks").toPath();
     BlockTestUtil.write1000Blocks(blocks);
     blockchain = importBlocks(controller, blocks);
@@ -68,7 +68,7 @@ public final class RlpBlockExporterTest {
     protocolSchedule = controller.getProtocolSchedule();
   }
 
-  private static Blockchain importBlocks(final BesuController<?> controller, final Path blocksFile)
+  private static Blockchain importBlocks(final BesuController controller, final Path blocksFile)
       throws IOException {
     final RlpBlockImporter blockImporter = new RlpBlockImporter();
 
@@ -76,13 +76,13 @@ public final class RlpBlockExporterTest {
     return controller.getProtocolContext().getBlockchain();
   }
 
-  private static BesuController<?> createController() throws IOException {
+  private static BesuController createController() throws IOException {
     final Path dataDir = folder.newFolder().toPath();
     return new BesuController.Builder()
         .fromGenesisConfig(GenesisConfigFile.mainnet())
         .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
         .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
-        .storageProvider(new InMemoryStorageProvider())
+        .storageProvider(new InMemoryKeyValueStorageProvider())
         .networkId(BigInteger.ONE)
         .miningParameters(new MiningParametersTestBuilder().enabled(false).build())
         .nodeKey(NodeKeyUtils.generate())
@@ -90,8 +90,8 @@ public final class RlpBlockExporterTest {
         .privacyParameters(PrivacyParameters.DEFAULT)
         .dataDirectory(dataDir)
         .clock(TestClock.fixed())
-        .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
-        .targetGasLimit(GasLimitCalculator.DEFAULT)
+        .transactionPoolConfiguration(TransactionPoolConfiguration.DEFAULT)
+        .gasLimitCalculator(GasLimitCalculator.constant())
         .build();
   }
 

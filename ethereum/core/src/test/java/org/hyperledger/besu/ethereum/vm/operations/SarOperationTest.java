@@ -18,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.mainnet.SpuriousDragonGasCalculator;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
@@ -25,6 +26,7 @@ import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import java.util.Arrays;
 
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -39,9 +41,7 @@ public class SarOperationTest {
   private final GasCalculator gasCalculator = new SpuriousDragonGasCalculator();
   private final SarOperation operation = new SarOperation(gasCalculator);
 
-  private MessageFrame frame;
-
-  static String[][] testData = {
+  private static final String[][] testData = {
     {
       "0x0000000000000000000000000000000000000000000000000000000000000001",
       "0x00",
@@ -157,11 +157,13 @@ public class SarOperationTest {
 
   @Test
   public void shiftOperation() {
-    frame = mock(MessageFrame.class);
+    final MessageFrame frame = mock(MessageFrame.class);
+    when(frame.stackSize()).thenReturn(2);
+    when(frame.getRemainingGas()).thenReturn(Gas.of(100));
     when(frame.popStackItem())
-        .thenReturn(Bytes32.fromHexStringLenient(shift))
-        .thenReturn(Bytes32.fromHexString(number));
-    operation.execute(frame);
-    verify(frame).pushStackItem(Bytes32.fromHexString(expectedResult));
+        .thenReturn(UInt256.fromBytes(Bytes32.fromHexStringLenient(shift)))
+        .thenReturn(UInt256.fromHexString(number));
+    operation.execute(frame, null);
+    verify(frame).pushStackItem(UInt256.fromHexString(expectedResult));
   }
 }

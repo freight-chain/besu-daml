@@ -25,10 +25,11 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.methods.JsonRpcMethodsFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
-import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
@@ -107,7 +108,7 @@ public class JsonRpcHttpServiceHostWhitelistTest {
                         new StubGenesisConfigOptions().constantinopleBlock(0).chainId(CHAIN_ID)),
                     mock(FilterManager.class),
                     mock(TransactionPool.class),
-                    mock(EthHashMiningCoordinator.class),
+                    mock(PoWMiningCoordinator.class),
                     new NoOpMetricsSystem(),
                     supportedCapabilities,
                     Optional.of(mock(AccountLocalConfigPermissioningController.class)),
@@ -118,7 +119,9 @@ public class JsonRpcHttpServiceHostWhitelistTest {
                     mock(WebSocketConfiguration.class),
                     mock(MetricsConfiguration.class),
                     natService,
-                    new HashMap<>()));
+                    new HashMap<>(),
+                    folder.getRoot().toPath(),
+                    mock(EthPeers.class)));
     service = createJsonRpcHttpService();
     service.start().join();
 
@@ -161,14 +164,14 @@ public class JsonRpcHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithAnyHostnameAndWildcardConfigIsAccepted() throws IOException {
-    jsonRpcConfig.setHostsWhitelist(Collections.singletonList("*"));
+    jsonRpcConfig.setHostsAllowlist(Collections.singletonList("*"));
     assertThat(doRequest("ally")).isEqualTo(200);
     assertThat(doRequest("foe")).isEqualTo(200);
   }
 
   @Test
   public void requestWithWhitelistedHostIsAccepted() throws IOException {
-    jsonRpcConfig.setHostsWhitelist(hostsWhitelist);
+    jsonRpcConfig.setHostsAllowlist(hostsWhitelist);
     assertThat(doRequest("ally")).isEqualTo(200);
     assertThat(doRequest("ally:12345")).isEqualTo(200);
     assertThat(doRequest("friend")).isEqualTo(200);
@@ -176,7 +179,7 @@ public class JsonRpcHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithUnknownHostIsRejected() throws IOException {
-    jsonRpcConfig.setHostsWhitelist(hostsWhitelist);
+    jsonRpcConfig.setHostsAllowlist(hostsWhitelist);
     assertThat(doRequest("foe")).isEqualTo(403);
   }
 
@@ -193,7 +196,7 @@ public class JsonRpcHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithMalformedHostIsRejected() throws IOException {
-    jsonRpcConfig.setHostsWhitelist(hostsWhitelist);
+    jsonRpcConfig.setHostsAllowlist(hostsWhitelist);
     assertThat(doRequest("ally:friend")).isEqualTo(403);
     assertThat(doRequest("ally:123456")).isEqualTo(403);
     assertThat(doRequest("ally:friend:1234")).isEqualTo(403);

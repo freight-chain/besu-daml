@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Supplier;
 import org.apache.logging.log4j.LogManager;
@@ -45,7 +46,7 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
 
   private static final Logger LOG = LogManager.getLogger();
   private static final int DEFAULT_VERSION = 1;
-  private static final Set<Integer> SUPPORTED_VERSIONS = Set.of(0, 1);
+  private static final Set<Integer> SUPPORTED_VERSIONS = Set.of(0, 1, 2);
   private static final String NAME = "rocksdb";
   private final RocksDBMetricsFactory rocksDBMetricsFactory;
 
@@ -112,12 +113,17 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
           return unsegmentedStorage;
         }
       case 1:
+      case 2:
         {
           unsegmentedStorage = null;
           if (segmentedStorage == null) {
+            final List<SegmentIdentifier> segmentsForVersion =
+                segments.stream()
+                    .filter(segmentId -> segmentId.includeInDatabaseVersion(databaseVersion))
+                    .collect(Collectors.toList());
             segmentedStorage =
                 new RocksDBColumnarKeyValueStorage(
-                    rocksDBConfiguration, segments, metricsSystem, rocksDBMetricsFactory);
+                    rocksDBConfiguration, segmentsForVersion, metricsSystem, rocksDBMetricsFactory);
           }
           return new SegmentedKeyValueStorageAdapter<>(segment, segmentedStorage);
         }
@@ -154,17 +160,15 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
   }
 
   private int readDatabaseVersion(final BesuConfiguration commonConfiguration) throws IOException {
-    final Path databaseDir = commonConfiguration.getStoragePath();
     final Path dataDir = commonConfiguration.getDataPath();
-    final boolean databaseExists = databaseDir.resolve("IDENTITY").toFile().exists();
+    final boolean databaseExists = commonConfiguration.getStoragePath().toFile().exists();
     final int databaseVersion;
     if (databaseExists) {
-      databaseVersion = DatabaseMetadata.lookUpFrom(databaseDir, dataDir).getVersion();
+      databaseVersion = DatabaseMetadata.lookUpFrom(dataDir).getVersion();
       LOG.info("Existing database detected at {}. Version {}", dataDir, databaseVersion);
     } else {
-      databaseVersion = defaultVersion;
+      databaseVersion = commonConfiguration.getDatabaseVersion();
       LOG.info("No existing database detected at {}. Using version {}", dataDir, databaseVersion);
-      Files.createDirectories(databaseDir);
       Files.createDirectories(dataDir);
       new DatabaseMetadata(databaseVersion).writeToDirectory(dataDir);
     }

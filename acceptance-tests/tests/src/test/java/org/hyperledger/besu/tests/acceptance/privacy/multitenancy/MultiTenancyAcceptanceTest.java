@@ -23,7 +23,9 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hyperledger.besu.ethereum.core.Address.DEFAULT_PRIVACY;
 
-import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.enclave.types.PrivacyGroup;
 import org.hyperledger.besu.enclave.types.ReceiveResponse;
 import org.hyperledger.besu.enclave.types.SendResponse;
@@ -31,8 +33,8 @@ import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransaction;
-import org.hyperledger.besu.ethereum.privacy.Restriction;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
+import org.hyperledger.besu.plugin.data.Restriction;
 import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
 import org.hyperledger.besu.tests.acceptance.dsl.node.BesuNode;
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster;
@@ -45,6 +47,8 @@ import java.util.List;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.io.Base64;
 import org.junit.After;
@@ -57,16 +61,26 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
   private final ObjectMapper mapper = new ObjectMapper();
   private Cluster multiTenancyCluster;
 
-  private static final SECP256K1.KeyPair TEST_KEY =
-      SECP256K1.KeyPair.create(
-          SECP256K1.PrivateKey.create(
-              new BigInteger(
-                  "853d7f0010fd86d0d7811c1f9d968ea89a24484a8127b4a483ddf5d2cfec766d", 16)));
+  private static final Supplier<SignatureAlgorithm> SIGNATURE_ALGORITHM =
+      Suppliers.memoize(SignatureAlgorithmFactory::getInstance);
+  private static final KeyPair TEST_KEY =
+      SIGNATURE_ALGORITHM
+          .get()
+          .createKeyPair(
+              SIGNATURE_ALGORITHM
+                  .get()
+                  .createPrivateKey(
+                      new BigInteger(
+                          "853d7f0010fd86d0d7811c1f9d968ea89a24484a8127b4a483ddf5d2cfec766d", 16)));
   private static final String PRIVACY_GROUP_ID = "B1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
-  private static final String ENCLAVE_KEY = "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
-  private static final String KEY1 = "sgFkVOyFndZe/5SAZJO5UYbrl7pezHetveriBBWWnE8=";
-  private static final String KEY2 = "R1kW75NQC9XX3kwNpyPjCBFflM29+XvnKKS9VLrUkzo=";
-  private static final String KEY3 = "QzHuACXpfhoGAgrQriWJcDJ6MrUwcCvutKMoAn9KplQ=";
+  private static final String PARTICIPANT_ENCLAVE_KEY0 =
+      "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
+  private static final String PARTICIPANT_ENCLAVE_KEY1 =
+      "sgFkVOyFndZe/5SAZJO5UYbrl7pezHetveriBBWWnE8=";
+  private static final String PARTICIPANT_ENCLAVE_KEY2 =
+      "R1kW75NQC9XX3kwNpyPjCBFflM29+XvnKKS9VLrUkzo=";
+  private static final String PARTICIPANT_ENCLAVE_KEY3 =
+      "QzHuACXpfhoGAgrQriWJcDJ6MrUwcCvutKMoAn9KplQ=";
   private final Address senderAddress =
       Address.wrap(Bytes.fromHexString(accounts.getPrimaryBenefactor().getAddress()));
 
@@ -82,7 +96,8 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
             "node1",
             "http://127.0.0.1:" + wireMockRule.port(),
             "authentication/auth_priv.toml",
-            "authentication/auth_priv_key");
+            "authentication/auth_priv_key",
+            false);
     multiTenancyCluster.start(node);
     final String token =
         node.execute(permissioningTransactions.createSuccessfulLogin("user", "pegasys"));
@@ -107,13 +122,13 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
 
     receiveEnclaveStub(validSignedPrivateTransaction);
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
 
     final Hash transactionHash =
         node.execute(
             privacyTransactions.sendRawTransaction(
                 getRLPOutput(validSignedPrivateTransaction).encoded().toHexString()));
-    node.verify(priv.getTransactionReceipt(transactionHash));
+    node.verify(priv.getSuccessfulTransactionReceipt(transactionHash));
     node.verify(priv.getPrivateTransaction(transactionHash, validSignedPrivateTransaction));
   }
 
@@ -123,7 +138,10 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
 
     node.verify(
         priv.createPrivacyGroup(
-            List.of(KEY1, KEY2, KEY3), "GroupName", "Group description.", PRIVACY_GROUP_ID));
+            List.of(PARTICIPANT_ENCLAVE_KEY1, PARTICIPANT_ENCLAVE_KEY2, PARTICIPANT_ENCLAVE_KEY3),
+            "GroupName",
+            "Group description.",
+            PRIVACY_GROUP_ID));
   }
 
   @Test
@@ -139,13 +157,13 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
       throws JsonProcessingException {
     final List<PrivacyGroup> groupMembership =
         List.of(
-            testPrivacyGroup(singletonList(ENCLAVE_KEY), PrivacyGroup.Type.PANTHEON),
-            testPrivacyGroup(singletonList(ENCLAVE_KEY), PrivacyGroup.Type.PANTHEON),
-            testPrivacyGroup(singletonList(ENCLAVE_KEY), PrivacyGroup.Type.PANTHEON));
+            testPrivacyGroup(singletonList(PARTICIPANT_ENCLAVE_KEY0), PrivacyGroup.Type.PANTHEON),
+            testPrivacyGroup(singletonList(PARTICIPANT_ENCLAVE_KEY0), PrivacyGroup.Type.PANTHEON),
+            testPrivacyGroup(singletonList(PARTICIPANT_ENCLAVE_KEY0), PrivacyGroup.Type.PANTHEON));
 
     findPrivacyGroupEnclaveStub(groupMembership);
 
-    node.verify(priv.findPrivacyGroup(groupMembership.size(), ENCLAVE_KEY));
+    node.verify(priv.findPrivacyGroup(groupMembership.size(), PARTICIPANT_ENCLAVE_KEY0));
   }
 
   @Test
@@ -155,7 +173,7 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
         getValidSignedPrivateTransaction(senderAddress);
 
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
     receiveEnclaveStub(validSignedPrivateTransaction);
 
     node.verify(
@@ -172,24 +190,25 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
     final BytesValueRLPOutput rlpOutput = getRLPOutput(validSignedPrivateTransaction);
 
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
     receiveEnclaveStub(validSignedPrivateTransaction);
 
     node.verify(priv.getTransactionCount(accountAddress, PRIVACY_GROUP_ID, 0));
     final Hash transactionReceipt =
         node.execute(privacyTransactions.sendRawTransaction(rlpOutput.encoded().toHexString()));
 
-    node.verify(priv.getTransactionReceipt(transactionReceipt));
+    node.verify(priv.getSuccessfulTransactionReceipt(transactionReceipt));
     node.verify(priv.getTransactionCount(accountAddress, PRIVACY_GROUP_ID, 1));
   }
 
   @Test
   public void privDistributeRawTransactionSuccessShouldReturnEnclaveKey()
       throws JsonProcessingException {
-    final String enclaveResponseKeyBytes = Bytes.wrap(Bytes.fromBase64String(KEY1)).toString();
+    final String enclaveResponseKeyBytes =
+        Bytes.wrap(Bytes.fromBase64String(PARTICIPANT_ENCLAVE_KEY1)).toString();
 
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
 
     node.verify(
         priv.distributeRawTransaction(
@@ -205,13 +224,13 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
     final BytesValueRLPOutput rlpOutput = getRLPOutput(validSignedPrivateTransaction);
 
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
     receiveEnclaveStub(validSignedPrivateTransaction);
 
     final Hash transactionReceipt =
         node.execute(privacyTransactions.sendRawTransaction(rlpOutput.encoded().toHexString()));
 
-    node.verify(priv.getTransactionReceipt(transactionReceipt));
+    node.verify(priv.getSuccessfulTransactionReceipt(transactionReceipt));
   }
 
   @Test
@@ -226,7 +245,7 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
         List.of(testPrivacyGroup(emptyList(), PrivacyGroup.Type.LEGACY));
 
     retrievePrivacyGroupEnclaveStub();
-    sendEnclaveStub(KEY1);
+    sendEnclaveStub(PARTICIPANT_ENCLAVE_KEY1);
     receiveEnclaveStub(validSignedPrivateTransaction);
     findPrivacyGroupEnclaveStub(groupMembership);
 
@@ -234,9 +253,9 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
     final Hash transactionHash =
         node.execute(privacyTransactions.sendRawTransaction(rlpOutput.encoded().toHexString()));
 
-    node.verify(priv.getTransactionReceipt(transactionHash));
+    node.verify(priv.getSuccessfulTransactionReceipt(transactionHash));
 
-    final String privateFrom = ENCLAVE_KEY;
+    final String privateFrom = PARTICIPANT_ENCLAVE_KEY0;
     final String[] privateFor = {senderAddressBase64};
     node.verify(priv.getEeaTransactionCount(accountAddress, privateFrom, privateFor, 1));
   }
@@ -261,7 +280,7 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
   private void retrievePrivacyGroupEnclaveStub() throws JsonProcessingException {
     final String retrieveGroupResponse =
         mapper.writeValueAsString(
-            testPrivacyGroup(List.of(ENCLAVE_KEY), PrivacyGroup.Type.PANTHEON));
+            testPrivacyGroup(List.of(PARTICIPANT_ENCLAVE_KEY0), PrivacyGroup.Type.PANTHEON));
     stubFor(post("/retrievePrivacyGroup").willReturn(ok(retrieveGroupResponse)));
   }
 
@@ -272,7 +291,7 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
 
   private void receiveEnclaveStub(final PrivateTransaction privTx) throws JsonProcessingException {
     final BytesValueRLPOutput rlpOutput = getRLPOutputForReceiveResponse(privTx);
-    final String senderKey = "QTFhVnRNeExDVUhtQlZIWG9aenpCZ1BiVy93ajVheERwVzlYOGw5MVNHbz0=";
+    final String senderKey = privTx.getPrivateFrom().toBase64String();
     final String receiveResponse =
         mapper.writeValueAsString(
             new ReceiveResponse(
@@ -307,8 +326,8 @@ public class MultiTenancyAcceptanceTest extends AcceptanceTestBase {
         .value(Wei.ZERO)
         .payload(Bytes.wrap(new byte[] {}))
         .sender(senderAddress)
-        .chainId(BigInteger.valueOf(2018))
-        .privateFrom(Bytes.fromBase64String(ENCLAVE_KEY))
+        .chainId(BigInteger.valueOf(1337))
+        .privateFrom(Bytes.fromBase64String(PARTICIPANT_ENCLAVE_KEY0))
         .restriction(Restriction.RESTRICTED)
         .privacyGroupId(Bytes.fromBase64String(PRIVACY_GROUP_ID))
         .signAndBuild(TEST_KEY);

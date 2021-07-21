@@ -24,8 +24,13 @@ import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.WorldState;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
+import org.hyperledger.besu.ethereum.referencetests.GeneralStateTestCaseEipSpec;
+import org.hyperledger.besu.ethereum.referencetests.GeneralStateTestCaseSpec;
+import org.hyperledger.besu.ethereum.referencetests.ReferenceTestBlockchain;
+import org.hyperledger.besu.ethereum.referencetests.ReferenceTestProtocolSchedules;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.worldstate.DefaultMutableWorldState;
 import org.hyperledger.besu.testutil.JsonTestParameters;
@@ -34,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class GeneralStateReferenceTestTools {
   private static final ReferenceTestProtocolSchedules REFERENCE_TEST_PROTOCOL_SCHEDULES =
@@ -41,7 +47,7 @@ public class GeneralStateReferenceTestTools {
   private static final List<String> SPECS_PRIOR_TO_DELETING_EMPTY_ACCOUNTS =
       Arrays.asList("Frontier", "Homestead", "EIP150");
 
-  private static TransactionProcessor transactionProcessor(final String name) {
+  private static MainnetTransactionProcessor transactionProcessor(final String name) {
     return REFERENCE_TEST_PROTOCOL_SCHEDULES
         .getByName(name)
         .getByBlockNumber(0)
@@ -54,7 +60,8 @@ public class GeneralStateReferenceTestTools {
     final String eips =
         System.getProperty(
             "test.ethereum.state.eips",
-            "Frontier,Homestead,EIP150,EIP158,Byzantium,Constantinople,ConstantinopleFix,Istanbul,Berlin");
+            "Frontier,Homestead,EIP150,EIP158,Byzantium,Constantinople,ConstantinopleFix,Istanbul,Berlin,"
+                + "London,Shanghai,Cancun");
     EIPS_TO_RUN = Arrays.asList(eips.split(","));
   }
 
@@ -80,22 +87,22 @@ public class GeneralStateReferenceTestTools {
 
   static {
     if (EIPS_TO_RUN.isEmpty()) {
-      params.blacklistAll();
+      params.ignoreAll();
     }
 
     // Known incorrect test.
-    params.blacklist(
+    params.ignore(
         "RevertPrecompiledTouch(_storage)?-(EIP158|Byzantium|Constantinople|ConstantinopleFix)");
 
     // Gas integer value is too large to construct a valid transaction.
-    params.blacklist("OverflowGasRequire");
+    params.ignore("OverflowGasRequire");
 
     // Consumes a huge amount of memory
-    params.blacklist("static_Call1MB1024Calldepth-\\w");
+    params.ignore("static_Call1MB1024Calldepth-\\w");
+    params.ignore("ShanghaiLove_.*");
 
     // Don't do time consuming tests
-    params.blacklist("CALLBlake2f_MaxRounds.*");
-    params.blacklist(".*\\w50000[-_].*");
+    params.ignore("CALLBlake2f_MaxRounds.*");
   }
 
   public static Collection<Object[]> generateTestParametersForConfig(final String[] filePath) {
@@ -103,9 +110,9 @@ public class GeneralStateReferenceTestTools {
   }
 
   public static void executeTest(final GeneralStateTestCaseEipSpec spec) {
-    final BlockHeader blockHeader = spec.blockHeader();
-    final WorldState initialWorldState = spec.initialWorldState();
-    final Transaction transaction = spec.transaction();
+    final BlockHeader blockHeader = spec.getBlockHeader();
+    final WorldState initialWorldState = spec.getInitialWorldState();
+    final Transaction transaction = spec.getTransaction();
 
     final MutableWorldState worldState = new DefaultMutableWorldState(initialWorldState);
     // Several of the GeneralStateTests check if the transaction could potentially
@@ -116,10 +123,10 @@ public class GeneralStateReferenceTestTools {
       return;
     }
 
-    final TransactionProcessor processor = transactionProcessor(spec.eip());
+    final MainnetTransactionProcessor processor = transactionProcessor(spec.getFork());
     final WorldUpdater worldStateUpdater = worldState.updater();
-    final TestBlockchain blockchain = new TestBlockchain(blockHeader.getNumber());
-    final TransactionProcessor.Result result =
+    final ReferenceTestBlockchain blockchain = new ReferenceTestBlockchain(blockHeader.getNumber());
+    final TransactionProcessingResult result =
         processor.processTransaction(
             blockchain,
             worldStateUpdater,
@@ -129,24 +136,29 @@ public class GeneralStateReferenceTestTools {
             new BlockHashLookup(blockHeader, blockchain),
             false,
             TransactionValidationParams.processingBlock());
-    final Account coinbase = worldStateUpdater.getOrCreate(spec.blockHeader().getCoinbase());
-    if (coinbase != null && coinbase.isEmpty() && shouldClearEmptyAccounts(spec.eip())) {
+    final Account coinbase = worldStateUpdater.getOrCreate(spec.getBlockHeader().getCoinbase());
+    if (coinbase != null && coinbase.isEmpty() && shouldClearEmptyAccounts(spec.getFork())) {
       worldStateUpdater.deleteAccount(coinbase.getAddress());
     }
     worldStateUpdater.commit();
 
     // Check the world state root hash.
-    final Hash expectedRootHash = spec.expectedRootHash();
+    final Hash expectedRootHash = spec.getExpectedRootHash();
     assertThat(worldState.rootHash())
         .withFailMessage("Unexpected world state root hash; computed state: %s", worldState)
         .isEqualTo(expectedRootHash);
 
     // Check the logs.
-    final Hash expectedLogsHash = spec.expectedLogsHash();
-    final List<Log> logs = result.getLogs();
-    assertThat(Hash.hash(RLP.encode(out -> out.writeList(logs, Log::writeTo))))
-        .withFailMessage("Unmatched logs hash. Generated logs: %s", logs)
-        .isEqualTo(expectedLogsHash);
+    final Hash expectedLogsHash = spec.getExpectedLogsHash();
+    Optional.ofNullable(expectedLogsHash)
+        .ifPresent(
+            expected -> {
+              final List<Log> logs = result.getLogs();
+
+              assertThat(Hash.hash(RLP.encode(out -> out.writeList(logs, Log::writeTo))))
+                  .withFailMessage("Unmatched logs hash. Generated logs: %s", logs)
+                  .isEqualTo(expected);
+            });
   }
 
   private static boolean shouldClearEmptyAccounts(final String eip) {

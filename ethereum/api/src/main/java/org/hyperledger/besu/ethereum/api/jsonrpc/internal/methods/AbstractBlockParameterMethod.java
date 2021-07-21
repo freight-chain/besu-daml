@@ -16,11 +16,12 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.BlockParameter;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 
-import java.util.OptionalLong;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.google.common.base.Suppliers;
@@ -59,9 +60,9 @@ public abstract class AbstractBlockParameterMethod implements JsonRpcMethod {
     final BlockParameter blockParam = blockParameter(request);
 
     final Object result;
-    final OptionalLong blockNumber = blockParam.getNumber();
+    final Optional<Long> blockNumber = blockParam.getNumber();
     if (blockNumber.isPresent()) {
-      result = resultByBlockNumber(request, blockNumber.getAsLong());
+      result = resultByBlockNumber(request, blockNumber.get());
     } else if (blockParam.isLatest()) {
       result = latestResult(request);
     } else {
@@ -74,6 +75,13 @@ public abstract class AbstractBlockParameterMethod implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
+    Object response = findResultByParamType(requestContext);
+
+    if (response instanceof JsonRpcErrorResponse) {
+      return new JsonRpcErrorResponse(
+          requestContext.getRequest().getId(), ((JsonRpcErrorResponse) response).getError());
+    }
+
     return new JsonRpcSuccessResponse(
         requestContext.getRequest().getId(), findResultByParamType(requestContext));
   }

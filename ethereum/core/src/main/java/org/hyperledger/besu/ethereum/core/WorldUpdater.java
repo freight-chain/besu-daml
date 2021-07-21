@@ -14,7 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.core;
 
-import org.hyperledger.besu.ethereum.core.AbstractWorldUpdater.UpdateTrackingAccount;
+import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -42,7 +42,7 @@ public interface WorldUpdater extends MutableWorldView {
    * @return the account {@code address}, which will have nonce {@code nonce}, balance {@code
    *     balance} and empty code and storage.
    */
-  DefaultEvmAccount createAccount(Address address, long nonce, Wei balance);
+  EvmAccount createAccount(Address address, long nonce, Wei balance);
 
   /**
    * Creates a new account, or reset it (that is, act as if it was deleted and created anew) if it
@@ -55,7 +55,7 @@ public interface WorldUpdater extends MutableWorldView {
    * @return the account {@code address}, which will have 0 for the nonce and balance and empty code
    *     and storage.
    */
-  default DefaultEvmAccount createAccount(final Address address) {
+  default EvmAccount createAccount(final Address address) {
     return createAccount(address, Account.DEFAULT_NONCE, Account.DEFAULT_BALANCE);
   }
 
@@ -67,9 +67,20 @@ public interface WorldUpdater extends MutableWorldView {
    *     #getAccount(Address)}, otherwise, it is created and returned as if by {@link
    *     #createAccount(Address)} (and thus all his fields will be zero/empty).
    */
-  default DefaultEvmAccount getOrCreate(final Address address) {
-    final DefaultEvmAccount account = getAccount(address);
+  default EvmAccount getOrCreate(final Address address) {
+    final EvmAccount account = getAccount(address);
     return account == null ? createAccount(address) : account;
+  }
+
+  /**
+   * Retrieves the provided account for a sender of a transaction if it exists, or creates it if it
+   * doesn't.
+   *
+   * @param address the address of the account.
+   * @return the account of the sender for {@code address}
+   */
+  default EvmAccount getOrCreateSenderAccount(final Address address) {
+    return getOrCreate(address);
   }
 
   /**
@@ -79,7 +90,18 @@ public interface WorldUpdater extends MutableWorldView {
    * @param address the address of the account.
    * @return the account {@code address}, or {@code null} if the account does not exist.
    */
-  DefaultEvmAccount getAccount(Address address);
+  EvmAccount getAccount(Address address);
+
+  /**
+   * Retrieves the senders account, returning a modifiable object (whose updates are accumulated by
+   * this updater).
+   *
+   * @param frame the current message frame.
+   * @return the account {@code address}, or {@code null} if the account does not exist.
+   */
+  default EvmAccount getSenderAccount(final MessageFrame frame) {
+    return getAccount(frame.getSenderAddress());
+  }
 
   /**
    * Deletes the provided account.
@@ -94,7 +116,7 @@ public interface WorldUpdater extends MutableWorldView {
    *
    * @return the accounts that have been touched within the scope of this updater
    */
-  Collection<UpdateTrackingAccount<? extends Account>> getTouchedAccounts();
+  Collection<? extends Account> getTouchedAccounts();
 
   /**
    * Returns the account addresses that have been deleted within the scope of this updater.
@@ -112,6 +134,10 @@ public interface WorldUpdater extends MutableWorldView {
    */
   void commit();
 
-  /** @return The parent WorldUpdater if this wraps another one, empty otherwise */
-  public Optional<WorldUpdater> parentUpdater();
+  /**
+   * The parent updater (if it exists).
+   *
+   * @return The parent WorldUpdater if this wraps another one, empty otherwise
+   */
+  Optional<WorldUpdater> parentUpdater();
 }

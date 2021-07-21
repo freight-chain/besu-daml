@@ -15,14 +15,18 @@
 package org.hyperledger.besu.ethereum.trie;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 import static org.hyperledger.besu.ethereum.trie.CompactEncoding.bytesToPath;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -33,6 +37,7 @@ import org.apache.tuweni.bytes.Bytes32;
  * @param <V> The type of values stored by this trie.
  */
 public class StoredMerklePatriciaTrie<K extends Bytes, V> implements MerklePatriciaTrie<K, V> {
+
   private final GetVisitor<V> getVisitor = new GetVisitor<>();
   private final RemoveVisitor<V> removeVisitor = new RemoveVisitor<>();
   private final StoredNodeFactory<V> nodeFactory;
@@ -71,7 +76,7 @@ public class StoredMerklePatriciaTrie<K extends Bytes, V> implements MerklePatri
     this.root =
         rootHash.equals(EMPTY_TRIE_NODE_HASH)
             ? NullNode.instance()
-            : new StoredNode<>(nodeFactory, rootHash);
+            : new StoredNode<>(nodeFactory, Bytes.EMPTY, rootHash);
   }
 
   @Override
@@ -106,17 +111,25 @@ public class StoredMerklePatriciaTrie<K extends Bytes, V> implements MerklePatri
   @Override
   public void commit(final NodeUpdater nodeUpdater) {
     final CommitVisitor<V> commitVisitor = new CommitVisitor<>(nodeUpdater);
-    root.accept(commitVisitor);
+    root.accept(Bytes.EMPTY, commitVisitor);
     // Make sure root node was stored
     if (root.isDirty() && root.getRlpRef().size() < 32) {
-      nodeUpdater.store(root.getHash(), root.getRlpRef());
+      nodeUpdater.store(Bytes.EMPTY, root.getHash(), root.getRlpRef());
     }
     // Reset root so dirty nodes can be garbage collected
     final Bytes32 rootHash = root.getHash();
     this.root =
         rootHash.equals(EMPTY_TRIE_NODE_HASH)
             ? NullNode.instance()
-            : new StoredNode<>(nodeFactory, rootHash);
+            : new StoredNode<>(nodeFactory, Bytes.EMPTY, rootHash);
+  }
+
+  public void acceptAtRoot(final NodeVisitor<V> visitor) {
+    root.accept(visitor);
+  }
+
+  public void acceptAtRoot(final PathNodeVisitor<V> visitor, final Bytes path) {
+    root.accept(visitor, path);
   }
 
   @Override
@@ -125,8 +138,31 @@ public class StoredMerklePatriciaTrie<K extends Bytes, V> implements MerklePatri
   }
 
   @Override
-  public void visitAll(final Consumer<Node<V>> visitor) {
-    root.accept(new AllNodesVisitor<>(visitor));
+  public void visitAll(final Consumer<Node<V>> nodeConsumer) {
+    root.accept(new AllNodesVisitor<>(nodeConsumer));
+  }
+
+  @Override
+  public CompletableFuture<Void> visitAll(
+      final Consumer<Node<V>> nodeConsumer, final ExecutorService executorService) {
+    return CompletableFuture.allOf(
+        Stream.concat(
+                Stream.of(
+                    CompletableFuture.runAsync(() -> nodeConsumer.accept(root), executorService)),
+                root.getChildren().stream()
+                    .map(
+                        rootChild ->
+                            CompletableFuture.runAsync(
+                                () -> rootChild.accept(new AllNodesVisitor<>(nodeConsumer)),
+                                executorService)))
+            .collect(toUnmodifiableSet())
+            .toArray(CompletableFuture[]::new));
+  }
+
+  @Override
+  public void visitLeafs(final TrieIterator.LeafHandler<V> handler) {
+    final TrieIterator<V> visitor = new TrieIterator<>(handler, true);
+    root.accept(visitor, CompactEncoding.bytesToPath(Bytes32.ZERO));
   }
 
   @Override

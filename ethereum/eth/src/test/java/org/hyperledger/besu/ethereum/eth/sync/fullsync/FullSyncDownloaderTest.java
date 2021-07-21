@@ -29,28 +29,47 @@ import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.TrailingPeerRequirements;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class FullSyncDownloaderTest {
 
-  protected ProtocolSchedule<Void> protocolSchedule;
+  protected ProtocolSchedule protocolSchedule;
   protected EthProtocolManager ethProtocolManager;
   protected EthContext ethContext;
-  protected ProtocolContext<Void> protocolContext;
+  protected ProtocolContext protocolContext;
   private SyncState syncState;
 
-  private BlockchainSetupUtil<Void> localBlockchainSetup;
+  private BlockchainSetupUtil localBlockchainSetup;
   protected MutableBlockchain localBlockchain;
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
+  @Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {{DataStorageFormat.BONSAI}, {DataStorageFormat.FOREST}});
+  }
+
+  private final DataStorageFormat storageFormat;
+
+  public FullSyncDownloaderTest(final DataStorageFormat storageFormat) {
+    this.storageFormat = storageFormat;
+  }
+
   @Before
   public void setupTest() {
-    localBlockchainSetup = BlockchainSetupUtil.forTesting();
+    localBlockchainSetup = BlockchainSetupUtil.forTesting(storageFormat);
     localBlockchain = localBlockchainSetup.getBlockchain();
 
     protocolSchedule = localBlockchainSetup.getProtocolSchedule();
@@ -71,8 +90,8 @@ public class FullSyncDownloaderTest {
     ethProtocolManager.stop();
   }
 
-  private FullSyncDownloader<Void> downloader(final SynchronizerConfiguration syncConfig) {
-    return new FullSyncDownloader<>(
+  private FullSyncDownloader downloader(final SynchronizerConfiguration syncConfig) {
+    return new FullSyncDownloader(
         syncConfig, protocolSchedule, protocolContext, ethContext, syncState, metricsSystem);
   }
 
@@ -80,7 +99,7 @@ public class FullSyncDownloaderTest {
   public void shouldLimitTrailingPeersWhenBehindChain() {
     localBlockchainSetup.importFirstBlocks(2);
     final int maxTailingPeers = 5;
-    final FullSyncDownloader<Void> synchronizer =
+    final FullSyncDownloader synchronizer =
         downloader(SynchronizerConfiguration.builder().maxTrailingPeers(maxTailingPeers).build());
 
     final RespondingEthPeer bestPeer =
@@ -96,7 +115,7 @@ public class FullSyncDownloaderTest {
   public void shouldNotLimitTrailingPeersWhenInSync() {
     localBlockchainSetup.importFirstBlocks(2);
     final int maxTailingPeers = 5;
-    final FullSyncDownloader<Void> synchronizer =
+    final FullSyncDownloader synchronizer =
         downloader(SynchronizerConfiguration.builder().maxTrailingPeers(maxTailingPeers).build());
 
     final RespondingEthPeer bestPeer = EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 2);

@@ -20,10 +20,10 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason.EXCEEDS_BLOCK_GAS_LIMIT;
-import static org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason.GAS_PRICE_TOO_LOW;
-import static org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason.NONCE_TOO_LOW;
 import static org.hyperledger.besu.ethereum.mainnet.ValidationResult.valid;
+import static org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason.CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE;
+import static org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason.EXCEEDS_BLOCK_GAS_LIMIT;
+import static org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason.NONCE_TOO_LOW;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,7 +36,8 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Account;
@@ -50,6 +51,7 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.ethereum.core.Wei;
+import org.hyperledger.besu.ethereum.core.fees.EIP1559;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
@@ -58,16 +60,18 @@ import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManager;
 import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionValidator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.hyperledger.besu.plugin.data.TransactionType;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.testutil.TestClock;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -77,11 +81,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+@SuppressWarnings("unchecked")
 public class TransactionPoolTest {
 
   private static final int MAX_TRANSACTIONS = 5;
   private static final int MAX_TRANSACTION_HASHES = 5;
-  private static final KeyPair KEY_PAIR1 = KeyPair.generate();
+  private static final KeyPair KEY_PAIR1 =
+      SignatureAlgorithmFactory.getInstance().generateKeyPair();
 
   private final PendingTransactionListener listener = mock(PendingTransactionListener.class);
   private final TransactionPool.TransactionBatchAddedListener batchAddedListener =
@@ -91,19 +97,20 @@ public class TransactionPoolTest {
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
   @SuppressWarnings("unchecked")
-  private final ProtocolSchedule<Void> protocolSchedule = mock(ProtocolSchedule.class);
+  private final ProtocolSchedule protocolSchedule = mock(ProtocolSchedule.class);
 
   @SuppressWarnings("unchecked")
-  private final ProtocolSpec<Void> protocolSpec = mock(ProtocolSpec.class);
+  private final ProtocolSpec protocolSpec = mock(ProtocolSpec.class);
 
-  private final TransactionValidator transactionValidator = mock(TransactionValidator.class);
+  private final MainnetTransactionValidator transactionValidator =
+      mock(MainnetTransactionValidator.class);
   private MutableBlockchain blockchain;
 
   private PendingTransactions transactions;
   private final Transaction transaction1 = createTransaction(1);
   private final Transaction transaction2 = createTransaction(2);
   private final ExecutionContextTestFixture executionContext = ExecutionContextTestFixture.create();
-  private final ProtocolContext<Void> protocolContext = executionContext.getProtocolContext();
+  private final ProtocolContext protocolContext = executionContext.getProtocolContext();
   private TransactionPool transactionPool;
   private long genesisBlockGasLimit;
   private SyncState syncState;
@@ -123,7 +130,6 @@ public class TransactionPoolTest {
             TestClock.fixed(),
             metricsSystem,
             blockchain::getChainHeadHeader,
-            Optional.empty(),
             TransactionPoolConfiguration.DEFAULT_PRICE_BUMP);
     when(protocolSchedule.getByBlockNumber(anyLong())).thenReturn(protocolSpec);
     when(protocolSpec.getTransactionValidator()).thenReturn(transactionValidator);
@@ -141,14 +147,15 @@ public class TransactionPoolTest {
             protocolSchedule,
             protocolContext,
             batchAddedListener,
-            Optional.of(pendingBatchAddedListener),
+            pendingBatchAddedListener,
             syncState,
             ethContext,
             peerTransactionTracker,
-            Optional.of(peerPendingTransactionTracker),
+            peerPendingTransactionTracker,
             Wei.of(2),
             metricsSystem,
-            Optional.empty());
+            Optional.empty(),
+            TransactionPoolConfiguration.DEFAULT);
     blockchain.observeBlockAdded(transactionPool);
   }
 
@@ -292,26 +299,27 @@ public class TransactionPoolTest {
   }
 
   @Test
-  public void shouldRejectLocalTransactionsWhenGasPriceBelowMinimum() {
-
+  public void shouldNotRejectLocalTransactionsWhenGasPriceBelowMinimum() {
     final Transaction transaction =
         new TransactionTestFixture()
             .nonce(1)
             .gasLimit(0)
             .gasPrice(Wei.of(1))
             .createTransaction(KEY_PAIR1);
+
+    when(transactionValidator.validate(eq(transaction), any(Optional.class), any()))
+        .thenReturn(ValidationResult.valid());
+
     final ValidationResult<TransactionInvalidReason> result =
         transactionPool.addLocalTransaction(transaction);
 
-    assertThat(result).isEqualTo(ValidationResult.invalid(GAS_PRICE_TOO_LOW));
-    assertTransactionNotPending(transaction);
-    verifyZeroInteractions(transactionValidator); // Reject before validation
+    assertThat(result).isEqualTo(ValidationResult.invalid(CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE));
   }
 
   @Test
   public void shouldNotAddRemoteTransactionsThatAreInvalidAccordingToInvariantChecks() {
     givenTransactionIsValid(transaction2);
-    when(transactionValidator.validate(eq(transaction1)))
+    when(transactionValidator.validate(eq(transaction1), any(Optional.class), any()))
         .thenReturn(ValidationResult.invalid(NONCE_TOO_LOW));
 
     transactionPool.addRemoteTransactions(asList(transaction1, transaction2));
@@ -324,7 +332,8 @@ public class TransactionPoolTest {
   @Test
   public void shouldNotAddRemoteTransactionsThatAreInvalidAccordingToStateDependentChecks() {
     givenTransactionIsValid(transaction2);
-    when(transactionValidator.validate(eq(transaction1))).thenReturn(valid());
+    when(transactionValidator.validate(eq(transaction1), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(transaction1, null, true))
         .thenReturn(ValidationResult.invalid(NONCE_TOO_LOW));
 
@@ -342,7 +351,8 @@ public class TransactionPoolTest {
     final Transaction transaction2 = builder.nonce(2).createTransaction(KEY_PAIR1);
     final Transaction transaction3 = builder.nonce(3).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -370,7 +380,8 @@ public class TransactionPoolTest {
     final Transaction transaction2 = builder.nonce(2).createTransaction(KEY_PAIR1);
     final Transaction transaction3 = builder.nonce(3).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -397,14 +408,15 @@ public class TransactionPoolTest {
             protocolSchedule,
             protocolContext,
             batchAddedListener,
-            Optional.of(pendingBatchAddedListener),
+            pendingBatchAddedListener,
             syncState,
             ethContext,
             peerTransactionTracker,
-            Optional.of(peerPendingTransactionTracker),
+            peerPendingTransactionTracker,
             Wei.ZERO,
             metricsSystem,
-            Optional.empty());
+            Optional.empty(),
+            TransactionPoolConfiguration.DEFAULT);
 
     when(pendingTransactions.containsTransaction(transaction1.getHash())).thenReturn(true);
 
@@ -424,7 +436,8 @@ public class TransactionPoolTest {
     final Transaction transaction2 =
         builder.nonce(1).gasPrice(Wei.of(5)).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -448,7 +461,8 @@ public class TransactionPoolTest {
     final Transaction transaction2 =
         builder.nonce(1).gasPrice(Wei.of(5)).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -506,7 +520,7 @@ public class TransactionPoolTest {
     when(peerPendingTransactionTracker.isPeerSupported(peer, EthProtocol.ETH65)).thenReturn(false);
     when(peerPendingTransactionTracker.isPeerSupported(validPeer, EthProtocol.ETH65))
         .thenReturn(true);
-    when(transactionValidator.validate(any())).thenReturn(valid());
+    when(transactionValidator.validate(any(), any(Optional.class), any())).thenReturn(valid());
     transactionPool.addTransactionHash(transaction1.getHash());
     transactionPool.handleConnect(peer);
     verify(peerPendingTransactionTracker, never()).addToPeerSendQueue(peer, transaction1.getHash());
@@ -516,7 +530,7 @@ public class TransactionPoolTest {
   }
 
   @Test
-  public void shouldAllowTransactionWhenAccountWhitelistControllerIsNotPresent() {
+  public void shouldAllowTransactionWhenAccountAllowlistControllerIsNotPresent() {
     givenTransactionIsValid(transaction1);
 
     assertThat(transactionPool.addLocalTransaction(transaction1)).isEqualTo(valid());
@@ -534,21 +548,23 @@ public class TransactionPoolTest {
             protocolSchedule,
             protocolContext,
             batchAddedListener,
-            Optional.of(pendingBatchAddedListener),
+            pendingBatchAddedListener,
             syncState,
             ethContext,
             peerTransactionTracker,
-            Optional.of(peerPendingTransactionTracker),
+            peerPendingTransactionTracker,
             Wei.ZERO,
             metricsSystem,
-            Optional.empty());
+            Optional.empty(),
+            TransactionPoolConfiguration.DEFAULT);
 
     final TransactionTestFixture builder = new TransactionTestFixture();
     final Transaction transaction1 = builder.nonce(1).createTransaction(KEY_PAIR1);
     final Transaction transaction2 = builder.nonce(2).createTransaction(KEY_PAIR1);
     final Transaction transaction3 = builder.nonce(3).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -574,7 +590,8 @@ public class TransactionPoolTest {
     final Transaction transaction2 = builder.nonce(2).createTransaction(KEY_PAIR1);
     final Transaction transaction3 = builder.nonce(3).createTransaction(KEY_PAIR1);
 
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction1), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());
@@ -603,19 +620,21 @@ public class TransactionPoolTest {
             protocolSchedule,
             protocolContext,
             batchAddedListener,
-            Optional.of(pendingBatchAddedListener),
+            pendingBatchAddedListener,
             syncState,
             ethContext,
             peerTransactionTracker,
-            Optional.of(peerPendingTransactionTracker),
+            peerPendingTransactionTracker,
             Wei.ZERO,
             metricsSystem,
-            Optional.empty());
+            Optional.empty(),
+            TransactionPoolConfiguration.DEFAULT);
 
     final TransactionTestFixture builder = new TransactionTestFixture();
     final Transaction transactionLocal = builder.nonce(1).createTransaction(KEY_PAIR1);
     final Transaction transactionRemote = builder.nonce(2).createTransaction(KEY_PAIR1);
-    when(transactionValidator.validate(any(Transaction.class))).thenReturn(valid());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             any(Transaction.class),
             nullable(Account.class),
@@ -637,7 +656,8 @@ public class TransactionPoolTest {
   public void shouldCallValidatorWithExpectedValidationParameters() {
     final ArgumentCaptor<TransactionValidationParams> txValidationParamCaptor =
         ArgumentCaptor.forClass(TransactionValidationParams.class);
-    when(transactionValidator.validate(eq(transaction1))).thenReturn(valid());
+    when(transactionValidator.validate(eq(transaction1), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(any(), any(), txValidationParamCaptor.capture()))
         .thenReturn(valid());
 
@@ -648,6 +668,209 @@ public class TransactionPoolTest {
 
     assertThat(txValidationParamCaptor.getValue())
         .isEqualToComparingFieldByField(expectedValidationParams);
+  }
+
+  @Test
+  public void shouldIgnoreFeeCapIfSetZero() {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    final EthContext ethContext = ethProtocolManager.ethContext();
+    final PeerTransactionTracker peerTransactionTracker = new PeerTransactionTracker();
+    final Wei twoEthers = Wei.fromEth(2);
+    final TransactionPool transactionPool =
+        new TransactionPool(
+            transactions,
+            protocolSchedule,
+            protocolContext,
+            batchAddedListener,
+            pendingBatchAddedListener,
+            syncState,
+            ethContext,
+            peerTransactionTracker,
+            peerPendingTransactionTracker,
+            Wei.ZERO,
+            metricsSystem,
+            Optional.empty(),
+            ImmutableTransactionPoolConfiguration.builder().txFeeCap(Wei.ZERO).build());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
+    when(transactionValidator.validateForSender(
+            any(Transaction.class),
+            nullable(Account.class),
+            any(TransactionValidationParams.class)))
+        .thenReturn(valid());
+    assertThat(
+            transactionPool
+                .addLocalTransaction(
+                    new TransactionTestFixture()
+                        .nonce(1)
+                        .gasPrice(twoEthers.add(Wei.of(1)))
+                        .createTransaction(KEY_PAIR1))
+                .isValid())
+        .isTrue();
+  }
+
+  @Test
+  public void shouldIgnoreEIP1559TransactionWhenNotAllowed() {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    final EthContext ethContext = ethProtocolManager.ethContext();
+    final PeerTransactionTracker peerTransactionTracker = new PeerTransactionTracker();
+    final TransactionPool transactionPool =
+        new TransactionPool(
+            transactions,
+            protocolSchedule,
+            protocolContext,
+            batchAddedListener,
+            pendingBatchAddedListener,
+            syncState,
+            ethContext,
+            peerTransactionTracker,
+            peerPendingTransactionTracker,
+            Wei.ZERO,
+            metricsSystem,
+            Optional.empty(),
+            ImmutableTransactionPoolConfiguration.builder().txFeeCap(Wei.ONE).build());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
+    when(transactionValidator.validateForSender(
+            any(Transaction.class),
+            nullable(Account.class),
+            any(TransactionValidationParams.class)))
+        .thenReturn(valid());
+    final Transaction transaction =
+        new TransactionTestFixture()
+            .nonce(1)
+            .type(TransactionType.EIP1559)
+            .maxFeePerGas(Optional.of(Wei.ONE))
+            .maxPriorityFeePerGas(Optional.of(Wei.ONE))
+            .gasLimit(10)
+            .gasPrice(null)
+            .createTransaction(KEY_PAIR1);
+
+    final ValidationResult<TransactionInvalidReason> result =
+        transactionPool.addLocalTransaction(transaction);
+    assertThat(result.getInvalidReason())
+        .isEqualTo(TransactionInvalidReason.INVALID_TRANSACTION_FORMAT);
+  }
+
+  @Test
+  public void shouldIgnoreEIP1559TransactionBeforeTheFork() {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    final EthContext ethContext = ethProtocolManager.ethContext();
+    final PeerTransactionTracker peerTransactionTracker = new PeerTransactionTracker();
+    final TransactionPool transactionPool =
+        new TransactionPool(
+            transactions,
+            protocolSchedule,
+            protocolContext,
+            batchAddedListener,
+            pendingBatchAddedListener,
+            syncState,
+            ethContext,
+            peerTransactionTracker,
+            peerPendingTransactionTracker,
+            Wei.ZERO,
+            metricsSystem,
+            Optional.of(new EIP1559(100)),
+            ImmutableTransactionPoolConfiguration.builder().txFeeCap(Wei.ONE).build());
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
+    when(transactionValidator.validateForSender(
+            any(Transaction.class),
+            nullable(Account.class),
+            any(TransactionValidationParams.class)))
+        .thenReturn(valid());
+    final Transaction transaction =
+        new TransactionTestFixture()
+            .nonce(1)
+            .type(TransactionType.EIP1559)
+            .maxFeePerGas(Optional.of(Wei.ONE))
+            .maxPriorityFeePerGas(Optional.of(Wei.ONE))
+            .gasLimit(10)
+            .gasPrice(null)
+            .createTransaction(KEY_PAIR1);
+
+    final ValidationResult<TransactionInvalidReason> result =
+        transactionPool.addLocalTransaction(transaction);
+    assertThat(result.getInvalidReason())
+        .isEqualTo(TransactionInvalidReason.INVALID_TRANSACTION_FORMAT);
+  }
+
+  @Test
+  public void shouldRejectLocalTransactionIfFeeCapExceeded() {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    final EthContext ethContext = ethProtocolManager.ethContext();
+    final PeerTransactionTracker peerTransactionTracker = new PeerTransactionTracker();
+    final Wei twoEthers = Wei.fromEth(2);
+    TransactionPool transactionPool =
+        new TransactionPool(
+            transactions,
+            protocolSchedule,
+            protocolContext,
+            batchAddedListener,
+            pendingBatchAddedListener,
+            syncState,
+            ethContext,
+            peerTransactionTracker,
+            peerPendingTransactionTracker,
+            Wei.ZERO,
+            metricsSystem,
+            Optional.empty(),
+            ImmutableTransactionPoolConfiguration.builder().txFeeCap(twoEthers).build());
+
+    final TransactionTestFixture builder = new TransactionTestFixture();
+    final Transaction transactionLocal =
+        builder.nonce(1).gasPrice(twoEthers.add(Wei.of(1))).createTransaction(KEY_PAIR1);
+
+    when(transactionValidator.validate(any(Transaction.class), any(Optional.class), any()))
+        .thenReturn(valid());
+    when(transactionValidator.validateForSender(
+            any(Transaction.class),
+            nullable(Account.class),
+            any(TransactionValidationParams.class)))
+        .thenReturn(valid());
+
+    final ValidationResult<TransactionInvalidReason> result =
+        transactionPool.addLocalTransaction(transactionLocal);
+    assertThat(result.getInvalidReason()).isEqualTo(TransactionInvalidReason.TX_FEECAP_EXCEEDED);
+  }
+
+  @Test
+  public void shouldRejectGoQuorumTransactionWithNonZeroValue() {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    final EthContext ethContext = ethProtocolManager.ethContext();
+    final PeerTransactionTracker peerTransactionTracker = new PeerTransactionTracker();
+    final Wei twoEthers = Wei.fromEth(2);
+
+    final TransactionPool transactionPool =
+        new TransactionPool(
+            transactions,
+            protocolSchedule,
+            protocolContext,
+            batchAddedListener,
+            pendingBatchAddedListener,
+            syncState,
+            ethContext,
+            peerTransactionTracker,
+            peerPendingTransactionTracker,
+            Wei.ZERO,
+            metricsSystem,
+            Optional.empty(),
+            ImmutableTransactionPoolConfiguration.builder().txFeeCap(twoEthers).build());
+
+    final Transaction transaction37 =
+        Transaction.builder().v(BigInteger.valueOf(37)).value(Wei.ONE).build();
+    final Transaction transaction38 =
+        Transaction.builder().v(BigInteger.valueOf(38)).value(Wei.ONE).build();
+
+    final ValidationResult<TransactionInvalidReason> result37 =
+        transactionPool.addLocalTransaction(transaction37);
+    final ValidationResult<TransactionInvalidReason> result38 =
+        transactionPool.addLocalTransaction(transaction38);
+
+    assertThat(result37.getInvalidReason())
+        .isEqualTo(TransactionInvalidReason.ETHER_VALUE_NOT_SUPPORTED);
+    assertThat(result38.getInvalidReason())
+        .isEqualTo(TransactionInvalidReason.ETHER_VALUE_NOT_SUPPORTED);
   }
 
   private void assertTransactionPending(final Transaction t) {
@@ -699,7 +922,8 @@ public class TransactionPoolTest {
   }
 
   private void givenTransactionIsValid(final Transaction transaction) {
-    when(transactionValidator.validate(eq(transaction))).thenReturn(valid());
+    when(transactionValidator.validate(eq(transaction), any(Optional.class), any()))
+        .thenReturn(valid());
     when(transactionValidator.validateForSender(
             eq(transaction), nullable(Account.class), any(TransactionValidationParams.class)))
         .thenReturn(valid());

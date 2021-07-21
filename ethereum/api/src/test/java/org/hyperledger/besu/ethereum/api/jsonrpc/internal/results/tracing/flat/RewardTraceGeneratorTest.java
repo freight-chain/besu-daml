@@ -25,16 +25,18 @@ import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Wei;
-import org.hyperledger.besu.ethereum.core.fees.TransactionGasBudgetCalculator;
+import org.hyperledger.besu.ethereum.mainnet.AbstractBlockProcessor;
 import org.hyperledger.besu.ethereum.mainnet.ClassicBlockProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockProcessor;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MiningBeneficiaryCalculator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,10 +52,10 @@ public class RewardTraceGeneratorTest {
 
   private final BlockDataGenerator gen = new BlockDataGenerator();
 
-  @Mock private ProtocolSchedule<Void> protocolSchedule;
-  @Mock private ProtocolSpec<Void> protocolSpec;
+  @Mock private ProtocolSchedule protocolSchedule;
+  @Mock private ProtocolSpec protocolSpec;
   @Mock private MiningBeneficiaryCalculator miningBeneficiaryCalculator;
-  @Mock private TransactionProcessor transactionProcessor;
+  @Mock private MainnetTransactionProcessor transactionProcessor;
 
   private final Address ommerBeneficiary =
       Address.wrap(Bytes.fromHexString("0x095e7baea6a6c7c4c2dfeb977efac326af552d87"));
@@ -61,7 +63,7 @@ public class RewardTraceGeneratorTest {
       Address.wrap(Bytes.fromHexString("0x095e7baea6a6c7c4c2dfeb977efac326af552d88"));
   private final Wei blockReward = Wei.of(10000);
   private final BlockHeader ommerHeader = gen.header(0x09);
-
+  private final OptionalLong eraRounds = OptionalLong.of(5000000);
   private Block block;
 
   @Before
@@ -81,8 +83,8 @@ public class RewardTraceGeneratorTest {
 
   @Test
   public void assertThatTraceGeneratorReturnValidRewardsForMainnetBlockProcessor() {
-    final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory =
-        mock(MainnetBlockProcessor.TransactionReceiptFactory.class);
+    final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory =
+        mock(AbstractBlockProcessor.TransactionReceiptFactory.class);
     final MainnetBlockProcessor blockProcessor =
         new MainnetBlockProcessor(
             transactionProcessor,
@@ -90,7 +92,7 @@ public class RewardTraceGeneratorTest {
             blockReward,
             BlockHeader::getCoinbase,
             true,
-            TransactionGasBudgetCalculator.frontier());
+            Optional.empty());
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =
@@ -140,15 +142,16 @@ public class RewardTraceGeneratorTest {
 
   @Test
   public void assertThatTraceGeneratorReturnValidRewardsForClassicBlockProcessor() {
-    final ClassicBlockProcessor.TransactionReceiptFactory transactionReceiptFactory =
-        mock(ClassicBlockProcessor.TransactionReceiptFactory.class);
+    final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory =
+        mock(AbstractBlockProcessor.TransactionReceiptFactory.class);
     final ClassicBlockProcessor blockProcessor =
         new ClassicBlockProcessor(
             transactionProcessor,
             transactionReceiptFactory,
             blockReward,
             BlockHeader::getCoinbase,
-            true);
+            true,
+            eraRounds);
     when(protocolSpec.getBlockProcessor()).thenReturn(blockProcessor);
 
     final Stream<Trace> traceStream =

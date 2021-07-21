@@ -28,12 +28,14 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError;
 import org.hyperledger.besu.ethereum.api.jsonrpc.methods.JsonRpcMethodsFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
-import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration;
 import org.hyperledger.besu.ethereum.p2p.config.NetworkingConfiguration;
 import org.hyperledger.besu.ethereum.p2p.config.RlpxConfiguration;
@@ -49,6 +51,7 @@ import org.hyperledger.besu.nat.NatService;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -65,6 +68,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.apache.tuweni.bytes.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -134,7 +138,8 @@ public class JsonRpcHttpServiceRpcApisTest {
   }
 
   @Test
-  public void requestWithNetMethodShouldFailWhenNetApiIsNotEnabled() throws Exception {
+  public void requestWithNetMethodShouldSuccessWithCode200WhenNetApiIsNotEnabled()
+      throws Exception {
     service = createJsonRpcHttpServiceWithRpcApis(RpcApis.WEB3);
     final String id = "123";
     final RequestBody body =
@@ -143,7 +148,7 @@ public class JsonRpcHttpServiceRpcApisTest {
             "{\"jsonrpc\":\"2.0\",\"id\":" + Json.encode(id) + ",\"method\":\"net_version\"}");
 
     try (final Response resp = client.newCall(buildRequest(body)).execute()) {
-      assertThat(resp.code()).isEqualTo(400);
+      assertThat(resp.code()).isEqualTo(200);
       // Check general format of result
       final JsonObject json = new JsonObject(resp.body().string());
       final JsonRpcError expectedError = JsonRpcError.METHOD_NOT_ENABLED;
@@ -197,10 +202,10 @@ public class JsonRpcHttpServiceRpcApisTest {
                     mock(P2PNetwork.class),
                     blockchainQueries,
                     mock(Synchronizer.class),
-                    MainnetProtocolSchedule.create(),
+                    ProtocolScheduleFixture.MAINNET,
                     mock(FilterManager.class),
                     mock(TransactionPool.class),
-                    mock(EthHashMiningCoordinator.class),
+                    mock(PoWMiningCoordinator.class),
                     new NoOpMetricsSystem(),
                     supportedCapabilities,
                     Optional.of(mock(AccountLocalConfigPermissioningController.class)),
@@ -211,7 +216,9 @@ public class JsonRpcHttpServiceRpcApisTest {
                     mock(WebSocketConfiguration.class),
                     mock(MetricsConfiguration.class),
                     natService,
-                    new HashMap<>()));
+                    new HashMap<>(),
+                    folder.getRoot().toPath(),
+                    mock(EthPeers.class)));
     final JsonRpcHttpService jsonRpcHttpService =
         new JsonRpcHttpService(
             vertx,
@@ -257,6 +264,8 @@ public class JsonRpcHttpServiceRpcApisTest {
             .vertx(vertx)
             .config(config)
             .metricsSystem(new NoOpMetricsSystem())
+            .storageProvider(new InMemoryKeyValueStorageProvider())
+            .forkIdSupplier(() -> Collections.singletonList(Bytes.EMPTY))
             .build();
 
     p2pNetwork.start();
@@ -290,10 +299,10 @@ public class JsonRpcHttpServiceRpcApisTest {
                     p2pNetwork,
                     blockchainQueries,
                     mock(Synchronizer.class),
-                    MainnetProtocolSchedule.create(),
+                    ProtocolScheduleFixture.MAINNET,
                     mock(FilterManager.class),
                     mock(TransactionPool.class),
-                    mock(EthHashMiningCoordinator.class),
+                    mock(PoWMiningCoordinator.class),
                     new NoOpMetricsSystem(),
                     supportedCapabilities,
                     Optional.of(mock(AccountLocalConfigPermissioningController.class)),
@@ -304,7 +313,9 @@ public class JsonRpcHttpServiceRpcApisTest {
                     webSocketConfiguration,
                     metricsConfiguration,
                     natService,
-                    new HashMap<>()));
+                    new HashMap<>(),
+                    folder.getRoot().toPath(),
+                    mock(EthPeers.class)));
     final JsonRpcHttpService jsonRpcHttpService =
         new JsonRpcHttpService(
             vertx,

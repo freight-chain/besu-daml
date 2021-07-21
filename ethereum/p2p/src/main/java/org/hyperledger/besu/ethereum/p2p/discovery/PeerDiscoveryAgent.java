@@ -16,9 +16,13 @@ package org.hyperledger.besu.ethereum.p2p.discovery;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.tuweni.bytes.Bytes.wrapBuffer;
 
+import org.hyperledger.besu.crypto.Hash;
 import org.hyperledger.besu.crypto.NodeKey;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.Packet;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PeerDiscoveryController;
@@ -26,29 +30,42 @@ import org.hyperledger.besu.ethereum.p2p.discovery.internal.PeerDiscoveryControl
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PeerRequirement;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PingPacketData;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.TimerUtil;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
+import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.peers.PeerId;
 import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissions;
+import org.hyperledger.besu.ethereum.storage.StorageProvider;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier;
 import org.hyperledger.besu.nat.NatService;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction;
 import org.hyperledger.besu.util.NetworkUtility;
 import org.hyperledger.besu.util.Subscribers;
 
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
 import com.google.common.net.InetAddresses;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt64;
+import org.ethereum.beacon.discovery.schema.EnrField;
+import org.ethereum.beacon.discovery.schema.IdentitySchema;
+import org.ethereum.beacon.discovery.schema.NodeRecord;
+import org.ethereum.beacon.discovery.schema.NodeRecordFactory;
 
 /**
  * The peer discovery agent is the network component that sends and receives peer discovery messages
@@ -56,6 +73,9 @@ import org.apache.tuweni.bytes.Bytes;
  */
 public abstract class PeerDiscoveryAgent {
   private static final Logger LOG = LogManager.getLogger();
+  private static final String SEQ_NO_STORE_KEY = "local-enr-seqno";
+  private static final com.google.common.base.Supplier<SignatureAlgorithm> SIGNATURE_ALGORITHM =
+      Suppliers.memoize(SignatureAlgorithmFactory::getInstance);
 
   // The devp2p specification says only accept packets up to 1280, but some
   // clients ignore that, so we add in a little extra padding.
@@ -83,12 +103,18 @@ public abstract class PeerDiscoveryAgent {
   private boolean isActive = false;
   protected final Subscribers<PeerBondedObserver> peerBondedObservers = Subscribers.create();
 
-  public PeerDiscoveryAgent(
+  private final StorageProvider storageProvider;
+  private final Supplier<List<Bytes>> forkIdSupplier;
+  private String advertisedAddress;
+
+  protected PeerDiscoveryAgent(
       final NodeKey nodeKey,
       final DiscoveryConfiguration config,
       final PeerPermissions peerPermissions,
       final NatService natService,
-      final MetricsSystem metricsSystem) {
+      final MetricsSystem metricsSystem,
+      final StorageProvider storageProvider,
+      final Supplier<List<Bytes>> forkIdSupplier) {
     this.metricsSystem = metricsSystem;
     checkArgument(nodeKey != null, "nodeKey cannot be null");
     checkArgument(config != null, "provided configuration cannot be null");
@@ -103,7 +129,10 @@ public abstract class PeerDiscoveryAgent {
     this.config = config;
     this.nodeKey = nodeKey;
 
-    id = nodeKey.getPublicKey().getEncodedBytes();
+    this.id = nodeKey.getPublicKey().getEncodedBytes();
+
+    this.storageProvider = storageProvider;
+    this.forkIdSupplier = forkIdSupplier;
   }
 
   protected abstract TimerUtil createTimer();
@@ -124,8 +153,7 @@ public abstract class PeerDiscoveryAgent {
       LOG.info("Starting peer discovery agent on host={}, port={}", host, port);
 
       // override advertised host if we detect an external IP address via NAT manager
-      final String advertisedAddress =
-          natService.queryExternalIPAddress(config.getAdvertisedHost());
+      this.advertisedAddress = natService.queryExternalIPAddress(config.getAdvertisedHost());
 
       return listenForConnections()
           .thenApply(
@@ -134,7 +162,7 @@ public abstract class PeerDiscoveryAgent {
                 final int discoveryPort = localAddress.getPort();
                 final DiscoveryPeer ourNode =
                     DiscoveryPeer.fromEnode(
-                        EnodeURL.builder()
+                        EnodeURLImpl.builder()
                             .nodeId(id)
                             .ipAddress(advertisedAddress)
                             .listeningPort(tcpPort)
@@ -143,6 +171,7 @@ public abstract class PeerDiscoveryAgent {
                 this.localNode = Optional.of(ourNode);
                 isActive = true;
                 LOG.info("P2P peer discovery agent started and listening on {}", localAddress);
+                updateNodeRecord();
                 startController(ourNode);
                 return discoveryPort;
               });
@@ -150,6 +179,73 @@ public abstract class PeerDiscoveryAgent {
       this.isActive = false;
       return CompletableFuture.completedFuture(0);
     }
+  }
+
+  public void updateNodeRecord() {
+    if (!config.isActive()) {
+      return;
+    }
+
+    final KeyValueStorage keyValueStorage =
+        storageProvider.getStorageBySegmentIdentifier(KeyValueSegmentIdentifier.BLOCKCHAIN);
+    final NodeRecordFactory nodeRecordFactory = NodeRecordFactory.DEFAULT;
+    final Optional<NodeRecord> existingNodeRecord =
+        keyValueStorage
+            .get(Bytes.of(SEQ_NO_STORE_KEY.getBytes(UTF_8)).toArray())
+            .map(Bytes::of)
+            .map(nodeRecordFactory::fromBytes);
+
+    final Bytes addressBytes = Bytes.of(InetAddresses.forString(advertisedAddress).getAddress());
+    final Optional<EnodeURL> maybeEnodeURL = localNode.map(DiscoveryPeer::getEnodeURL);
+    final Integer discoveryPort = maybeEnodeURL.flatMap(EnodeURL::getDiscoveryPort).orElse(0);
+    final Integer listeningPort = maybeEnodeURL.flatMap(EnodeURL::getListeningPort).orElse(0);
+    final String forkIdEnrField = "eth";
+    final NodeRecord newNodeRecord =
+        existingNodeRecord
+            .filter(
+                nodeRecord ->
+                    id.equals(nodeRecord.get(EnrField.PKEY_SECP256K1))
+                        && addressBytes.equals(nodeRecord.get(EnrField.IP_V4))
+                        && discoveryPort.equals(nodeRecord.get(EnrField.UDP))
+                        && listeningPort.equals(nodeRecord.get(EnrField.TCP))
+                        && forkIdSupplier.get().equals(nodeRecord.get(forkIdEnrField)))
+            .orElseGet(
+                () -> {
+                  final UInt64 sequenceNumber =
+                      existingNodeRecord.map(NodeRecord::getSeq).orElse(UInt64.ZERO).add(1);
+                  final NodeRecord nodeRecord =
+                      nodeRecordFactory.createFromValues(
+                          sequenceNumber,
+                          new EnrField(EnrField.ID, IdentitySchema.V4),
+                          new EnrField(
+                              SIGNATURE_ALGORITHM.get().getCurveName(),
+                              SIGNATURE_ALGORITHM
+                                  .get()
+                                  .compressPublicKey(
+                                      SIGNATURE_ALGORITHM.get().createPublicKey(id))),
+                          new EnrField(EnrField.IP_V4, addressBytes),
+                          new EnrField(EnrField.TCP, listeningPort),
+                          new EnrField(EnrField.UDP, discoveryPort),
+                          new EnrField(
+                              forkIdEnrField, Collections.singletonList(forkIdSupplier.get())));
+                  nodeRecord.setSignature(
+                      nodeKey
+                          .sign(Hash.keccak256(nodeRecord.serializeNoSignature()))
+                          .encodedBytes()
+                          .slice(0, 64));
+
+                  LOG.info("Writing node record to disk. {}", nodeRecord);
+                  final KeyValueStorageTransaction keyValueStorageTransaction =
+                      keyValueStorage.startTransaction();
+                  keyValueStorageTransaction.put(
+                      Bytes.wrap(SEQ_NO_STORE_KEY.getBytes(UTF_8)).toArray(),
+                      nodeRecord.serialize().toArray());
+                  keyValueStorageTransaction.commit();
+                  return nodeRecord;
+                });
+    localNode
+        .orElseThrow(() -> new IllegalStateException("Local node should be set here"))
+        .setNodeRecord(newNodeRecord);
   }
 
   public void addPeerRequirement(final PeerRequirement peerRequirement) {
@@ -182,24 +278,23 @@ public abstract class PeerDiscoveryAgent {
   }
 
   protected void handleIncomingPacket(final Endpoint sourceEndpoint, final Packet packet) {
-    OptionalInt tcpPort = OptionalInt.empty();
-    if (packet.getPacketData(PingPacketData.class).isPresent()) {
-      final PingPacketData ping = packet.getPacketData(PingPacketData.class).orElseGet(null);
-      if (ping != null && ping.getFrom() != null && ping.getFrom().getTcpPort().isPresent()) {
-        tcpPort = ping.getFrom().getTcpPort();
-      }
-    }
+    final int udpPort = sourceEndpoint.getUdpPort();
+    final int tcpPort =
+        packet
+            .getPacketData(PingPacketData.class)
+            .flatMap(PingPacketData::getFrom)
+            .flatMap(Endpoint::getTcpPort)
+            .orElse(udpPort);
 
     // Notify the peer controller.
-    String host = sourceEndpoint.getHost();
-    int port = sourceEndpoint.getUdpPort();
+    final String host = sourceEndpoint.getHost();
     final DiscoveryPeer peer =
         DiscoveryPeer.fromEnode(
-            EnodeURL.builder()
+            EnodeURLImpl.builder()
                 .nodeId(packet.getNodeId())
                 .ipAddress(host)
-                .listeningPort(tcpPort.orElse(port))
-                .discoveryPort(port)
+                .listeningPort(tcpPort)
+                .discoveryPort(udpPort)
                 .build());
 
     controller.ifPresent(c -> c.onMessage(packet, peer));
@@ -307,5 +402,17 @@ public abstract class PeerDiscoveryAgent {
    */
   public boolean isActive() {
     return isActive;
+  }
+
+  public void bond(final Peer peer) {
+    controller.ifPresent(
+        c -> {
+          DiscoveryPeer.from(peer).ifPresent(c::handleBondingRequest);
+        });
+  }
+
+  @VisibleForTesting
+  public Optional<DiscoveryPeer> getLocalNode() {
+    return localNode;
   }
 }

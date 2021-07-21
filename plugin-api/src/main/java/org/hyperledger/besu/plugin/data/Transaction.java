@@ -53,16 +53,16 @@ public interface Transaction {
    *
    * @return the quantity of Wei per gas unit paid.
    */
-  Quantity getGasPrice();
+  Optional<? extends Quantity> getGasPrice();
 
   /**
    * A scalar value equal to the number of Wei to be paid on top of base fee, as specified in
    * EIP-1559.
    *
-   * @return the quantity of Wei for gas premium.
+   * @return the quantity of Wei for max fee per gas
    */
   @Unstable
-  default Optional<Quantity> getGasPremium() {
+  default Optional<? extends Quantity> getMaxPriorityFeePerGas() {
     return Optional.empty();
   }
 
@@ -72,7 +72,7 @@ public interface Transaction {
    * @return the quantity of Wei for fee cap.
    */
   @Unstable
-  default Optional<Quantity> getFeeCap() {
+  default Optional<? extends Quantity> getMaxFeePerGas() {
     return Optional.empty();
   }
 
@@ -109,16 +109,16 @@ public interface Transaction {
   BigInteger getV();
 
   /**
-   * Value corresponding to the 'V' component of the signature of the transaction.
+   * Value corresponding to the 'R' component of the signature of the transaction.
    *
-   * @return the 'V' component of the signature
+   * @return the 'R' component of the signature
    */
   BigInteger getR();
 
   /**
-   * Value corresponding to the 'V' component of the signature of the transaction.
+   * Value corresponding to the 'S' component of the signature of the transaction.
    *
-   * @return the 'V' component of the signature
+   * @return the 'S' component of the signature
    */
   BigInteger getS();
 
@@ -150,7 +150,7 @@ public interface Transaction {
   Optional<Bytes> getInit();
 
   /**
-   * An unlimited size byte array specifying theinput data of the message call.
+   * An unlimited size byte array specifying the input data of the message call.
    *
    * <p>Only present if this is a message call transaction, which is only true if {@link #getTo} is
    * present.
@@ -172,22 +172,10 @@ public interface Transaction {
   Bytes getPayload();
 
   /**
-   * Returns whether or not the transaction is a legacy transaction.
+   * Returns the type of the transaction.
    *
-   * @return true if legacy transaction, false otherwise
+   * @return the type of the transaction
    */
   @Unstable
-  default boolean isFrontierTransaction() {
-    return true;
-  }
-
-  /**
-   * Returns whether or not the transaction is an EIP-1559 transaction.
-   *
-   * @return true if EIP-1559 transaction, false otherwise
-   */
-  @Unstable
-  default boolean isEIP1559Transaction() {
-    return false;
-  }
+  TransactionType getType();
 }

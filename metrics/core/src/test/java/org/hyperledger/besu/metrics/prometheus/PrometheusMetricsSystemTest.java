@@ -26,6 +26,7 @@ import static org.hyperledger.besu.metrics.BesuMetricCategory.RPC;
 import static org.hyperledger.besu.metrics.StandardMetricCategory.JVM;
 
 import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.metrics.MetricsSystemFactory;
 import org.hyperledger.besu.metrics.ObservableMetricsSystem;
 import org.hyperledger.besu.metrics.Observation;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
@@ -34,6 +35,7 @@ import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 
+import java.util.Collections;
 import java.util.Comparator;
 
 import com.google.common.collect.ImmutableSet;
@@ -55,11 +57,11 @@ public class PrometheusMetricsSystemTest {
 
     counter.inc();
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 1d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 1.0, emptyList()));
 
     counter.inc();
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 2d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 2.0, emptyList()));
   }
 
   @Test
@@ -72,11 +74,11 @@ public class PrometheusMetricsSystemTest {
 
     counter1.labels().inc();
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 1d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 1.0, emptyList()));
 
     counter2.labels().inc();
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 2d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 2.0, emptyList()));
   }
 
   @Test
@@ -90,8 +92,8 @@ public class PrometheusMetricsSystemTest {
 
     assertThat(metricsSystem.streamObservations())
         .containsExactlyInAnyOrder(
-            new Observation(PEERS, "connected", 2d, singletonList("value1")),
-            new Observation(PEERS, "connected", 1d, singletonList("value2")));
+            new Observation(PEERS, "connected", 2.0, singletonList("value1")),
+            new Observation(PEERS, "connected", 1.0, singletonList("value2")));
   }
 
   @Test
@@ -100,11 +102,11 @@ public class PrometheusMetricsSystemTest {
 
     counter.inc(5);
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 5d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 5.0, emptyList()));
 
     counter.inc(6);
     assertThat(metricsSystem.streamObservations())
-        .containsExactly(new Observation(PEERS, "connected", 11d, emptyList()));
+        .containsExactly(new Observation(PEERS, "connected", 11.0, emptyList()));
   }
 
   @Test
@@ -160,7 +162,7 @@ public class PrometheusMetricsSystemTest {
   @Test
   public void shouldNotCreateObservationsFromTimerWhenTimersDisabled() {
     final ObservableMetricsSystem metricsSystem =
-        new PrometheusMetricsSystem(DEFAULT_METRIC_CATEGORIES, false);
+        new PrometheusMetricsSystem(Collections.emptySet(), false);
     final LabelledMetric<OperationTimer> timer =
         metricsSystem.createLabelledTimer(RPC, "request", "Some help", "methodName");
 
@@ -172,10 +174,10 @@ public class PrometheusMetricsSystemTest {
 
   @Test
   public void shouldCreateObservationFromGauge() {
-    metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7d);
+    metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7.0);
 
     assertThat(metricsSystem.streamObservations())
-        .containsExactlyInAnyOrder(new Observation(JVM, "myValue", 7d, emptyList()));
+        .containsExactlyInAnyOrder(new Observation(JVM, "myValue", 7.0, emptyList()));
   }
 
   @Test
@@ -183,8 +185,8 @@ public class PrometheusMetricsSystemTest {
     // Gauges have a reference to the source of their data so creating it twice will still only
     // pull data from the first instance, possibly leaking memory and likely returning the wrong
     // results.
-    metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7d);
-    assertThatThrownBy(() -> metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7d))
+    metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7.0);
+    assertThatThrownBy(() -> metricsSystem.createGauge(JVM, "myValue", "Help", () -> 7.0))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -196,7 +198,7 @@ public class PrometheusMetricsSystemTest {
             .enabled(true)
             .build();
     final ObservableMetricsSystem localMetricSystem =
-        PrometheusMetricsSystem.init(metricsConfiguration);
+        MetricsSystemFactory.create(metricsConfiguration);
 
     // do a category we are not watching
     final LabelledMetric<Counter> counterN =
@@ -220,7 +222,7 @@ public class PrometheusMetricsSystemTest {
   public void returnsNoOpMetricsWhenAllDisabled() {
     final MetricsConfiguration metricsConfiguration =
         MetricsConfiguration.builder().enabled(false).pushEnabled(false).build();
-    final MetricsSystem localMetricSystem = PrometheusMetricsSystem.init(metricsConfiguration);
+    final MetricsSystem localMetricSystem = MetricsSystemFactory.create(metricsConfiguration);
 
     assertThat(localMetricSystem).isInstanceOf(NoOpMetricsSystem.class);
   }
@@ -229,7 +231,7 @@ public class PrometheusMetricsSystemTest {
   public void returnsPrometheusMetricsWhenEnabled() {
     final MetricsConfiguration metricsConfiguration =
         MetricsConfiguration.builder().enabled(true).pushEnabled(false).build();
-    final MetricsSystem localMetricSystem = PrometheusMetricsSystem.init(metricsConfiguration);
+    final MetricsSystem localMetricSystem = MetricsSystemFactory.create(metricsConfiguration);
 
     assertThat(localMetricSystem).isInstanceOf(PrometheusMetricsSystem.class);
   }
@@ -238,7 +240,7 @@ public class PrometheusMetricsSystemTest {
   public void returnsNoOpMetricsWhenPushEnabled() {
     final MetricsConfiguration metricsConfiguration =
         MetricsConfiguration.builder().enabled(false).pushEnabled(true).build();
-    final MetricsSystem localMetricSystem = PrometheusMetricsSystem.init(metricsConfiguration);
+    final MetricsSystem localMetricSystem = MetricsSystemFactory.create(metricsConfiguration);
 
     assertThat(localMetricSystem).isInstanceOf(PrometheusMetricsSystem.class);
   }

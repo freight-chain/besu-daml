@@ -48,6 +48,47 @@ public class EnclaveFactory {
     return new Enclave(vertxTransmitter);
   }
 
+  public Enclave createVertxEnclave(
+      final URI enclaveUri,
+      final Path privacyKeyStoreFile,
+      final Path privacyKeyStorePasswordFile,
+      final Path privacyAllowlistFile) {
+
+    final HttpClientOptions clientOptions =
+        createTlsClientOptions(
+            enclaveUri, privacyKeyStoreFile, privacyKeyStorePasswordFile, privacyAllowlistFile);
+
+    final RequestTransmitter vertxTransmitter =
+        new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
+
+    return new Enclave(vertxTransmitter);
+  }
+
+  public GoQuorumEnclave createGoQuorumEnclave(final URI enclaveUri) {
+    final HttpClientOptions clientOptions = createNonTlsClientOptions(enclaveUri);
+
+    final RequestTransmitter vertxTransmitter =
+        new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
+
+    return new GoQuorumEnclave(vertxTransmitter);
+  }
+
+  public GoQuorumEnclave createGoQuorumEnclave(
+      final URI enclaveUri,
+      final Path privacyKeyStoreFile,
+      final Path privacyKeyStorePasswordFile,
+      final Path privacyAllowlistFile) {
+
+    final HttpClientOptions clientOptions =
+        createTlsClientOptions(
+            enclaveUri, privacyKeyStoreFile, privacyKeyStorePasswordFile, privacyAllowlistFile);
+
+    final RequestTransmitter vertxTransmitter =
+        new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
+
+    return new GoQuorumEnclave(vertxTransmitter);
+  }
+
   private HttpClientOptions createNonTlsClientOptions(final URI enclaveUri) {
 
     if (enclaveUri.getPort() == -1) {
@@ -65,7 +106,7 @@ public class EnclaveFactory {
       final URI enclaveUri,
       final Path privacyKeyStoreFile,
       final Path privacyKeyStorePasswordFile,
-      final Path privacyWhitelistFile) {
+      final Path privacyAllowlistFile) {
 
     final HttpClientOptions clientOptions = createNonTlsClientOptions(enclaveUri);
     try {
@@ -75,7 +116,7 @@ public class EnclaveFactory {
             convertFrom(privacyKeyStoreFile, privacyKeyStorePasswordFile));
       }
       clientOptions.setTrustOptions(
-          VertxTrustOptions.whitelistServers(privacyWhitelistFile, TRUST_CA));
+          VertxTrustOptions.allowlistServers(privacyAllowlistFile, TRUST_CA));
     } catch (final NoSuchFileException e) {
       throw new InvalidConfigurationException(
           "Requested file " + e.getMessage() + " does not exist at specified location.");
@@ -88,22 +129,6 @@ public class EnclaveFactory {
       throw new InvalidConfigurationException("Failed to load TLS files " + e.getMessage());
     }
     return clientOptions;
-  }
-
-  public Enclave createVertxEnclave(
-      final URI enclaveUri,
-      final Path privacyKeyStoreFile,
-      final Path privacyKeyStorePasswordFile,
-      final Path privacyWhitelistFile) {
-
-    final HttpClientOptions clientOptions =
-        createTlsClientOptions(
-            enclaveUri, privacyKeyStoreFile, privacyKeyStorePasswordFile, privacyWhitelistFile);
-
-    final RequestTransmitter vertxTransmitter =
-        new VertxRequestTransmitter(vertx.createHttpClient(clientOptions));
-
-    return new Enclave(vertxTransmitter);
   }
 
   private static PfxOptions convertFrom(final Path keystoreFile, final Path keystorePasswordFile)

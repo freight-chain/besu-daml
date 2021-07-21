@@ -25,7 +25,6 @@ import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.Words;
 
-import java.util.EnumSet;
 import java.util.Optional;
 
 import org.apache.tuweni.units.bigints.UInt256;
@@ -58,22 +57,22 @@ public class CallOperation extends AbstractCallOperation {
 
   @Override
   protected UInt256 inputDataOffset(final MessageFrame frame) {
-    return UInt256.fromBytes(frame.getStackItem(3));
+    return frame.getStackItem(3);
   }
 
   @Override
   protected UInt256 inputDataLength(final MessageFrame frame) {
-    return UInt256.fromBytes(frame.getStackItem(4));
+    return frame.getStackItem(4);
   }
 
   @Override
   protected UInt256 outputDataOffset(final MessageFrame frame) {
-    return UInt256.fromBytes(frame.getStackItem(5));
+    return frame.getStackItem(5);
   }
 
   @Override
   protected UInt256 outputDataLength(final MessageFrame frame) {
-    return UInt256.fromBytes(frame.getStackItem(6));
+    return frame.getStackItem(6);
   }
 
   @Override
@@ -114,16 +113,17 @@ public class CallOperation extends AbstractCallOperation {
             outputDataOffset,
             outputDataLength,
             value(frame),
-            recipient);
+            recipient,
+            to(frame));
   }
 
   @Override
-  public Optional<ExceptionalHaltReason> exceptionalHaltCondition(
-      final MessageFrame frame,
-      final EnumSet<ExceptionalHaltReason> previousReasons,
-      final EVM evm) {
-    return frame.isStatic() && !value(frame).isZero()
-        ? Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE)
-        : Optional.empty();
+  public OperationResult execute(final MessageFrame frame, final EVM evm) {
+    if (frame.isStatic() && !value(frame).isZero()) {
+      return new OperationResult(
+          Optional.of(cost(frame)), Optional.of(ExceptionalHaltReason.ILLEGAL_STATE_CHANGE));
+    } else {
+      return super.execute(frame, evm);
+    }
   }
 }

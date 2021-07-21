@@ -14,29 +14,26 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 
-public class ChainIdOperation extends AbstractOperation {
+public class ChainIdOperation extends AbstractFixedCostOperation {
 
-  private final Bytes32 chainId;
+  private final UInt256 chainId;
 
   public ChainIdOperation(final GasCalculator gasCalculator, final Bytes32 chainId) {
-    super(0x46, "CHAINID", 0, 1, false, 1, gasCalculator);
-    this.chainId = chainId;
+    super(0x46, "CHAINID", 0, 1, false, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
+    this.chainId = UInt256.fromBytes(chainId);
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getBaseTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
     frame.pushStackItem(chainId);
+
+    return successResponse;
   }
 }

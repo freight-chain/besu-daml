@@ -32,19 +32,21 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnection.PeerNot
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
+import org.hyperledger.besu.plugin.services.permissioning.NodeMessagePermissioningProvider;
 
 import java.time.Clock;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
@@ -61,9 +63,12 @@ public class EthPeer {
   private final Set<Hash> knownBlocks;
   private final String protocolName;
   private final Clock clock;
+  private final List<NodeMessagePermissioningProvider> permissioningProviders;
   private final ChainState chainHeadState;
   private final AtomicBoolean statusHasBeenSentToPeer = new AtomicBoolean(false);
   private final AtomicBoolean statusHasBeenReceivedFromPeer = new AtomicBoolean(false);
+  private final AtomicBoolean fullyValidated = new AtomicBoolean(false);
+  private final AtomicInteger lastProtocolVersion = new AtomicInteger(0);
 
   private volatile long lastRequestTimestamp = 0;
   private final RequestManager headersRequestManager = new RequestManager(this);
@@ -74,21 +79,24 @@ public class EthPeer {
 
   private final AtomicReference<Consumer<EthPeer>> onStatusesExchanged = new AtomicReference<>();
   private final PeerReputation reputation = new PeerReputation();
-  private final Map<PeerValidator, Boolean> validationStatus = new HashMap<>();
+  private final Map<PeerValidator, Boolean> validationStatus = new ConcurrentHashMap<>();
 
-  EthPeer(
+  @VisibleForTesting
+  public EthPeer(
       final PeerConnection connection,
       final String protocolName,
       final Consumer<EthPeer> onStatusesExchanged,
       final List<PeerValidator> peerValidators,
-      final Clock clock) {
+      final Clock clock,
+      final List<NodeMessagePermissioningProvider> permissioningProviders) {
     this.connection = connection;
     this.protocolName = protocolName;
     this.clock = clock;
+    this.permissioningProviders = permissioningProviders;
     knownBlocks =
         Collections.newSetFromMap(
             Collections.synchronizedMap(
-                new LinkedHashMap<Hash, Boolean>(16, 0.75f, true) {
+                new LinkedHashMap<>(16, 0.75f, true) {
                   @Override
                   protected boolean removeEldestEntry(final Map.Entry<Hash, Boolean> eldest) {
                     return size() > maxTrackedSeenBlocks;
@@ -96,9 +104,10 @@ public class EthPeer {
                 }));
     this.chainHeadState = new ChainState();
     this.onStatusesExchanged.set(onStatusesExchanged);
-    for (PeerValidator peerValidator : peerValidators) {
+    for (final PeerValidator peerValidator : peerValidators) {
       validationStatus.put(peerValidator, false);
     }
+    fullyValidated.set(peerValidators.isEmpty());
   }
 
   public void markValidated(final PeerValidator validator) {
@@ -106,6 +115,7 @@ public class EthPeer {
       throw new IllegalArgumentException("Attempt to update unknown validation status");
     }
     validationStatus.put(validator, true);
+    fullyValidated.set(validationStatus.values().stream().allMatch(b -> b));
   }
 
   /**
@@ -114,12 +124,7 @@ public class EthPeer {
    * @return {@code true} if all peer validation logic has run and successfully validated this peer
    */
   public boolean isFullyValidated() {
-    for (Boolean isValid : validationStatus.values()) {
-      if (!isValid) {
-        return false;
-      }
-    }
-    return true;
+    return fullyValidated.get();
   }
 
   public boolean isDisconnected() {
@@ -149,6 +154,23 @@ public class EthPeer {
   }
 
   public RequestManager.ResponseStream send(final MessageData messageData) throws PeerNotConnected {
+    if (permissioningProviders.stream()
+        .anyMatch(p -> !p.isMessagePermitted(connection.getRemoteEnode(), messageData.getCode()))) {
+      LOG.info(
+          "Permissioning blocked sending of message code {} to {}",
+          messageData.getCode(),
+          connection.getRemoteEnode());
+      LOG.debug(
+          "Permissioning blocked by providers {}",
+          () ->
+              permissioningProviders.stream()
+                  .filter(
+                      p ->
+                          !p.isMessagePermitted(
+                              connection.getRemoteEnode(), messageData.getCode())));
+      return null;
+    }
+
     switch (messageData.getCode()) {
       case EthPV62.GET_BLOCK_HEADERS:
         return sendRequest(headersRequestManager, messageData);
@@ -306,8 +328,10 @@ public class EthPeer {
     maybeExecuteStatusesExchangedCallback();
   }
 
-  public void registerStatusReceived(final Hash hash, final Difficulty td) {
+  public void registerStatusReceived(
+      final Hash hash, final Difficulty td, final int protocolVersion) {
     chainHeadState.statusReceived(hash, td);
+    lastProtocolVersion.set(protocolVersion);
     statusHasBeenReceivedFromPeer.set(true);
     maybeExecuteStatusesExchangedCallback();
   }
@@ -336,12 +360,16 @@ public class EthPeer {
    *
    * @return true if the peer has sent its initial status message to us.
    */
-  public boolean statusHasBeenReceived() {
+  boolean statusHasBeenReceived() {
     return statusHasBeenReceivedFromPeer.get();
   }
 
-  /** @return true if we have sent a status message to this peer. */
-  public boolean statusHasBeenSentToPeer() {
+  /**
+   * Return true if we have sent a status message to this peer.
+   *
+   * @return true if we have sent a status message to this peer.
+   */
+  boolean statusHasBeenSentToPeer() {
     return statusHasBeenSentToPeer.get();
   }
 
@@ -349,12 +377,28 @@ public class EthPeer {
     return knownBlocks.contains(hash);
   }
 
-  /** @return This peer's current chain state. */
+  /**
+   * Return This peer's current chain state.
+   *
+   * @return This peer's current chain state.
+   */
   public ChainState chainState() {
     return chainHeadState;
   }
 
-  /** @return A read-only snapshot of this peer's current {@code chainState} } */
+  public int getLastProtocolVersion() {
+    return lastProtocolVersion.get();
+  }
+
+  public String getProtocolName() {
+    return protocolName;
+  }
+
+  /**
+   * Return A read-only snapshot of this peer's current {@code chainState} }
+   *
+   * @return A read-only snapshot of this peer's current {@code chainState} }
+   */
   public ChainHeadEstimate chainStateSnapshot() {
     return chainHeadState.getSnapshot();
   }
@@ -383,13 +427,17 @@ public class EthPeer {
     return connection.getAgreedCapabilities();
   }
 
+  public PeerConnection getConnection() {
+    return connection;
+  }
+
   public Bytes nodeId() {
     return connection.getPeerInfo().getNodeId();
   }
 
   @Override
   public String toString() {
-    return nodeId().toString().substring(0, 20) + "...";
+    return String.format("Peer %s...", nodeId().toString().substring(0, 20));
   }
 
   @FunctionalInterface

@@ -14,10 +14,13 @@
  */
 package org.hyperledger.besu.consensus.ibft.messagewrappers;
 
-import org.hyperledger.besu.consensus.ibft.IbftBlockHeaderFunctions;
+import org.hyperledger.besu.consensus.common.bft.BftBlockHeaderFunctions;
+import org.hyperledger.besu.consensus.common.bft.messagewrappers.BftMessage;
+import org.hyperledger.besu.consensus.common.bft.payload.SignedData;
+import org.hyperledger.besu.consensus.ibft.IbftExtraDataCodec;
+import org.hyperledger.besu.consensus.ibft.payload.PayloadDeserializers;
 import org.hyperledger.besu.consensus.ibft.payload.ProposalPayload;
 import org.hyperledger.besu.consensus.ibft.payload.RoundChangeCertificate;
-import org.hyperledger.besu.consensus.ibft.payload.SignedData;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput;
@@ -28,8 +31,9 @@ import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
 
-public class Proposal extends IbftMessage<ProposalPayload> {
+public class Proposal extends BftMessage<ProposalPayload> {
 
+  private static final IbftExtraDataCodec BFT_EXTRA_DATA_ENCODER = new IbftExtraDataCodec();
   private final Block proposedBlock;
 
   private final Optional<RoundChangeCertificate> roundChangeCertificate;
@@ -73,8 +77,10 @@ public class Proposal extends IbftMessage<ProposalPayload> {
   public static Proposal decode(final Bytes data) {
     final RLPInput rlpIn = RLP.input(data);
     rlpIn.enterList();
-    final SignedData<ProposalPayload> payload = SignedData.readSignedProposalPayloadFrom(rlpIn);
-    final Block proposedBlock = Block.readFrom(rlpIn, IbftBlockHeaderFunctions.forCommittedSeal());
+    final SignedData<ProposalPayload> payload =
+        PayloadDeserializers.readSignedProposalPayloadFrom(rlpIn);
+    final Block proposedBlock =
+        Block.readFrom(rlpIn, BftBlockHeaderFunctions.forCommittedSeal(BFT_EXTRA_DATA_ENCODER));
 
     final Optional<RoundChangeCertificate> roundChangeCertificate =
         readRoundChangeCertificate(rlpIn);

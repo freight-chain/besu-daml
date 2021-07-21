@@ -39,10 +39,11 @@ public abstract class MainnetDifficultyCalculators {
   private static final long BYZANTIUM_FAKE_BLOCK_OFFSET = 2_999_999L;
   private static final long CONSTANTINOPLE_FAKE_BLOCK_OFFSET = 4_999_999L;
   private static final long MUIR_GLACIER_FAKE_BLOCK_OFFSET = 8_999_999L;
+  private static final long LONDON_FAKE_BLOCK_OFFSET = 9_699_999L;
 
   private MainnetDifficultyCalculators() {}
 
-  public static DifficultyCalculator<Void> FRONTIER =
+  public static DifficultyCalculator FRONTIER =
       (time, parent, protocolContext) -> {
         final BigInteger parentDifficulty = difficulty(parent.getDifficulty());
         final BigInteger adjust = parentDifficulty.divide(DIFFICULTY_BOUND_DIVISOR);
@@ -57,7 +58,7 @@ public abstract class MainnetDifficultyCalculators {
         return periodCount > 1 ? adjustForPeriod(periodCount, difficulty) : difficulty;
       };
 
-  public static DifficultyCalculator<Void> HOMESTEAD =
+  public static DifficultyCalculator HOMESTEAD =
       (time, parent, protocolContext) -> {
         final BigInteger parentDifficulty = difficulty(parent.getDifficulty());
         final BigInteger difficulty =
@@ -70,17 +71,22 @@ public abstract class MainnetDifficultyCalculators {
       };
 
   @VisibleForTesting
-  public static DifficultyCalculator<Void> BYZANTIUM =
+  public static DifficultyCalculator BYZANTIUM =
       (time, parent, protocolContext) ->
           calculateThawedDifficulty(time, parent, BYZANTIUM_FAKE_BLOCK_OFFSET);
 
-  static DifficultyCalculator<Void> CONSTANTINOPLE =
+  static DifficultyCalculator CONSTANTINOPLE =
       (time, parent, protocolContext) ->
           calculateThawedDifficulty(time, parent, CONSTANTINOPLE_FAKE_BLOCK_OFFSET);
 
-  static DifficultyCalculator<Void> MUIR_GLACIER =
+  static DifficultyCalculator MUIR_GLACIER =
       (time, parent, protocolContext) ->
           calculateThawedDifficulty(time, parent, MUIR_GLACIER_FAKE_BLOCK_OFFSET);
+
+  // As per https://eips.ethereum.org/EIPS/eip-3554
+  static DifficultyCalculator LONDON =
+      (time, parent, protocolContext) ->
+          calculateThawedDifficulty(time, parent, LONDON_FAKE_BLOCK_OFFSET);
 
   private static BigInteger calculateThawedDifficulty(
       final long time, final BlockHeader parent, final long fakeBlockOffset) {

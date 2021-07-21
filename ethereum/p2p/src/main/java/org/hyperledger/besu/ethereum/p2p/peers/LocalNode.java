@@ -16,6 +16,7 @@ package org.hyperledger.besu.ethereum.p2p.peers;
 
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.PeerInfo;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import java.util.List;
 
@@ -38,12 +39,16 @@ public interface LocalNode {
   }
 
   /**
+   * Information of this node as a peer.
+   *
    * @return the {@link PeerInfo} associated with the local node.
    * @throws NodeNotReadyException If the local node is not ready, throws an exception.
    */
   PeerInfo getPeerInfo() throws NodeNotReadyException;
 
   /**
+   * This node as a Peer.
+   *
    * @return a {@link Peer} representing the local node.
    * @throws NodeNotReadyException If the local node is not ready, throws an exception.
    */

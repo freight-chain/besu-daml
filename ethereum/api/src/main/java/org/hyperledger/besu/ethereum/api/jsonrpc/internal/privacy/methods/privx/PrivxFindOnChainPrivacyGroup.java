@@ -15,13 +15,13 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.privx;
 
 import static org.apache.logging.log4j.LogManager.getLogger;
-import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError.FIND_ON_CHAIN_PRIVACY_GROUP_ERROR;
+import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcError.FIND_ONCHAIN_PRIVACY_GROUP_ERROR;
 
 import org.hyperledger.besu.enclave.types.PrivacyGroup;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
-import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.EnclavePublicKeyProvider;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.PrivacyIdProvider;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcResponse;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse;
@@ -37,13 +37,12 @@ public class PrivxFindOnChainPrivacyGroup implements JsonRpcMethod {
 
   private static final Logger LOG = getLogger();
   private final PrivacyController privacyController;
-  private final EnclavePublicKeyProvider enclavePublicKeyProvider;
+  private final PrivacyIdProvider privacyIdProvider;
 
   public PrivxFindOnChainPrivacyGroup(
-      final PrivacyController privacyController,
-      final EnclavePublicKeyProvider enclavePublicKeyProvider) {
+      final PrivacyController privacyController, final PrivacyIdProvider privacyIdProvider) {
     this.privacyController = privacyController;
-    this.enclavePublicKeyProvider = enclavePublicKeyProvider;
+    this.privacyIdProvider = privacyIdProvider;
   }
 
   @Override
@@ -62,17 +61,17 @@ public class PrivxFindOnChainPrivacyGroup implements JsonRpcMethod {
     final List<PrivacyGroup> response;
     try {
       response =
-          privacyController.findOnChainPrivacyGroup(
+          privacyController.findOnChainPrivacyGroupByMembers(
               Arrays.asList(addresses),
-              enclavePublicKeyProvider.getEnclaveKey(requestContext.getUser()));
+              privacyIdProvider.getPrivacyUserId(requestContext.getUser()));
     } catch (final MultiTenancyValidationException e) {
       LOG.error("Unauthorized privacy multi-tenancy rpc request. {}", e.getMessage());
       return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), FIND_ON_CHAIN_PRIVACY_GROUP_ERROR);
+          requestContext.getRequest().getId(), FIND_ONCHAIN_PRIVACY_GROUP_ERROR);
     } catch (final Exception e) {
       LOG.error("Failed to fetch on chain privacy group", e);
       return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(), FIND_ON_CHAIN_PRIVACY_GROUP_ERROR);
+          requestContext.getRequest().getId(), FIND_ONCHAIN_PRIVACY_GROUP_ERROR);
     }
 
     return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), response);

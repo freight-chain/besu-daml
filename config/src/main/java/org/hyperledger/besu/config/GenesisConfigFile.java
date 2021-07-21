@@ -15,10 +15,12 @@
 package org.hyperledger.besu.config;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.hyperledger.besu.config.JsonUtil.normalizeKeys;
 
+import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
+
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +70,15 @@ public class GenesisConfigFile {
     }
   }
 
+  public static GenesisConfigFile ecip1049dev() {
+    try {
+      return fromConfig(
+          Resources.toString(GenesisConfigFile.class.getResource("/ecip1049_dev.json"), UTF_8));
+    } catch (final IOException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
   public static GenesisConfigFile fromConfig(final String jsonString) {
     return fromConfig(JsonUtil.objectNodeFromString(jsonString, false));
   }
@@ -110,7 +121,17 @@ public class GenesisConfigFile {
   }
 
   public long getGasLimit() {
-    return parseLong("gasLimit", getRequiredString("gaslimit"));
+    return parseLong("gasLimit", getFirstRequiredString("gaslimit", "gastarget"));
+  }
+
+  public Optional<Long> getBaseFeePerGas() {
+    return JsonUtil.getString(configRoot, "basefeepergas")
+        .map(baseFeeStr -> parseLong("baseFeePerGas", baseFeeStr));
+  }
+
+  public Optional<Long> getGenesisBaseFeePerGas() {
+    return Optional.of(getBaseFeePerGas().orElse(ExperimentalEIPs.initialBasefee))
+        .filter(z -> 0L == getConfigOptions().getEIP1559BlockNumber().orElse(-1L));
   }
 
   public String getMixHash() {
@@ -129,26 +150,22 @@ public class GenesisConfigFile {
     return parseLong("timestamp", JsonUtil.getValueAsString(configRoot, "timestamp", "0x0"));
   }
 
-  public List<Long> getForks() {
-    return JsonUtil.getObjectNode(configRoot, "config").stream()
-        .flatMap(
-            node ->
-                Streams.stream(node.fieldNames())
-                    .map(String::toLowerCase)
-                    .filter(name -> !name.equals("chainid"))
-                    .filter(name -> node.get(name).canConvertToLong())
-                    .filter(name -> name.contains("block"))
-                    .map(name -> node.get(name).asLong()))
-        .sorted()
-        .collect(toUnmodifiableList());
+  private String getRequiredString(final String key) {
+    return getFirstRequiredString(key);
   }
 
-  private String getRequiredString(final String key) {
-    if (!configRoot.has(key)) {
-      throw new IllegalArgumentException(
-          String.format("Invalid genesis block configuration, missing value for '%s'", key));
-    }
-    return configRoot.get(key).asText();
+  private String getFirstRequiredString(final String... keys) {
+    List<String> keysList = Arrays.asList(keys);
+    return keysList.stream()
+        .filter(key -> configRoot.has(key))
+        .findFirst()
+        .map(key -> configRoot.get(key).asText())
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    String.format(
+                        "Invalid genesis block configuration, missing value for one of '%s'",
+                        keysList)));
   }
 
   private long parseLong(final String name, final String value) {
@@ -162,5 +179,9 @@ public class GenesisConfigFile {
               + value
               + "'");
     }
+  }
+
+  public List<Long> getForks() {
+    return getConfigOptions().getForks();
   }
 }

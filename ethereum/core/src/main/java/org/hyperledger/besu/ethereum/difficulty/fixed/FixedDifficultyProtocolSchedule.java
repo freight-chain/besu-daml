@@ -18,28 +18,33 @@ import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolScheduleBuilder;
+import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecAdapters;
 
 /** A ProtocolSchedule which behaves similarly to MainNet, but with a much reduced difficulty. */
 public class FixedDifficultyProtocolSchedule {
 
-  public static ProtocolSchedule<Void> create(
+  public static ProtocolSchedule create(
       final GenesisConfigOptions config,
       final PrivacyParameters privacyParameters,
       final boolean isRevertReasonEnabled) {
-    return new ProtocolScheduleBuilder<>(
+    return new ProtocolScheduleBuilder(
             config,
-            builder -> builder.difficultyCalculator(FixedDifficultyCalculators.calculator(config)),
+            ProtocolSpecAdapters.create(
+                0,
+                builder ->
+                    builder.difficultyCalculator(FixedDifficultyCalculators.calculator(config))),
             privacyParameters,
-            isRevertReasonEnabled)
+            isRevertReasonEnabled,
+            config.isQuorum())
         .createProtocolSchedule();
   }
 
-  public static ProtocolSchedule<Void> create(
+  public static ProtocolSchedule create(
       final GenesisConfigOptions config, final boolean isRevertReasonEnabled) {
     return create(config, PrivacyParameters.DEFAULT, isRevertReasonEnabled);
   }
 
-  public static ProtocolSchedule<Void> create(final GenesisConfigOptions config) {
+  public static ProtocolSchedule create(final GenesisConfigOptions config) {
     return create(config, PrivacyParameters.DEFAULT, false);
   }
 }

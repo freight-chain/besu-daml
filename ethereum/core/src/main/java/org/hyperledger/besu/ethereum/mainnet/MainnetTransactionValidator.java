@@ -14,19 +14,21 @@
  */
 package org.hyperledger.besu.ethereum.mainnet;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
-import org.hyperledger.besu.crypto.SECP256K1;
-import org.hyperledger.besu.ethereum.core.AcceptedTransactionTypes;
+import org.hyperledger.besu.crypto.SECPSignature;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionFilter;
 import org.hyperledger.besu.ethereum.core.Wei;
-import org.hyperledger.besu.ethereum.core.fees.EIP1559;
+import org.hyperledger.besu.ethereum.core.fees.TransactionPriceCalculator;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
+import org.hyperledger.besu.plugin.data.TransactionType;
 
 import java.math.BigInteger;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Validates a transaction based on Frontier protocol runtime requirements.
@@ -34,70 +36,122 @@ import java.util.Optional;
  * <p>The {@link MainnetTransactionValidator} performs the intrinsic gas cost check on the given
  * {@link Transaction}.
  */
-public class MainnetTransactionValidator implements TransactionValidator {
+public class MainnetTransactionValidator {
 
   private final GasCalculator gasCalculator;
+  private final Optional<TransactionPriceCalculator> transactionPriceCalculator;
 
   private final boolean disallowSignatureMalleability;
 
   private final Optional<BigInteger> chainId;
 
   private Optional<TransactionFilter> transactionFilter = Optional.empty();
-  private final Optional<EIP1559> maybeEip1559;
-  private final AcceptedTransactionTypes acceptedTransactionTypes;
+  private final Set<TransactionType> acceptedTransactionTypes;
+  private final boolean goQuorumCompatibilityMode;
 
   public MainnetTransactionValidator(
       final GasCalculator gasCalculator,
       final boolean checkSignatureMalleability,
-      final Optional<BigInteger> chainId) {
+      final Optional<BigInteger> chainId,
+      final boolean goQuorumCompatibilityMode) {
     this(
         gasCalculator,
         checkSignatureMalleability,
         chainId,
-        Optional.empty(),
-        AcceptedTransactionTypes.FRONTIER_TRANSACTIONS);
+        Set.of(TransactionType.FRONTIER),
+        goQuorumCompatibilityMode);
   }
 
   public MainnetTransactionValidator(
       final GasCalculator gasCalculator,
       final boolean checkSignatureMalleability,
       final Optional<BigInteger> chainId,
-      final Optional<EIP1559> maybeEip1559,
-      final AcceptedTransactionTypes acceptedTransactionTypes) {
-    this.gasCalculator = gasCalculator;
-    this.disallowSignatureMalleability = checkSignatureMalleability;
-    this.chainId = chainId;
-    this.maybeEip1559 = maybeEip1559;
-    this.acceptedTransactionTypes = acceptedTransactionTypes;
+      final Set<TransactionType> acceptedTransactionTypes,
+      final boolean quorumCompatibilityMode) {
+    this(
+        gasCalculator,
+        Optional.of(TransactionPriceCalculator.frontier()),
+        checkSignatureMalleability,
+        chainId,
+        acceptedTransactionTypes,
+        quorumCompatibilityMode);
   }
 
-  @Override
-  public ValidationResult<TransactionInvalidReason> validate(final Transaction transaction) {
+  public MainnetTransactionValidator(
+      final GasCalculator gasCalculator,
+      final Optional<TransactionPriceCalculator> transactionPriceCalculator,
+      final boolean checkSignatureMalleability,
+      final Optional<BigInteger> chainId,
+      final Set<TransactionType> acceptedTransactionTypes,
+      final boolean goQuorumCompatibilityMode) {
+    this.gasCalculator = gasCalculator;
+    this.transactionPriceCalculator = transactionPriceCalculator;
+    this.disallowSignatureMalleability = checkSignatureMalleability;
+    this.chainId = chainId;
+    this.acceptedTransactionTypes = acceptedTransactionTypes;
+    this.goQuorumCompatibilityMode = goQuorumCompatibilityMode;
+  }
+
+  /**
+   * Asserts whether a transaction is valid.
+   *
+   * @param transaction the transaction to validate
+   * @param baseFee optional baseFee
+   * @param transactionValidationParams Validation parameters that will be used
+   * @return An empty @{link Optional} if the transaction is considered valid; otherwise an @{code
+   *     Optional} containing a {@link TransactionInvalidReason} that identifies why the transaction
+   *     is invalid.
+   */
+  public ValidationResult<TransactionInvalidReason> validate(
+      final Transaction transaction,
+      final Optional<Long> baseFee,
+      final TransactionValidationParams transactionValidationParams) {
     final ValidationResult<TransactionInvalidReason> signatureResult =
         validateTransactionSignature(transaction);
     if (!signatureResult.isValid()) {
       return signatureResult;
     }
 
-    if (ExperimentalEIPs.eip1559Enabled && maybeEip1559.isPresent()) {
-      final EIP1559 eip1559 = maybeEip1559.get();
-      if (!eip1559.isValidFormat(transaction, acceptedTransactionTypes)) {
+    if (goQuorumCompatibilityMode && transaction.hasCostParams()) {
+      return ValidationResult.invalid(
+          TransactionInvalidReason.GAS_PRICE_MUST_BE_ZERO,
+          "gasPrice must be set to zero on a GoQuorum compatible network");
+    }
+
+    final TransactionType transactionType = transaction.getType();
+    if (!acceptedTransactionTypes.contains(transactionType)) {
+      return ValidationResult.invalid(
+          TransactionInvalidReason.INVALID_TRANSACTION_FORMAT,
+          String.format(
+              "Transaction type %s is invalid, accepted transaction types are %s",
+              transactionType, acceptedTransactionTypes));
+    }
+
+    if (baseFee.isPresent()) {
+      final Wei price = transactionPriceCalculator.orElseThrow().price(transaction, baseFee);
+      if (!transactionValidationParams.isAllowMaxFeerGasBelowBaseFee()
+          && price.compareTo(Wei.of(baseFee.orElseThrow())) < 0) {
         return ValidationResult.invalid(
             TransactionInvalidReason.INVALID_TRANSACTION_FORMAT,
-            String.format(
-                "transaction format is invalid, accepted transaction types are %s",
-                acceptedTransactionTypes.toString()));
+            "gasPrice is less than the current BaseFee");
       }
-      if (!eip1559.isValidGasLimit(transaction)) {
+
+      // assert transaction.max_fee_per_gas >= transaction.max_priority_fee_per_gas
+      if (transaction.getType().supports1559FeeMarket()
+          && transaction
+                  .getMaxPriorityFeePerGas()
+                  .get()
+                  .getAsBigInteger()
+                  .compareTo(transaction.getMaxFeePerGas().get().getAsBigInteger())
+              > 0) {
         return ValidationResult.invalid(
-            TransactionInvalidReason.EXCEEDS_PER_TRANSACTION_GAS_LIMIT,
-            String.format(
-                "transaction gas limit %s exceeds per transaction gas limit",
-                transaction.getGasLimit()));
+            TransactionInvalidReason.MAX_PRIORITY_FEE_PER_GAS_EXCEEDS_MAX_FEE_PER_GAS,
+            "max priority fee per gas cannot be greater than max fee per gas");
       }
     }
 
-    final Gas intrinsicGasCost = gasCalculator.transactionIntrinsicGasCost(transaction);
+    final Gas intrinsicGasCost =
+        gasCalculator.transactionIntrinsicGasCostAndAccessedState(transaction).getGas();
     if (intrinsicGasCost.compareTo(Gas.of(transaction.getGasLimit())) > 0) {
       return ValidationResult.invalid(
           TransactionInvalidReason.INTRINSIC_GAS_EXCEEDS_GAS_LIMIT,
@@ -109,7 +163,6 @@ public class MainnetTransactionValidator implements TransactionValidator {
     return ValidationResult.valid();
   }
 
-  @Override
   public ValidationResult<TransactionInvalidReason> validateForSender(
       final Transaction transaction,
       final Account sender,
@@ -149,7 +202,7 @@ public class MainnetTransactionValidator implements TransactionValidator {
     if (!isSenderAllowed(transaction, validationParams)) {
       return ValidationResult.invalid(
           TransactionInvalidReason.TX_SENDER_NOT_AUTHORIZED,
-          String.format("Sender %s is not on the Account Whitelist", transaction.getSender()));
+          String.format("Sender %s is not on the Account Allowlist", transaction.getSender()));
     }
 
     return ValidationResult.valid();
@@ -166,20 +219,22 @@ public class MainnetTransactionValidator implements TransactionValidator {
               transaction.getChainId().get(), chainId.get()));
     }
 
-    if (!chainId.isPresent() && transaction.getChainId().isPresent()) {
+    if (!transaction.isGoQuorumPrivateTransaction()
+        && !chainId.isPresent()
+        && transaction.getChainId().isPresent()) {
       return ValidationResult.invalid(
           TransactionInvalidReason.REPLAY_PROTECTED_SIGNATURES_NOT_SUPPORTED,
           "replay protected signatures is not supported");
     }
 
-    final SECP256K1.Signature signature = transaction.getSignature();
-    if (disallowSignatureMalleability
-        && signature.getS().compareTo(SECP256K1.HALF_CURVE_ORDER) > 0) {
+    final SECPSignature signature = transaction.getSignature();
+    final BigInteger halfCurveOrder = SignatureAlgorithmFactory.getInstance().getHalfCurveOrder();
+    if (disallowSignatureMalleability && signature.getS().compareTo(halfCurveOrder) > 0) {
       return ValidationResult.invalid(
           TransactionInvalidReason.INVALID_SIGNATURE,
           String.format(
               "Signature s value should be less than %s, but got %s",
-              SECP256K1.HALF_CURVE_ORDER, signature.getS()));
+              halfCurveOrder, signature.getS()));
     }
 
     // org.bouncycastle.math.ec.ECCurve.AbstractFp.decompressPoint throws an
@@ -191,7 +246,6 @@ public class MainnetTransactionValidator implements TransactionValidator {
           TransactionInvalidReason.INVALID_SIGNATURE,
           "sender could not be extracted from transaction signature");
     }
-
     return ValidationResult.valid();
   }
 
@@ -199,15 +253,42 @@ public class MainnetTransactionValidator implements TransactionValidator {
       final Transaction transaction, final TransactionValidationParams validationParams) {
     if (validationParams.checkLocalPermissions() || validationParams.checkOnchainPermissions()) {
       return transactionFilter
-          .map(c -> c.permitted(transaction, validationParams.checkOnchainPermissions()))
+          .map(
+              c ->
+                  c.permitted(
+                      transaction,
+                      validationParams.checkLocalPermissions(),
+                      validationParams.checkOnchainPermissions()))
           .orElse(true);
     } else {
       return true;
     }
   }
 
-  @Override
   public void setTransactionFilter(final TransactionFilter transactionFilter) {
     this.transactionFilter = Optional.of(transactionFilter);
+  }
+
+  /**
+   * Asserts whether a transaction is valid for the sender accounts current state.
+   *
+   * <p>Note: {@code validate} should be called before getting the sender {@link Account} used in
+   * this method to ensure that a sender can be extracted from the {@link Transaction}.
+   *
+   * @param transaction the transaction to validateMessageFrame.State.COMPLETED_FAILED
+   * @param sender the sender account state to validate against
+   * @param allowFutureNonce if true, transactions with nonce equal or higher than the account nonce
+   *     will be considered valid (used when received transactions in the transaction pool). If
+   *     false, only a transaction with the nonce equals the account nonce will be considered valid
+   *     (used when processing transactions).
+   * @return An empty @{link Optional} if the transaction is considered valid; otherwise an @{code
+   *     Optional} containing a {@link TransactionInvalidReason} that identifies why the transaction
+   *     is invalid.
+   */
+  public ValidationResult<TransactionInvalidReason> validateForSender(
+      final Transaction transaction, final Account sender, final boolean allowFutureNonce) {
+    final TransactionValidationParams validationParams =
+        ImmutableTransactionValidationParams.builder().isAllowFutureNonce(allowFutureNonce).build();
+    return validateForSender(transaction, sender, validationParams);
   }
 }

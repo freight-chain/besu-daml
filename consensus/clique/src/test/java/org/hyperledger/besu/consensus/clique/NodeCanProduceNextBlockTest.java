@@ -16,7 +16,7 @@ package org.hyperledger.besu.consensus.clique;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -25,7 +25,8 @@ import org.hyperledger.besu.consensus.clique.headervalidationrules.SignerRateLim
 import org.hyperledger.besu.consensus.common.VoteProposer;
 import org.hyperledger.besu.consensus.common.VoteTally;
 import org.hyperledger.besu.consensus.common.VoteTallyCache;
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -45,12 +46,13 @@ import org.junit.Test;
 
 public class NodeCanProduceNextBlockTest {
 
-  private final KeyPair proposerKeyPair = KeyPair.generate();
+  private final KeyPair proposerKeyPair = SignatureAlgorithmFactory.getInstance().generateKeyPair();
   private Address localAddress;
-  private final KeyPair otherNodeKeyPair = KeyPair.generate();
+  private final KeyPair otherNodeKeyPair =
+      SignatureAlgorithmFactory.getInstance().generateKeyPair();
   private final List<Address> validatorList = Lists.newArrayList();
   private final BlockHeaderTestFixture headerBuilder = new BlockHeaderTestFixture();
-  private ProtocolContext<CliqueContext> cliqueProtocolContext;
+  private ProtocolContext cliqueProtocolContext;
   private final CliqueBlockInterface blockInterface = new CliqueBlockInterface();
 
   MutableBlockchain blockChain;
@@ -81,7 +83,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.number(1).parentHash(genesisBlock.getHash());
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -107,7 +109,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.number(1).parentHash(genesisBlock.getHash());
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -142,7 +144,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -173,7 +175,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(proposerKeyPair);
@@ -219,7 +221,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(genesisBlock.getHash()).number(1);
     final Block block_1 = createEmptyBlock(otherNodeKeyPair);
@@ -249,7 +251,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(Hash.ZERO).number(3);
     final BlockHeader parentHeader =
@@ -274,7 +276,7 @@ public class NodeCanProduceNextBlockTest {
     final VoteProposer voteProposer = new VoteProposer();
     final CliqueContext cliqueContext =
         new CliqueContext(voteTallyCache, voteProposer, null, blockInterface);
-    cliqueProtocolContext = new ProtocolContext<>(blockChain, null, cliqueContext);
+    cliqueProtocolContext = new ProtocolContext(blockChain, null, cliqueContext);
 
     headerBuilder.parentHash(Hash.ZERO).number(3);
     final BlockHeader parentHeader = headerBuilder.buildHeader();

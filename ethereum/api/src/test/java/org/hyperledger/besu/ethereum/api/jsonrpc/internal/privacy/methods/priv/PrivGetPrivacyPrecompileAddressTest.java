@@ -16,6 +16,7 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.internal.privacy.methods.priv;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
@@ -28,13 +29,11 @@ import org.junit.Test;
 
 public class PrivGetPrivacyPrecompileAddressTest {
 
-  private final int rawPrivacyAddress = Address.PRIVACY;
-  private final String privacyAddress = Address.privacyPrecompiled(rawPrivacyAddress).toString();
   private final PrivacyParameters privacyParameters = mock(PrivacyParameters.class);
 
   @Test
   public void verifyPrivacyPrecompileAddress() {
-    when(privacyParameters.getPrivacyAddress()).thenReturn(rawPrivacyAddress);
+    when(privacyParameters.getPrivacyAddress()).thenReturn(Address.DEFAULT_PRIVACY);
     when(privacyParameters.isEnabled()).thenReturn(true);
 
     final PrivGetPrivacyPrecompileAddress privGetPrivacyPrecompileAddress =
@@ -47,6 +46,7 @@ public class PrivGetPrivacyPrecompileAddressTest {
     final JsonRpcSuccessResponse response =
         (JsonRpcSuccessResponse) privGetPrivacyPrecompileAddress.response(request);
 
-    assertThat(response.getResult()).isEqualTo(privacyAddress);
+    verify(privacyParameters).getPrivacyAddress();
+    assertThat(response.getResult()).isEqualTo(Address.precompiled(Address.PRIVACY).toString());
   }
 }

@@ -34,11 +34,12 @@ import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
 import org.hyperledger.besu.ethereum.p2p.peers.DefaultPeer;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.nat.NatService;
 import org.hyperledger.besu.nat.core.domain.NatPortMapping;
 import org.hyperledger.besu.nat.core.domain.NatServiceType;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -72,7 +73,7 @@ public class AdminNodeInfoTest {
       new StubGenesisConfigOptions().chainId(BigInteger.valueOf(2019));
   private final DefaultPeer defaultPeer =
       DefaultPeer.fromEnodeURL(
-          EnodeURL.builder()
+          EnodeURLImpl.builder()
               .nodeId(nodeId)
               .ipAddress("1.2.3.4")
               .discoveryPort(7890)
@@ -188,7 +189,7 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithListeningAndDiscoveryDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder()
+        EnodeURLImpl.builder()
             .nodeId(nodeId)
             .ipAddress("1.2.3.4")
             .discoveryAndListeningPorts(0)
@@ -233,7 +234,7 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithListeningDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder()
+        EnodeURLImpl.builder()
             .nodeId(nodeId)
             .ipAddress("1.2.3.4")
             .discoveryAndListeningPorts(0)
@@ -279,7 +280,7 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithDiscoveryDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder()
+        EnodeURLImpl.builder()
             .nodeId(nodeId)
             .ipAddress("1.2.3.4")
             .discoveryAndListeningPorts(0)
@@ -349,6 +350,65 @@ public class AdminNodeInfoTest {
     final JsonRpcResponse response = method.response(request);
     assertThat(response).isInstanceOf(JsonRpcErrorResponse.class);
     assertThat(response).isEqualToComparingFieldByField(expectedResponse);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void returnsClassicForkBlocks() {
+    when(p2pNetwork.isP2pEnabled()).thenReturn(true);
+    when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(defaultPeer.getEnodeURL()));
+    final GenesisConfigOptions genesisClassicConfigOptions =
+        new StubGenesisConfigOptions()
+            .chainId(BigInteger.valueOf(2019))
+            .classicForkBlock(1)
+            .ecip1015(2)
+            .dieHard(3)
+            .gotham(4)
+            .defuseDifficultyBomb(5)
+            .atlantis(6)
+            .agharta(7)
+            .phoenix(8)
+            .thanos(9)
+            .magneto(10)
+            .ecip1049(11);
+
+    final AdminNodeInfo methodClassic =
+        new AdminNodeInfo(
+            "testnetClassic/1.0/this/that",
+            BigInteger.valueOf(2018),
+            genesisClassicConfigOptions,
+            p2pNetwork,
+            blockchainQueries,
+            natService);
+
+    final JsonRpcRequestContext request = adminNodeInfo();
+
+    final Map<String, Long> expectedConfig =
+        new HashMap<>(
+            Map.of(
+                "classicForkBlock", 1L,
+                "ecip1015Block", 2L,
+                "dieHardBlock", 3L,
+                "gothamBlock", 4L,
+                "ecip1041Block", 5L,
+                "atlantisBlock", 6L,
+                "aghartaBlock", 7L,
+                "phoenixBlock", 8L,
+                "thanosBlock", 9L,
+                "magnetoBlock", 10L));
+    expectedConfig.put("ecip1049Block", 11L);
+
+    final JsonRpcResponse response = methodClassic.response(request);
+    assertThat(response).isInstanceOf(JsonRpcSuccessResponse.class);
+    final Object result = ((JsonRpcSuccessResponse) response).getResult();
+    assertThat(result).isInstanceOf(Map.class);
+    final Object protocolsMap = ((Map<?, ?>) result).get("protocols");
+    assertThat(protocolsMap).isInstanceOf(Map.class);
+    final Object ethMap = ((Map<?, ?>) protocolsMap).get("eth");
+    assertThat(ethMap).isInstanceOf(Map.class);
+    final Object configMap = ((Map<?, ?>) ethMap).get("config");
+    assertThat(configMap).isInstanceOf(Map.class);
+    assertThat(((Map<String, Long>) configMap)).containsAllEntriesOf(expectedConfig);
   }
 
   private JsonRpcRequestContext adminNodeInfo() {

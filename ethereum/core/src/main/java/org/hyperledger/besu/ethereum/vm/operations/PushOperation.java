@@ -16,36 +16,41 @@ package org.hyperledger.besu.ethereum.vm.operations;
 
 import static java.lang.Math.min;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 
-public class PushOperation extends AbstractOperation {
+public class PushOperation extends AbstractFixedCostOperation {
 
   private final int length;
 
   public PushOperation(final int length, final GasCalculator gasCalculator) {
-    super(0x60 + length - 1, "PUSH" + length, 0, 1, false, length + 1, gasCalculator);
+    super(
+        0x60 + length - 1,
+        "PUSH" + length,
+        0,
+        1,
+        false,
+        length + 1,
+        gasCalculator,
+        gasCalculator.getVeryLowTierGasCost());
     this.length = length;
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getVeryLowTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
     final int pc = frame.getPC();
     final Bytes code = frame.getCode().getBytes();
 
     final int copyLength = min(length, code.size() - pc - 1);
     final MutableBytes32 bytes = MutableBytes32.create();
     code.slice(pc + 1, copyLength).copyTo(bytes, bytes.size() - length);
-    frame.pushStackItem(bytes);
+    frame.pushStackItem(UInt256.fromBytes(bytes));
+
+    return successResponse;
   }
 }

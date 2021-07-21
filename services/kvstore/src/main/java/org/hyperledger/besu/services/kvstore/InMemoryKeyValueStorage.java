@@ -20,6 +20,7 @@ import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction;
 
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -91,19 +92,6 @@ public class InMemoryKeyValueStorage implements KeyValueStorage {
   }
 
   @Override
-  public long removeAllKeysUnless(final Predicate<byte[]> retainCondition) throws StorageException {
-    final Lock lock = rwLock.writeLock();
-    lock.lock();
-    try {
-      long initialSize = hashValueStore.keySet().size();
-      hashValueStore.keySet().removeIf(key -> !retainCondition.test(key.toArrayUnsafe()));
-      return initialSize - hashValueStore.keySet().size();
-    } finally {
-      lock.unlock();
-    }
-  }
-
-  @Override
   public boolean tryDelete(final byte[] key) {
     final Lock lock = rwLock.writeLock();
     if (lock.tryLock()) {
@@ -164,6 +152,17 @@ public class InMemoryKeyValueStorage implements KeyValueStorage {
     public void rollback() {
       updatedValues.clear();
       removedKeys.clear();
+    }
+  }
+
+  public void dump(final PrintStream ps) {
+    final Lock lock = rwLock.readLock();
+    lock.lock();
+    try {
+      hashValueStore.forEach(
+          (k, v) -> ps.printf("  %s : %s%n", k.toHexString(), Bytes.wrap(v).toHexString()));
+    } finally {
+      lock.unlock();
     }
   }
 }

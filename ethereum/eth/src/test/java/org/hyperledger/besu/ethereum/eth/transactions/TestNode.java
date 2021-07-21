@@ -16,20 +16,21 @@ package org.hyperledger.besu.ethereum.eth.transactions;
 
 import static java.util.Collections.singletonList;
 import static org.assertj.core.util.Preconditions.checkNotNull;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.config.GenesisConfigFile;
+import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
-import org.hyperledger.besu.crypto.SECP256K1;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.BlockHeaderFunctions;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.difficulty.fixed.FixedDifficultyProtocolSchedule;
@@ -86,7 +87,7 @@ public class TestNode implements Closeable {
   public TestNode(
       final Vertx vertx,
       final Integer port,
-      final SECP256K1.KeyPair kp,
+      final KeyPair kp,
       final DiscoveryConfiguration discoveryCfg) {
     checkNotNull(vertx);
     checkNotNull(discoveryCfg);
@@ -103,7 +104,7 @@ public class TestNode implements Closeable {
                     .setSupportedProtocols(EthProtocol.get()));
 
     final GenesisConfigFile genesisConfigFile = GenesisConfigFile.development();
-    final ProtocolSchedule<Void> protocolSchedule =
+    final ProtocolSchedule protocolSchedule =
         FixedDifficultyProtocolSchedule.create(
             GenesisConfigFile.development().getConfigOptions(), false);
 
@@ -114,8 +115,8 @@ public class TestNode implements Closeable {
         createInMemoryBlockchain(genesisState.getBlock(), blockHeaderFunctions);
     final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
     genesisState.writeStateTo(worldStateArchive.getMutable());
-    final ProtocolContext<Void> protocolContext =
-        new ProtocolContext<>(blockchain, worldStateArchive, null);
+    final ProtocolContext protocolContext =
+        new ProtocolContext(blockchain, worldStateArchive, null);
 
     final SyncState syncState = mock(SyncState.class);
     when(syncState.isInSync(anyLong())).thenReturn(true);
@@ -136,8 +137,7 @@ public class TestNode implements Closeable {
             metricsSystem,
             syncState,
             Wei.ZERO,
-            TransactionPoolConfiguration.builder().build(),
-            true,
+            TransactionPoolConfiguration.DEFAULT,
             Optional.empty());
 
     final EthProtocolManager ethProtocolManager =
@@ -166,6 +166,8 @@ public class TestNode implements Closeable {
                         .config(networkingConfiguration)
                         .metricsSystem(new NoOpMetricsSystem())
                         .supportedCapabilities(capabilities)
+                        .storageProvider(new InMemoryKeyValueStorageProvider())
+                        .forkIdSupplier(() -> Collections.singletonList(Bytes.EMPTY))
                         .build())
             .metricsSystem(new NoOpMetricsSystem())
             .build();

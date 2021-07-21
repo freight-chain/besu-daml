@@ -12,29 +12,40 @@
  */
 
 dependencies {
-  testImplementation project(':acceptance-tests:dsl')
-  testImplementation project(':enclave')
-  testImplementation 'org.awaitility:awaitility'
-  testImplementation project(':consensus:clique')
-  testImplementation project(':ethereum:permissioning')
-  testImplementation project(':util')
-  testImplementation project(':plugin-api')
-  testImplementation project(':besu')
-  testImplementation project(':consensus:clique')
   implementation project(':crypto')
+
+  testImplementation project(':acceptance-tests:dsl')
+  testImplementation project(':acceptance-tests:test-plugins')
+  testImplementation project(':besu')
+  testImplementation project(':config')
+  testImplementation project(':consensus:clique')
   testImplementation project(':enclave')
   testImplementation project(':ethereum:api')
   testImplementation project(':ethereum:core')
-  testImplementation project(':ethereum:rlp')
-  testImplementation project(':privacy-contracts')
   testImplementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
   testImplementation project(':ethereum:permissioning')
+  testImplementation project(':ethereum:rlp')
+  testImplementation project(':metrics:core')
   testImplementation project(':plugin-api')
+  testImplementation project(':privacy-contracts')
   testImplementation project(':testutil')
   testImplementation project(':util')
 
   testImplementation 'com.github.tomakehurst:wiremock-jre8-standalone'
   testImplementation 'commons-io:commons-io'
+  testImplementation 'io.grpc:grpc-core'
+  testImplementation 'io.grpc:grpc-netty'
+  testImplementation 'io.grpc:grpc-stub'
+  testImplementation 'io.netty:netty-all'
+  testImplementation 'io.opentelemetry:opentelemetry-api'
+  testImplementation 'io.opentelemetry:opentelemetry-proto'
+  testImplementation 'io.opentelemetry:opentelemetry-sdk'
+  testImplementation 'io.opentelemetry:opentelemetry-sdk-trace'
+  testImplementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+  testImplementation 'io.opentracing.contrib:opentracing-okhttp3'
+  testImplementation 'io.opentracing:opentracing-api'
+  testImplementation 'io.opentracing:opentracing-util'
+  testImplementation 'io.jaegertracing:jaeger-client'
   testImplementation 'junit:junit'
   testImplementation 'net.consensys:orion'
   testImplementation 'org.apache.commons:commons-compress'
@@ -43,8 +54,8 @@ dependencies {
   testImplementation 'org.awaitility:awaitility'
   testImplementation 'org.web3j:abi'
   testImplementation 'org.web3j:besu'
-  testImplementation 'tech.pegasys.ethsigner.internal:core'
-  testImplementation 'tech.pegasys.ethsigner.internal:file-based'
+
+  testImplementation 'org.testcontainers:testcontainers'
 }
 
 test.enabled = false
@@ -52,12 +63,12 @@ test.enabled = false
 sourceSets {
   test {
     resources {
-      srcDirs "${rootDir}/besu/build/libs"
+      srcDirs "${rootDir}/acceptance-tests/test-plugins/build/libs"
     }
   }
 }
 
-processTestResources.dependsOn(':besu:testJar')
+processTestResources.dependsOn(':acceptance-tests:test-plugins:testPluginsJar')
 
 task acceptanceTest(type: Test) {
   inputs.property "integration.date", LocalTime.now() // so it runs at every invocation
@@ -65,9 +76,12 @@ task acceptanceTest(type: Test) {
   dependsOn(rootProject.installDist)
   setSystemProperties(test.getSystemProperties())
   systemProperty 'acctests.runBesuAsProcess', 'true'
+  systemProperty 'java.security.properties', "${buildDir}/resources/test/acceptanceTesting.security"
   mustRunAfter rootProject.subprojects*.test
   description = 'Runs Besu acceptance tests.'
   group = 'verification'
+
+  jvmArgs "-XX:ErrorFile=${buildDir}/jvmErrorLogs/java_err_pid%p.log"
 
   testLogging {
     exceptionFormat = 'full'
@@ -75,5 +89,9 @@ task acceptanceTest(type: Test) {
     showStandardStreams = Boolean.getBoolean('acctests.showStandardStreams')
     showExceptions = true
     showCauses = true
+  }
+
+  doFirst {
+    mkdir "${buildDir}/jvmErrorLogs"
   }
 }

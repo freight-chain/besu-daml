@@ -15,28 +15,26 @@
 package org.hyperledger.besu.ethereum.vm.operations;
 
 import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 
-public class GasOperation extends AbstractOperation {
+public class GasOperation extends AbstractFixedCostOperation {
 
   public GasOperation(final GasCalculator gasCalculator) {
-    super(0x5A, "GAS", 0, 1, false, 1, gasCalculator);
+    super(0x5A, "GAS", 0, 1, false, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getBaseTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
-    final Gas gasRemaining = frame.getRemainingGas();
-    final Bytes32 value = Bytes32.leftPad(Bytes.of(gasRemaining.getBytes()));
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
+    final Gas gasRemaining = frame.getRemainingGas().minus(gasCost);
+    final UInt256 value = UInt256.fromBytes(Bytes32.leftPad(Bytes.of(gasRemaining.getBytes())));
     frame.pushStackItem(value);
+
+    return successResponse;
   }
 }

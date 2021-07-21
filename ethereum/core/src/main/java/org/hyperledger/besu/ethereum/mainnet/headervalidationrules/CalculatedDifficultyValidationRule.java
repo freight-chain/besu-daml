@@ -24,24 +24,23 @@ import java.math.BigInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class CalculatedDifficultyValidationRule<C> implements AttachedBlockHeaderValidationRule<C> {
+public class CalculatedDifficultyValidationRule implements AttachedBlockHeaderValidationRule {
   private static final Logger LOG = LogManager.getLogger();
-  private final DifficultyCalculator<C> difficultyCalculator;
+  private final DifficultyCalculator difficultyCalculator;
 
-  public CalculatedDifficultyValidationRule(final DifficultyCalculator<C> difficultyCalculator) {
+  public CalculatedDifficultyValidationRule(final DifficultyCalculator difficultyCalculator) {
     this.difficultyCalculator = difficultyCalculator;
   }
 
   @Override
   public boolean validate(
-      final BlockHeader header, final BlockHeader parent, final ProtocolContext<C> context) {
-    final BigInteger actualDifficulty =
-        new BigInteger(1, header.getDifficulty().toBytes().toArray());
+      final BlockHeader header, final BlockHeader parent, final ProtocolContext context) {
+    final BigInteger actualDifficulty = new BigInteger(1, header.getDifficulty().toArray());
     final BigInteger expectedDifficulty =
         difficultyCalculator.nextDifficulty(header.getTimestamp(), parent, context);
 
     if (actualDifficulty.compareTo(expectedDifficulty) != 0) {
-      LOG.trace(
+      LOG.info(
           "Invalid block header: difficulty {} does not equal expected difficulty {}",
           actualDifficulty,
           expectedDifficulty);

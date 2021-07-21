@@ -14,11 +14,8 @@
  */
 package org.hyperledger.besu.tests.acceptance.permissioning;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.tests.acceptance.dsl.AcceptanceTestBase;
-import org.hyperledger.besu.tests.acceptance.dsl.WaitUtils;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.Condition;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.perm.NodeSmartContractPermissioningConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
@@ -30,7 +27,6 @@ import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.perm.NodeSmartContractPermissioningTransactions;
 
 import java.io.IOException;
-import java.math.BigInteger;
 
 class NodeSmartContractPermissioningAcceptanceTestBase extends AcceptanceTestBase {
 
@@ -56,21 +52,30 @@ class NodeSmartContractPermissioningAcceptanceTestBase extends AcceptanceTestBas
     return new Cluster(clusterConfiguration, net);
   }
 
-  protected Node permissionedNode(final String name, final Node... localConfigWhiteListedNodes) {
+  protected Node permissionedNode(final String name, final Node... localConfigAllowedNodes) {
+    return permissionedNode(name, GENESIS_FILE, localConfigAllowedNodes);
+  }
+
+  protected Node permissionedNode(
+      final String name, final String genesisFile, final Node... localConfigAllowedNodes) {
     PermissionedNodeBuilder permissionedNodeBuilder =
         this.permissionedNodeBuilder
             .name(name)
-            .genesisFile(GENESIS_FILE)
+            .genesisFile(genesisFile)
             .nodesContractEnabled(CONTRACT_ADDRESS);
-    if (localConfigWhiteListedNodes != null && localConfigWhiteListedNodes.length > 0) {
-      permissionedNodeBuilder.nodesPermittedInConfig(localConfigWhiteListedNodes);
+    if (localConfigAllowedNodes != null && localConfigAllowedNodes.length > 0) {
+      permissionedNodeBuilder.nodesPermittedInConfig(localConfigAllowedNodes);
     }
     return permissionedNodeBuilder.build();
   }
 
   protected Node bootnode(final String name) {
+    return bootnode(name, GENESIS_FILE);
+  }
+
+  protected Node bootnode(final String name, final String genesisFile) {
     try {
-      return besu.createCustomGenesisNode(name, GENESIS_FILE, true);
+      return besu.createCustomGenesisNode(name, genesisFile, true);
     } catch (IOException e) {
       throw new RuntimeException("Error creating node", e);
     }
@@ -122,13 +127,5 @@ class NodeSmartContractPermissioningAcceptanceTestBase extends AcceptanceTestBas
   protected Condition connectionIsForbidden(final Node source, final Node target) {
     return nodeSmartContractPermissioningConditions.connectionIsForbidden(
         CONTRACT_ADDRESS, source, target);
-  }
-
-  protected void waitForBlockHeight(final Node node, final long blockchainHeight) {
-    WaitUtils.waitFor(
-        120,
-        () ->
-            assertThat(node.execute(ethTransactions.blockNumber()))
-                .isGreaterThanOrEqualTo(BigInteger.valueOf(blockchainHeight)));
   }
 }

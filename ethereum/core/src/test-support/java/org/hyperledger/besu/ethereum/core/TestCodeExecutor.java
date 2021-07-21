@@ -14,7 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.core;
 
-import org.hyperledger.besu.crypto.SECP256K1.Signature;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.mainnet.MainnetMessageCallProcessor;
 import org.hyperledger.besu.ethereum.mainnet.PrecompileContractRegistry;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
@@ -23,6 +23,7 @@ import org.hyperledger.besu.ethereum.vm.Code;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.hyperledger.besu.ethereum.vm.OperationTracer;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
+import org.hyperledger.besu.plugin.data.TransactionType;
 
 import java.math.BigInteger;
 import java.util.ArrayDeque;
@@ -37,7 +38,7 @@ public class TestCodeExecutor {
   private final BlockHeader blockHeader = new BlockHeaderTestFixture().number(13).buildHeader();
   private static final Address SENDER_ADDRESS = AddressHelpers.ofValue(244259721);
 
-  public TestCodeExecutor(final ProtocolSchedule<Void> protocolSchedule) {
+  public TestCodeExecutor(final ProtocolSchedule protocolSchedule) {
     fixture = ExecutionContextTestFixture.builder().protocolSchedule(protocolSchedule).build();
   }
 
@@ -46,7 +47,7 @@ public class TestCodeExecutor {
       final int accountVersion,
       final long gasLimit,
       final Consumer<MutableAccount> accountSetup) {
-    final ProtocolSpec<Void> protocolSpec = fixture.getProtocolSchedule().getByBlockNumber(0);
+    final ProtocolSpec protocolSpec = fixture.getProtocolSchedule().getByBlockNumber(0);
     final WorldUpdater worldState =
         createInitialWorldState(accountSetup, fixture.getStateArchive());
     final Deque<MessageFrame> messageFrameStack = new ArrayDeque<>();
@@ -56,9 +57,12 @@ public class TestCodeExecutor {
 
     final Transaction transaction =
         Transaction.builder()
+            .type(TransactionType.FRONTIER)
             .value(Wei.ZERO)
             .sender(SENDER_ADDRESS)
-            .signature(Signature.create(BigInteger.ONE, BigInteger.TEN, (byte) 1))
+            .signature(
+                SignatureAlgorithmFactory.getInstance()
+                    .createSignature(BigInteger.ONE, BigInteger.TEN, (byte) 1))
             .gasLimit(gasLimit)
             .to(SENDER_ADDRESS)
             .payload(Bytes.EMPTY)
@@ -75,7 +79,7 @@ public class TestCodeExecutor {
             .originator(SENDER_ADDRESS)
             .contract(SENDER_ADDRESS)
             .contractAccountVersion(accountVersion)
-            .gasPrice(transaction.getGasPrice())
+            .gasPrice(transaction.getGasPrice().get())
             .inputData(transaction.getPayload())
             .sender(SENDER_ADDRESS)
             .value(transaction.getValue())
@@ -100,7 +104,7 @@ public class TestCodeExecutor {
         worldState.getOrCreate(TestCodeExecutor.SENDER_ADDRESS).getMutable();
     accountSetup.accept(senderAccount);
     worldState.commit();
-    initialWorldState.persist();
-    return stateArchive.getMutable(initialWorldState.rootHash()).get().updater();
+    initialWorldState.persist(null);
+    return stateArchive.getMutable(initialWorldState.rootHash(), null).get().updater();
   }
 }

@@ -14,6 +14,8 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
+import static okhttp3.Protocol.HTTP_1_1;
+import static okhttp3.Protocol.HTTP_2;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis.ETH;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis.NET;
@@ -32,10 +34,11 @@ import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.api.tls.FileBasedPasswordProvider;
 import org.hyperledger.besu.ethereum.api.tls.SelfSignedP12Certificate;
 import org.hyperledger.besu.ethereum.api.tls.TlsConfiguration;
-import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
@@ -114,7 +117,7 @@ public class JsonRpcHttpServiceTlsTest {
                         new StubGenesisConfigOptions().constantinopleBlock(0).chainId(CHAIN_ID)),
                     mock(FilterManager.class),
                     mock(TransactionPool.class),
-                    mock(EthHashMiningCoordinator.class),
+                    mock(PoWMiningCoordinator.class),
                     new NoOpMetricsSystem(),
                     supportedCapabilities,
                     Optional.of(mock(AccountLocalConfigPermissioningController.class)),
@@ -125,7 +128,9 @@ public class JsonRpcHttpServiceTlsTest {
                     mock(WebSocketConfiguration.class),
                     mock(MetricsConfiguration.class),
                     natService,
-                    Collections.emptyMap()));
+                    Collections.emptyMap(),
+                    folder.getRoot().toPath(),
+                    mock(EthPeers.class)));
     service = createJsonRpcHttpService(createJsonRpcConfig());
     service.start().join();
     baseUrl = service.url();
@@ -147,7 +152,7 @@ public class JsonRpcHttpServiceTlsTest {
   private JsonRpcConfiguration createJsonRpcConfig() {
     final JsonRpcConfiguration config = JsonRpcConfiguration.createDefault();
     config.setPort(0);
-    config.setHostsWhitelist(Collections.singletonList("*"));
+    config.setHostsAllowlist(Collections.singletonList("*"));
     config.setTlsConfiguration(getRpcHttpTlsConfiguration());
     return config;
   }
@@ -185,15 +190,24 @@ public class JsonRpcHttpServiceTlsTest {
   }
 
   @Test
-  public void netVersionSuccessfulOnTls() throws Exception {
+  public void netVersionSuccessfulOnTlsWithHttp1_1() throws Exception {
+    netVersionSuccessfulOnTls(true);
+  }
+
+  @Test
+  public void netVersionSuccessfulOnTlsWithHttp2() throws Exception {
+    netVersionSuccessfulOnTls(false);
+  }
+
+  public void netVersionSuccessfulOnTls(final boolean useHttp1) throws Exception {
     final String id = "123";
     final String json =
         "{\"jsonrpc\":\"2.0\",\"id\":" + Json.encode(id) + ",\"method\":\"net_version\"}";
 
-    final OkHttpClient httpClient = getTlsHttpClient();
+    final OkHttpClient httpClient = getTlsHttpClient(useHttp1);
     try (final Response response = httpClient.newCall(buildPostRequest(json)).execute()) {
-
       assertThat(response.code()).isEqualTo(200);
+      assertThat(response.protocol()).isEqualTo(useHttp1 ? HTTP_1_1 : HTTP_2);
       // Check general format of result
       final ResponseBody body = response.body();
       assertThat(body).isNotNull();
@@ -208,8 +222,11 @@ public class JsonRpcHttpServiceTlsTest {
     }
   }
 
-  private OkHttpClient getTlsHttpClient() {
-    return TlsOkHttpClientBuilder.anOkHttpClient().withBesuCertificate(besuCertificate).build();
+  private OkHttpClient getTlsHttpClient(final boolean useHttp1) {
+    return TlsOkHttpClientBuilder.anOkHttpClient()
+        .withBesuCertificate(besuCertificate)
+        .withHttp1(useHttp1)
+        .build();
   }
 
   private Request buildPostRequest(final String json) {

@@ -19,15 +19,18 @@ import static java.util.Arrays.asList;
 
 import org.hyperledger.besu.crypto.NodeKey;
 import org.hyperledger.besu.crypto.NodeKeyUtils;
+import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.p2p.config.DiscoveryConfiguration;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.MockPeerDiscoveryAgent;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.Packet;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PacketType;
 import org.hyperledger.besu.ethereum.p2p.discovery.internal.PingPacketData;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
+import org.hyperledger.besu.ethereum.p2p.discovery.internal.PongPacketData;
+import org.hyperledger.besu.ethereum.p2p.peers.EnodeURLImpl;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.permissions.PeerPermissions;
 import org.hyperledger.besu.nat.NatService;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,6 +44,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt64;
+import org.ethereum.beacon.discovery.schema.IdentitySchemaInterpreter;
+import org.ethereum.beacon.discovery.schema.NodeRecord;
 
 public class PeerDiscoveryTestHelper {
   private static final String LOOPBACK_IP_ADDR = "127.0.0.1";
@@ -73,12 +79,17 @@ public class PeerDiscoveryTestHelper {
   public DiscoveryPeer createDiscoveryPeer(final NodeKey nodeKey) {
     final Bytes peerId = nodeKey.getPublicKey().getEncodedBytes();
     final int port = nextAvailablePort.incrementAndGet();
-    return DiscoveryPeer.fromEnode(
-        EnodeURL.builder()
-            .nodeId(peerId)
-            .ipAddress(LOOPBACK_IP_ADDR)
-            .discoveryAndListeningPorts(port)
-            .build());
+    DiscoveryPeer discoveryPeer =
+        DiscoveryPeer.fromEnode(
+            EnodeURLImpl.builder()
+                .nodeId(peerId)
+                .ipAddress(LOOPBACK_IP_ADDR)
+                .discoveryAndListeningPorts(port)
+                .build());
+    discoveryPeer.setNodeRecord(
+        NodeRecord.fromValues(IdentitySchemaInterpreter.V4, UInt64.ONE, Collections.emptyList()));
+
+    return discoveryPeer;
   }
 
   public Packet createPingPacket(
@@ -87,8 +98,17 @@ public class PeerDiscoveryTestHelper {
         PacketType.PING,
         PingPacketData.create(
             fromAgent.getAdvertisedPeer().get().getEndpoint(),
-            toAgent.getAdvertisedPeer().get().getEndpoint()),
+            toAgent.getAdvertisedPeer().get().getEndpoint(),
+            UInt64.ONE),
         fromAgent.getNodeKey());
+  }
+
+  public Packet createPongPacket(final MockPeerDiscoveryAgent toAgent, final Hash pingHash) {
+    return Packet.create(
+        PacketType.PONG,
+        PongPacketData.create(
+            toAgent.getAdvertisedPeer().get().getEndpoint(), pingHash, UInt64.ONE),
+        toAgent.getNodeKey());
   }
 
   public AgentBuilder agentBuilder() {
@@ -190,6 +210,8 @@ public class PeerDiscoveryTestHelper {
     private String advertisedHost = "127.0.0.1";
     private OptionalInt bindPort = OptionalInt.empty();
     private NodeKey nodeKey = NodeKeyUtils.generate();
+    private NodeRecord nodeRecord =
+        NodeRecord.fromValues(IdentitySchemaInterpreter.V4, UInt64.ONE, Collections.emptyList());
 
     private AgentBuilder(
         final Map<Bytes, MockPeerDiscoveryAgent> agents, final AtomicInteger nextAvailablePort) {
@@ -247,6 +269,11 @@ public class PeerDiscoveryTestHelper {
       return this;
     }
 
+    public AgentBuilder nodeRecord(final NodeRecord nodeRecord) {
+      this.nodeRecord = nodeRecord;
+      return this;
+    }
+
     public MockPeerDiscoveryAgent build() {
       final int port = bindPort.orElseGet(nextAvailablePort::incrementAndGet);
       final DiscoveryConfiguration config = new DiscoveryConfiguration();
@@ -256,7 +283,17 @@ public class PeerDiscoveryTestHelper {
       config.setBindPort(port);
       config.setActive(active);
 
-      return new MockPeerDiscoveryAgent(nodeKey, config, peerPermissions, agents, natService);
+      MockPeerDiscoveryAgent mockPeerDiscoveryAgent =
+          new MockPeerDiscoveryAgent(
+              nodeKey,
+              config,
+              peerPermissions,
+              agents,
+              natService,
+              () -> Collections.singletonList(Bytes.EMPTY));
+      mockPeerDiscoveryAgent.getAdvertisedPeer().ifPresent(peer -> peer.setNodeRecord(nodeRecord));
+
+      return mockPeerDiscoveryAgent;
     }
   }
 }

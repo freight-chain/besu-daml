@@ -15,7 +15,7 @@
 package org.hyperledger.besu.ethereum.privacy;
 
 import org.hyperledger.besu.ethereum.core.Log;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 
@@ -32,11 +32,13 @@ import org.apache.tuweni.bytes.Bytes;
  * execution.
  */
 public class PrivateTransactionReceipt {
-
   @SuppressWarnings("unchecked")
   public static final PrivateTransactionReceipt FAILED =
-      new PrivateTransactionReceipt(
-          0, Collections.EMPTY_LIST, Bytes.EMPTY, Optional.ofNullable(null));
+      new PrivateTransactionReceipt(0, Collections.EMPTY_LIST, Bytes.EMPTY, Optional.empty());
+
+  private static final int STATUS_FAILED = 0;
+  private static final int STATUS_SUCCESSFUL = 1;
+  private static final int STATUS_INVALID = 2;
 
   private final int status;
   private final List<Log> logs;
@@ -62,12 +64,25 @@ public class PrivateTransactionReceipt {
     this.revertReason = revertReason;
   }
 
-  public PrivateTransactionReceipt(final TransactionProcessor.Result result) {
+  public PrivateTransactionReceipt(final TransactionProcessingResult result) {
     this(
-        result.getStatus() == PrivateTransactionProcessor.Result.Status.SUCCESSFUL ? 1 : 0,
+        getStatusCode(result.getStatus()),
         result.getLogs(),
         result.getOutput(),
         result.getRevertReason());
+  }
+
+  private static int getStatusCode(final TransactionProcessingResult.Status result) {
+    switch (result) {
+      case SUCCESSFUL:
+        return STATUS_SUCCESSFUL;
+      case INVALID:
+        return STATUS_INVALID;
+      case FAILED:
+        return STATUS_FAILED;
+      default:
+        throw new IllegalStateException("Unexpected private transaction status.");
+    }
   }
 
   /**
@@ -81,9 +96,7 @@ public class PrivateTransactionReceipt {
     out.writeLongScalar(status);
     out.writeList(logs, Log::writeTo);
     out.writeBytes(output);
-    if (revertReason.isPresent()) {
-      out.writeBytes(revertReason.get());
-    }
+    revertReason.ifPresent(out::writeBytes);
     out.endList();
   }
 

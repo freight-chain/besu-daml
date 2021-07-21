@@ -15,10 +15,10 @@
 package org.hyperledger.besu.ethereum.eth.transactions;
 
 import static java.util.Collections.singletonList;
+import static java.util.Optional.ofNullable;
 import static org.apache.logging.log4j.LogManager.getLogger;
-import static org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason.CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE;
+import static org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason.CHAIN_HEAD_WORLD_STATE_NOT_AVAILABLE;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.BlockAddedEvent;
 import org.hyperledger.besu.ethereum.chain.BlockAddedObserver;
@@ -36,19 +36,20 @@ import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.eth.transactions.PendingTransactions.TransactionAddedStatus;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionValidator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.data.TransactionType;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -69,34 +70,36 @@ public class TransactionPool implements BlockAddedObserver {
   private static final String REMOTE = "remote";
   private static final String LOCAL = "local";
   private final PendingTransactions pendingTransactions;
-  private final ProtocolSchedule<?> protocolSchedule;
-  private final ProtocolContext<?> protocolContext;
+  private final ProtocolSchedule protocolSchedule;
+  private final ProtocolContext protocolContext;
   private final TransactionBatchAddedListener transactionBatchAddedListener;
-  private final Optional<TransactionBatchAddedListener> pendingTransactionBatchAddedListener;
+  private final TransactionBatchAddedListener pendingTransactionBatchAddedListener;
   private final SyncState syncState;
   private final Wei minTransactionGasPrice;
   private final LabelledMetric<Counter> duplicateTransactionCounter;
   private final PeerTransactionTracker peerTransactionTracker;
-  private final Optional<PeerPendingTransactionTracker> peerPendingTransactionTracker;
+  private final PeerPendingTransactionTracker peerPendingTransactionTracker;
   private final Optional<EIP1559> eip1559;
   private final TransactionPriceCalculator frontierPriceCalculator =
       TransactionPriceCalculator.frontier();
   private final TransactionPriceCalculator eip1559PriceCalculator =
       TransactionPriceCalculator.eip1559();
+  private final TransactionPoolConfiguration configuration;
 
   public TransactionPool(
       final PendingTransactions pendingTransactions,
-      final ProtocolSchedule<?> protocolSchedule,
-      final ProtocolContext<?> protocolContext,
+      final ProtocolSchedule protocolSchedule,
+      final ProtocolContext protocolContext,
       final TransactionBatchAddedListener transactionBatchAddedListener,
-      final Optional<TransactionBatchAddedListener> pendingTransactionBatchAddedListener,
+      final TransactionBatchAddedListener pendingTransactionBatchAddedListener,
       final SyncState syncState,
       final EthContext ethContext,
       final PeerTransactionTracker peerTransactionTracker,
-      final Optional<PeerPendingTransactionTracker> peerPendingTransactionTracker,
+      final PeerPendingTransactionTracker peerPendingTransactionTracker,
       final Wei minTransactionGasPrice,
       final MetricsSystem metricsSystem,
-      final Optional<EIP1559> eip1559) {
+      final Optional<EIP1559> eip1559,
+      final TransactionPoolConfiguration configuration) {
     this.pendingTransactions = pendingTransactions;
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
@@ -107,6 +110,7 @@ public class TransactionPool implements BlockAddedObserver {
     this.peerPendingTransactionTracker = peerPendingTransactionTracker;
     this.minTransactionGasPrice = minTransactionGasPrice;
     this.eip1559 = eip1559;
+    this.configuration = configuration;
 
     duplicateTransactionCounter =
         metricsSystem.createLabelledCounter(
@@ -119,27 +123,15 @@ public class TransactionPool implements BlockAddedObserver {
   }
 
   void handleConnect(final EthPeer peer) {
-    final List<Transaction> localTransactions = getLocalTransactions();
-    for (final Transaction transaction : localTransactions) {
-      peerTransactionTracker.addToPeerSendQueue(peer, transaction);
+    pendingTransactions
+        .getLocalTransactions()
+        .forEach(transaction -> peerTransactionTracker.addToPeerSendQueue(peer, transaction));
+
+    if (peerPendingTransactionTracker.isPeerSupported(peer, EthProtocol.ETH65)) {
+      pendingTransactions
+          .getNewPooledHashes()
+          .forEach(hash -> peerPendingTransactionTracker.addToPeerSendQueue(peer, hash));
     }
-    peerPendingTransactionTracker.ifPresent(
-        peerPendingTransactionTracker -> {
-          if (peerPendingTransactionTracker.isPeerSupported(peer, EthProtocol.ETH65)) {
-            final Collection<Hash> hashes = getNewPooledHashes();
-            for (final Hash hash : hashes) {
-              peerPendingTransactionTracker.addToPeerSendQueue(peer, hash);
-            }
-          }
-        });
-  }
-
-  private List<Transaction> getLocalTransactions() {
-    return pendingTransactions.getLocalTransactions();
-  }
-
-  public Collection<Hash> getNewPooledHashes() {
-    return pendingTransactions.getNewPooledHashes();
   }
 
   public boolean addTransactionHash(final Hash transactionHash) {
@@ -148,13 +140,13 @@ public class TransactionPool implements BlockAddedObserver {
 
   public ValidationResult<TransactionInvalidReason> addLocalTransaction(
       final Transaction transaction) {
-    final Wei transactionGasPrice = minTransactionGasPrice(transaction);
-    if (transactionGasPrice.compareTo(minTransactionGasPrice) < 0) {
-      return ValidationResult.invalid(TransactionInvalidReason.GAS_PRICE_TOO_LOW);
-    }
     final ValidationResult<TransactionInvalidReason> validationResult =
         validateTransaction(transaction);
     if (validationResult.isValid()) {
+      if (!configuration.getTxFeeCap().isZero()
+          && minTransactionGasPrice(transaction).compareTo(configuration.getTxFeeCap()) > 0) {
+        return ValidationResult.invalid(TransactionInvalidReason.TX_FEECAP_EXCEEDED);
+      }
       final TransactionAddedStatus transactionAddedStatus =
           pendingTransactions.addLocalTransaction(transaction);
       if (!transactionAddedStatus.equals(TransactionAddedStatus.ADDED)) {
@@ -163,7 +155,7 @@ public class TransactionPool implements BlockAddedObserver {
       }
       final Collection<Transaction> txs = singletonList(transaction);
       transactionBatchAddedListener.onTransactionsAdded(txs);
-      pendingTransactionBatchAddedListener.ifPresent(it -> it.onTransactionsAdded(txs));
+      pendingTransactionBatchAddedListener.onTransactionsAdded(txs);
     }
 
     return validationResult;
@@ -225,10 +217,11 @@ public class TransactionPool implements BlockAddedObserver {
   @Override
   public void onBlockAdded(final BlockAddedEvent event) {
     event.getAddedTransactions().forEach(pendingTransactions::transactionAddedToBlock);
+    event.getBlock().getHeader().getBaseFee().ifPresent(pendingTransactions::updateBaseFee);
     addRemoteTransactions(event.getRemovedTransactions());
   }
 
-  private TransactionValidator getTransactionValidator() {
+  private MainnetTransactionValidator getTransactionValidator() {
     return protocolSchedule
         .getByBlockNumber(protocolContext.getBlockchain().getChainHeadBlockNumber())
         .getTransactionValidator();
@@ -241,8 +234,21 @@ public class TransactionPool implements BlockAddedObserver {
   private ValidationResult<TransactionInvalidReason> validateTransaction(
       final Transaction transaction) {
     final BlockHeader chainHeadBlockHeader = getChainHeadBlockHeader();
+
+    // Check whether it's a GoQuorum transaction
+    if (isGoQuorumPrivateTransaction(transaction)) {
+      final Optional<Wei> weiValue = ofNullable(transaction.getValue());
+      if (weiValue.isPresent() && !weiValue.get().isZero()) {
+        return ValidationResult.invalid(TransactionInvalidReason.ETHER_VALUE_NOT_SUPPORTED);
+      }
+    }
+
     final ValidationResult<TransactionInvalidReason> basicValidationResult =
-        getTransactionValidator().validate(transaction);
+        getTransactionValidator()
+            .validate(
+                transaction,
+                chainHeadBlockHeader.getBaseFee(),
+                TransactionValidationParams.transactionPool());
     if (!basicValidationResult.isValid()) {
       return basicValidationResult;
     }
@@ -254,10 +260,18 @@ public class TransactionPool implements BlockAddedObserver {
               "Transaction gas limit of %s exceeds block gas limit of %s",
               transaction.getGasLimit(), chainHeadBlockHeader.getGasLimit()));
     }
+    if (transaction.getType().equals(TransactionType.EIP1559)
+        && !eip1559
+            .map(eip1559 -> eip1559.isEIP1559(chainHeadBlockHeader.getNumber()))
+            .orElse(false)) {
+      return ValidationResult.invalid(
+          TransactionInvalidReason.INVALID_TRANSACTION_FORMAT,
+          "EIP-1559 transaction are not allowed yet");
+    }
 
     return protocolContext
         .getWorldStateArchive()
-        .get(chainHeadBlockHeader.getStateRoot())
+        .getMutable(chainHeadBlockHeader.getStateRoot(), chainHeadBlockHeader.getHash(), false)
         .map(
             worldState -> {
               final Account senderAccount = worldState.get(transaction.getSender());
@@ -277,20 +291,20 @@ public class TransactionPool implements BlockAddedObserver {
     return blockchain.getBlockHeader(blockchain.getChainHeadHash()).get();
   }
 
+  private boolean isGoQuorumPrivateTransaction(final Transaction transaction) {
+    return (transaction.getV().equals(BigInteger.valueOf(37))
+        || (transaction.getV().equals(BigInteger.valueOf(38))));
+  }
+
   public interface TransactionBatchAddedListener {
 
     void onTransactionsAdded(Iterable<Transaction> transactions);
   }
 
   private Wei minTransactionGasPrice(final Transaction transaction) {
-    // EIP-1559 enablement guard block
-    if (!ExperimentalEIPs.eip1559Enabled || this.eip1559.isEmpty()) {
-      return frontierPriceCalculator.price(transaction, Optional.empty());
-    }
-
     final BlockHeader chainHeadBlockHeader = getChainHeadBlockHeader();
     // Compute transaction price using EIP-1559 rules if chain head is after fork
-    if (this.eip1559.get().isEIP1559(chainHeadBlockHeader.getNumber())) {
+    if (eip1559.isPresent() && eip1559.get().isEIP1559(chainHeadBlockHeader.getNumber())) {
       return BaseFee.minTransactionPriceInNextBlock(
           transaction, eip1559PriceCalculator, chainHeadBlockHeader::getBaseFee);
     } else { // Use frontier rules otherwise

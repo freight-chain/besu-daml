@@ -20,7 +20,7 @@ import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.core.DefaultEvmAccount;
+import org.hyperledger.besu.ethereum.core.EvmAccount;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.MutableAccount;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
@@ -30,15 +30,14 @@ import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.mainnet.AbstractBlockProcessor;
-import org.hyperledger.besu.ethereum.mainnet.MainnetBlockProcessor;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.MiningBeneficiaryCalculator;
-import org.hyperledger.besu.ethereum.mainnet.TransactionProcessor;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
 import org.hyperledger.besu.ethereum.privacy.group.OnChainGroupManagement;
-import org.hyperledger.besu.ethereum.privacy.storage.PrivacyGroupHeadBlockMap;
-import org.hyperledger.besu.ethereum.privacy.storage.PrivateBlockMetadata;
+import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateStateStorage;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateTransactionMetadata;
+import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.OperationTracer;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
@@ -58,17 +57,17 @@ public class PrivateGroupRehydrationBlockProcessor {
 
   static final int MAX_GENERATION = 6;
 
-  private final TransactionProcessor transactionProcessor;
+  private final MainnetTransactionProcessor transactionProcessor;
   private final PrivateTransactionProcessor privateTransactionProcessor;
-  private final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
   final Wei blockReward;
   private final boolean skipZeroBlockRewards;
   private final MiningBeneficiaryCalculator miningBeneficiaryCalculator;
 
   public PrivateGroupRehydrationBlockProcessor(
-      final TransactionProcessor transactionProcessor,
+      final MainnetTransactionProcessor transactionProcessor,
       final PrivateTransactionProcessor privateTransactionProcessor,
-      final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
+      final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
       final Wei blockReward,
       final MiningBeneficiaryCalculator miningBeneficiaryCalculator,
       final boolean skipZeroBlockRewards) {
@@ -94,12 +93,16 @@ public class PrivateGroupRehydrationBlockProcessor {
 
     final List<Transaction> transactions = block.getBody().getTransactions();
     final BlockHeader blockHeader = block.getHeader();
+    final PrivateMetadataUpdater metadataUpdater =
+        new PrivateMetadataUpdater(blockHeader, privateStateStorage);
+
     for (final Transaction transaction : transactions) {
 
       final long remainingGasBudget = blockHeader.getGasLimit() - gasUsed;
       if (Long.compareUnsigned(transaction.getGasLimit(), remainingGasBudget) > 0) {
         LOG.warn(
-            "Transaction processing error: transaction gas limit {} exceeds available block budget remaining {}",
+            "Transaction processing error: transaction gas limit {} exceeds available block budget"
+                + " remaining {}",
             transaction.getGasLimit(),
             remainingGasBudget);
         return AbstractBlockProcessor.Result.failed();
@@ -110,48 +113,52 @@ public class PrivateGroupRehydrationBlockProcessor {
       final Address miningBeneficiary =
           miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
 
-      if (forExecution.containsKey(transaction.getHash())) {
-        final PrivateTransaction privateTransaction = forExecution.get(transaction.getHash());
+      final Hash transactionHash = transaction.getHash();
+      if (forExecution.containsKey(transactionHash)) {
+        final PrivateTransaction privateTransaction = forExecution.get(transactionHash);
+        final Bytes32 privacyGroupId = Bytes32.wrap(privateTransaction.getPrivacyGroupId().get());
         final Hash lastRootHash =
-            privateStateRootResolver.resolveLastStateRoot(
-                Bytes32.wrap(privateTransaction.getPrivacyGroupId().get()),
-                blockHeader.getParentHash());
+            privateStateRootResolver.resolveLastStateRoot(privacyGroupId, metadataUpdater);
 
         final MutableWorldState disposablePrivateState =
-            privateWorldStateArchive.getMutable(lastRootHash).get();
+            privateWorldStateArchive.getMutable(lastRootHash, null).get();
         final WorldUpdater privateStateUpdater = disposablePrivateState.updater();
         maybeInjectDefaultManagementAndProxy(
             lastRootHash, disposablePrivateState, privateStateUpdater);
         LOG.debug(
             "Pre-rehydrate root hash: {} for tx {}",
             disposablePrivateState.rootHash(),
-            transaction.getHash());
+            transactionHash);
 
-        final PrivateTransactionProcessor.Result privateResult =
+        final TransactionProcessingResult privateResult =
             privateTransactionProcessor.processTransaction(
                 blockchain,
                 worldStateUpdater.updater(),
                 privateStateUpdater,
                 blockHeader,
-                transaction.getHash(),
+                transactionHash,
                 privateTransaction,
                 miningBeneficiary,
                 OperationTracer.NO_TRACING,
                 new BlockHashLookup(blockHeader, blockchain),
                 privateTransaction.getPrivacyGroupId().get());
-        persistPrivateState(
-            transaction.getHash(),
-            blockHeader.getHash(),
-            privateTransaction,
-            Bytes32.wrap(privateTransaction.getPrivacyGroupId().get()),
+
+        privateStateUpdater.commit();
+        disposablePrivateState.persist(null);
+
+        storePrivateMetadata(
+            transactionHash,
+            privacyGroupId,
             disposablePrivateState,
-            privateStateUpdater,
-            privateStateStorage,
+            metadataUpdater,
             privateResult);
+
         LOG.debug("Post-rehydrate root hash: {}", disposablePrivateState.rootHash());
       }
 
-      final TransactionProcessor.Result result =
+      // We have to process the public transactions here, because the private transactions can
+      // depend on  public state
+      final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
               blockchain,
               worldStateUpdater,
@@ -165,10 +172,9 @@ public class PrivateGroupRehydrationBlockProcessor {
         return AbstractBlockProcessor.Result.failed();
       }
 
-      worldStateUpdater.commit();
       gasUsed = transaction.getGasLimit() - result.getGasRemaining() + gasUsed;
       final TransactionReceipt transactionReceipt =
-          transactionReceiptFactory.create(result, worldState, gasUsed);
+          transactionReceiptFactory.create(transaction.getType(), result, worldState, gasUsed);
       receipts.add(transactionReceipt);
     }
 
@@ -176,53 +182,30 @@ public class PrivateGroupRehydrationBlockProcessor {
       return AbstractBlockProcessor.Result.failed();
     }
 
+    metadataUpdater.commit();
+
     return AbstractBlockProcessor.Result.successful(receipts);
   }
 
-  protected void persistPrivateState(
+  void storePrivateMetadata(
       final Hash commitmentHash,
-      final Hash currentBlockHash,
-      final PrivateTransaction privateTransaction,
       final Bytes32 privacyGroupId,
       final MutableWorldState disposablePrivateState,
-      final WorldUpdater privateWorldStateUpdater,
-      final PrivateStateStorage privateStateStorage,
-      final PrivateTransactionProcessor.Result result) {
-
-    LOG.trace(
-        "Persisting private state {} for privacyGroup {}",
-        disposablePrivateState.rootHash(),
-        privacyGroupId);
-    privateWorldStateUpdater.commit();
-    disposablePrivateState.persist();
-
-    final PrivateStateStorage.Updater privateStateUpdater = privateStateStorage.updater();
-
-    updatePrivateBlockMetadata(
-        commitmentHash,
-        currentBlockHash,
-        privacyGroupId,
-        disposablePrivateState.rootHash(),
-        privateStateUpdater,
-        privateStateStorage);
+      final PrivateMetadataUpdater privateMetadataUpdater,
+      final TransactionProcessingResult result) {
 
     final int txStatus =
-        result.getStatus() == PrivateTransactionProcessor.Result.Status.SUCCESSFUL ? 1 : 0;
+        result.getStatus() == TransactionProcessingResult.Status.SUCCESSFUL ? 1 : 0;
 
     final PrivateTransactionReceipt privateTransactionReceipt =
         new PrivateTransactionReceipt(
             txStatus, result.getLogs(), result.getOutput(), result.getRevertReason());
 
-    privateStateUpdater.putTransactionReceipt(
-        currentBlockHash, commitmentHash, privateTransactionReceipt);
-    final PrivacyGroupHeadBlockMap privacyGroupHeadBlockMap =
-        privateStateStorage.getPrivacyGroupHeadBlockMap(currentBlockHash).get();
-    if (!privacyGroupHeadBlockMap.contains(Bytes32.wrap(privacyGroupId), currentBlockHash)) {
-      privacyGroupHeadBlockMap.put(Bytes32.wrap(privacyGroupId), currentBlockHash);
-      privateStateUpdater.putPrivacyGroupHeadBlockMap(
-          currentBlockHash, new PrivacyGroupHeadBlockMap(privacyGroupHeadBlockMap));
-    }
-    privateStateUpdater.commit();
+    privateMetadataUpdater.putTransactionReceipt(commitmentHash, privateTransactionReceipt);
+    privateMetadataUpdater.updatePrivacyGroupHeadBlockMap(privacyGroupId);
+    privateMetadataUpdater.addPrivateTransactionMetadata(
+        privacyGroupId,
+        new PrivateTransactionMetadata(commitmentHash, disposablePrivateState.rootHash()));
   }
 
   protected void maybeInjectDefaultManagementAndProxy(
@@ -231,7 +214,7 @@ public class PrivateGroupRehydrationBlockProcessor {
       final WorldUpdater privateWorldStateUpdater) {
     if (lastRootHash.equals(EMPTY_ROOT_HASH)) {
       // inject management
-      final DefaultEvmAccount managementPrecompile =
+      final EvmAccount managementPrecompile =
           privateWorldStateUpdater.createAccount(Address.DEFAULT_ONCHAIN_PRIVACY_MANAGEMENT);
       final MutableAccount mutableManagementPrecompiled = managementPrecompile.getMutable();
       // this is the code for the simple management contract
@@ -239,7 +222,7 @@ public class PrivateGroupRehydrationBlockProcessor {
           OnChainGroupManagement.DEFAULT_GROUP_MANAGEMENT_RUNTIME_BYTECODE);
 
       // inject proxy
-      final DefaultEvmAccount proxyPrecompile =
+      final EvmAccount proxyPrecompile =
           privateWorldStateUpdater.createAccount(Address.ONCHAIN_PRIVACY_PROXY);
       final MutableAccount mutableProxyPrecompiled = proxyPrecompile.getMutable();
       // this is the code for the proxy contract
@@ -250,25 +233,8 @@ public class PrivateGroupRehydrationBlockProcessor {
           UInt256.fromBytes(Bytes32.leftPad(Address.DEFAULT_ONCHAIN_PRIVACY_MANAGEMENT)));
 
       privateWorldStateUpdater.commit();
-      disposablePrivateState.persist();
+      disposablePrivateState.persist(null);
     }
-  }
-
-  private void updatePrivateBlockMetadata(
-      final Hash markerTransactionHash,
-      final Hash currentBlockHash,
-      final Bytes32 privacyGroupId,
-      final Hash rootHash,
-      final PrivateStateStorage.Updater privateStateUpdater,
-      final PrivateStateStorage privateStateStorage) {
-    final PrivateBlockMetadata privateBlockMetadata =
-        privateStateStorage
-            .getPrivateBlockMetadata(currentBlockHash, Bytes32.wrap(privacyGroupId))
-            .orElseGet(PrivateBlockMetadata::empty);
-    privateBlockMetadata.addPrivateTransactionMetadata(
-        new PrivateTransactionMetadata(markerTransactionHash, rootHash));
-    privateStateUpdater.putPrivateBlockMetadata(
-        Bytes32.wrap(currentBlockHash), Bytes32.wrap(privacyGroupId), privateBlockMetadata);
   }
 
   private boolean rewardCoinbase(
@@ -288,7 +254,8 @@ public class PrivateGroupRehydrationBlockProcessor {
     for (final BlockHeader ommerHeader : ommers) {
       if (ommerHeader.getNumber() - header.getNumber() > MAX_GENERATION) {
         LOG.warn(
-            "Block processing error: ommer block number {} more than {} generations current block number {}",
+            "Block processing error: ommer block number {} more than {} generations current block"
+                + " number {}",
             ommerHeader.getNumber(),
             MAX_GENERATION,
             header.getNumber());

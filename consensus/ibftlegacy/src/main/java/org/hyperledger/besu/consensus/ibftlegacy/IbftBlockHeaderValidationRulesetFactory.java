@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.consensus.ibftlegacy;
 
-import org.hyperledger.besu.consensus.ibft.IbftContext;
 import org.hyperledger.besu.consensus.ibftlegacy.headervalidationrules.IbftExtraDataValidationRule;
 import org.hyperledger.besu.consensus.ibftlegacy.headervalidationrules.VoteValidationRule;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -36,11 +35,12 @@ public class IbftBlockHeaderValidationRulesetFactory {
    * part of the BlockChain (i.e. not proposed blocks, which do not contain commit seals)
    *
    * @param secondsBetweenBlocks the minimum number of seconds which must elapse between blocks.
+   * @param ceil2nBy3Block the block after which 2/3n commit seals must exist, rather than 2F+1
    * @return BlockHeaderValidator configured for assessing ibft block headers
    */
-  public static BlockHeaderValidator.Builder<IbftContext> ibftBlockHeaderValidator(
-      final long secondsBetweenBlocks) {
-    return createValidator(secondsBetweenBlocks, true);
+  public static BlockHeaderValidator.Builder ibftBlockHeaderValidator(
+      final long secondsBetweenBlocks, final long ceil2nBy3Block) {
+    return createValidator(secondsBetweenBlocks, true, ceil2nBy3Block);
   }
 
   /**
@@ -50,14 +50,16 @@ public class IbftBlockHeaderValidationRulesetFactory {
    * @param secondsBetweenBlocks the minimum number of seconds which must elapse between blocks.
    * @return BlockHeaderValidator configured for assessing ibft block headers
    */
-  public static BlockHeaderValidator.Builder<IbftContext> ibftProposedBlockValidator(
+  public static BlockHeaderValidator.Builder ibftProposedBlockValidator(
       final long secondsBetweenBlocks) {
-    return createValidator(secondsBetweenBlocks, false);
+    return createValidator(secondsBetweenBlocks, false, 0);
   }
 
-  private static BlockHeaderValidator.Builder<IbftContext> createValidator(
-      final long secondsBetweenBlocks, final boolean validateCommitSeals) {
-    return new BlockHeaderValidator.Builder<IbftContext>()
+  private static BlockHeaderValidator.Builder createValidator(
+      final long secondsBetweenBlocks,
+      final boolean validateCommitSeals,
+      final long ceil2nBy3Block) {
+    return new BlockHeaderValidator.Builder()
         .addRule(new AncestryValidationRule())
         .addRule(new GasUsageValidationRule())
         .addRule(new GasLimitRangeAndDeltaValidationRule(5000, 0x7fffffffffffffffL))
@@ -73,6 +75,6 @@ public class IbftBlockHeaderValidationRulesetFactory {
             new ConstantFieldValidationRule<>(
                 "Difficulty", BlockHeader::getDifficulty, UInt256.ONE))
         .addRule(new VoteValidationRule())
-        .addRule(new IbftExtraDataValidationRule(validateCommitSeals));
+        .addRule(new IbftExtraDataValidationRule(validateCommitSeals, ceil2nBy3Block));
   }
 }

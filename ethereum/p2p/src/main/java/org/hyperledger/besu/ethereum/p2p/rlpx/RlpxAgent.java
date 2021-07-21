@@ -19,9 +19,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.isNull;
 
 import org.hyperledger.besu.crypto.NodeKey;
+import org.hyperledger.besu.crypto.SECPPublicKey;
 import org.hyperledger.besu.ethereum.p2p.config.RlpxConfiguration;
 import org.hyperledger.besu.ethereum.p2p.discovery.DiscoveryPeer;
-import org.hyperledger.besu.ethereum.p2p.peers.EnodeURL;
 import org.hyperledger.besu.ethereum.p2p.peers.LocalNode;
 import org.hyperledger.besu.ethereum.p2p.peers.Peer;
 import org.hyperledger.besu.ethereum.p2p.peers.PeerPrivileges;
@@ -32,9 +32,12 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerConnectionEvents;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.PeerRlpxPermissions;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.RlpxConnection;
 import org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.NettyConnectionInitializer;
+import org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.NettyTLSConnectionInitializer;
+import org.hyperledger.besu.ethereum.p2p.rlpx.connections.netty.TLSConfiguration;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.util.Subscribers;
@@ -67,7 +70,11 @@ public class RlpxAgent {
   private final PeerRlpxPermissions peerPermissions;
   private final PeerPrivileges peerPrivileges;
   private final int maxConnections;
+  private final boolean randomPeerPriority;
   private final int maxRemotelyInitiatedConnections;
+  // xor'ing with this mask will allow us to randomly let new peers connect
+  // without allowing the counterparty to play nodeId farming games
+  private final Bytes nodeIdMask = Bytes.random(SECPPublicKey.BYTE_LENGTH);
 
   @VisibleForTesting final Map<Bytes, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
 
@@ -84,6 +91,7 @@ public class RlpxAgent {
       final PeerPrivileges peerPrivileges,
       final int maxConnections,
       final int maxRemotelyInitiatedConnections,
+      final boolean randomPeerPriority,
       final MetricsSystem metricsSystem) {
     this.localNode = localNode;
     this.connectionEvents = connectionEvents;
@@ -91,6 +99,7 @@ public class RlpxAgent {
     this.peerPermissions = peerPermissions;
     this.peerPrivileges = peerPrivileges;
     this.maxConnections = maxConnections;
+    this.randomPeerPriority = randomPeerPriority;
     this.maxRemotelyInitiatedConnections =
         Math.min(maxConnections, maxRemotelyInitiatedConnections);
 
@@ -133,7 +142,9 @@ public class RlpxAgent {
         .whenComplete(
             (res, err) -> {
               if (err != null) {
-                LOG.error("Failed to start P2P RLPx agent.", err);
+                // the detail of this error is already logged by the completeExceptionally() call in
+                // NettyConnectionInitializer
+                LOG.error("Failed to start P2P RLPx agent. Check for port conflicts.");
               }
             });
   }
@@ -336,19 +347,22 @@ public class RlpxAgent {
       peerConnection.disconnect(DisconnectReason.UNKNOWN);
       return;
     }
-    // Disconnect if too many peers
-    if (!peerPrivileges.canExceedConnectionLimits(peer) && getConnectionCount() >= maxConnections) {
-      LOG.debug("Too many peers. Disconnect incoming connection: {}", peerConnection);
-      peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
-      return;
-    }
-    // Disconnect if too many remotely-initiated connections
-    if (!peerPrivileges.canExceedConnectionLimits(peer) && remoteConnectionLimitReached()) {
-      LOG.debug(
-          "Too many remotely-initiated connections. Disconnect incoming connection: {}",
-          peerConnection);
-      peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
-      return;
+    if (!randomPeerPriority) {
+      // Disconnect if too many peers
+      if (!peerPrivileges.canExceedConnectionLimits(peer)
+          && getConnectionCount() >= maxConnections) {
+        LOG.debug("Too many peers. Disconnect incoming connection: {}", peerConnection);
+        peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
+        return;
+      }
+      // Disconnect if too many remotely-initiated connections
+      if (!peerPrivileges.canExceedConnectionLimits(peer) && remoteConnectionLimitReached()) {
+        LOG.debug(
+            "Too many remotely-initiated connections. Disconnect incoming connection: {}",
+            peerConnection);
+        peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
+        return;
+      }
     }
     // Disconnect if not permitted
     if (!peerPermissions.allowNewInboundConnectionFrom(peer)) {
@@ -461,10 +475,10 @@ public class RlpxAgent {
   private Stream<RlpxConnection> getActivePrioritizedConnections() {
     return connectionsById.values().stream()
         .filter(RlpxConnection::isActive)
-        .sorted(this::prioritizeConnections);
+        .sorted(this::comparePeerPriorities);
   }
 
-  private int prioritizeConnections(final RlpxConnection a, final RlpxConnection b) {
+  private int comparePeerPriorities(final RlpxConnection a, final RlpxConnection b) {
     final boolean aIgnoresPeerLimits = peerPrivileges.canExceedConnectionLimits(a.getPeer());
     final boolean bIgnoresPeerLimits = peerPrivileges.canExceedConnectionLimits(b.getPeer());
     if (aIgnoresPeerLimits && !bIgnoresPeerLimits) {
@@ -472,8 +486,18 @@ public class RlpxAgent {
     } else if (bIgnoresPeerLimits && !aIgnoresPeerLimits) {
       return 1;
     } else {
-      return Math.toIntExact(a.getInitiatedAt() - b.getInitiatedAt());
+      return randomPeerPriority
+          ? compareByMaskedNodeId(a, b)
+          : compareConnectionInitiationTimes(a, b);
     }
+  }
+
+  private int compareConnectionInitiationTimes(final RlpxConnection a, final RlpxConnection b) {
+    return Math.toIntExact(a.getInitiatedAt() - b.getInitiatedAt());
+  }
+
+  private int compareByMaskedNodeId(final RlpxConnection a, final RlpxConnection b) {
+    return a.getPeer().getId().xor(nodeIdMask).compareTo(b.getPeer().getId().xor(nodeIdMask));
   }
 
   /**
@@ -533,7 +557,9 @@ public class RlpxAgent {
     private PeerPermissions peerPermissions;
     private ConnectionInitializer connectionInitializer;
     private PeerConnectionEvents connectionEvents;
+    private boolean randomPeerPriority;
     private MetricsSystem metricsSystem;
+    private Optional<TLSConfiguration> p2pTLSConfiguration;
 
     private Builder() {}
 
@@ -544,9 +570,17 @@ public class RlpxAgent {
         connectionEvents = new PeerConnectionEvents(metricsSystem);
       }
       if (connectionInitializer == null) {
-        connectionInitializer =
-            new NettyConnectionInitializer(
-                nodeKey, config, localNode, connectionEvents, metricsSystem);
+        if (p2pTLSConfiguration.isPresent()) {
+          LOG.debug("TLS Configuration found using NettyTLSConnectionInitializer");
+          connectionInitializer =
+              new NettyTLSConnectionInitializer(
+                  nodeKey, config, localNode, connectionEvents, metricsSystem, p2pTLSConfiguration);
+        } else {
+          LOG.debug("Using default NettyConnectionInitializer");
+          connectionInitializer =
+              new NettyConnectionInitializer(
+                  nodeKey, config, localNode, connectionEvents, metricsSystem);
+        }
       }
 
       final PeerRlpxPermissions rlpxPermissions =
@@ -559,6 +593,7 @@ public class RlpxAgent {
           peerPrivileges,
           config.getMaxPeers(),
           config.getMaxRemotelyInitiatedConnections(),
+          randomPeerPriority,
           metricsSystem);
     }
 
@@ -616,6 +651,16 @@ public class RlpxAgent {
     public Builder metricsSystem(final MetricsSystem metricsSystem) {
       checkNotNull(metricsSystem);
       this.metricsSystem = metricsSystem;
+      return this;
+    }
+
+    public Builder randomPeerPriority(final boolean randomPeerPriority) {
+      this.randomPeerPriority = randomPeerPriority;
+      return this;
+    }
+
+    public Builder p2pTLSConfiguration(final Optional<TLSConfiguration> p2pTLSConfiguration) {
+      this.p2pTLSConfiguration = p2pTLSConfiguration;
       return this;
     }
   }

@@ -14,36 +14,30 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
-import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class AddModOperation extends AbstractOperation {
+public class AddModOperation extends AbstractFixedCostOperation {
 
   public AddModOperation(final GasCalculator gasCalculator) {
-    super(0x08, "ADDMOD", 3, 1, false, 1, gasCalculator);
+    super(0x08, "ADDMOD", 3, 1, false, 1, gasCalculator, gasCalculator.getMidTierGasCost());
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getMidTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
-    final UInt256 value0 = UInt256.fromBytes(frame.popStackItem());
-    final UInt256 value1 = UInt256.fromBytes(frame.popStackItem());
-    final UInt256 value2 = UInt256.fromBytes(frame.popStackItem());
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
+    final UInt256 value0 = frame.popStackItem();
+    final UInt256 value1 = frame.popStackItem();
+    final UInt256 value2 = frame.popStackItem();
 
     if (value2.isZero()) {
-      frame.pushStackItem(Bytes32.ZERO);
+      frame.pushStackItem(UInt256.ZERO);
     } else {
       final UInt256 result = value0.addMod(value1, value2);
-      frame.pushStackItem(result.toBytes());
+      frame.pushStackItem(result);
     }
+    return successResponse;
   }
 }

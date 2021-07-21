@@ -22,20 +22,23 @@ import org.hyperledger.besu.ethereum.eth.sync.tasks.exceptions.InvalidBlockExcep
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 
+import java.time.Instant;
 import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class FullImportBlockStep<C> implements Consumer<Block> {
+public class FullImportBlockStep implements Consumer<Block> {
   private static final Logger LOG = LogManager.getLogger();
-  private final ProtocolSchedule<C> protocolSchedule;
-  private final ProtocolContext<C> protocolContext;
+  private final ProtocolSchedule protocolSchedule;
+  private final ProtocolContext protocolContext;
   private final EthContext ethContext;
+  private long gasAccumulator = 0;
+  private long lastReportMillis = 0;
 
   public FullImportBlockStep(
-      final ProtocolSchedule<C> protocolSchedule,
-      final ProtocolContext<C> protocolContext,
+      final ProtocolSchedule protocolSchedule,
+      final ProtocolContext protocolContext,
       final EthContext ethContext) {
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
@@ -46,22 +49,31 @@ public class FullImportBlockStep<C> implements Consumer<Block> {
   public void accept(final Block block) {
     final long blockNumber = block.getHeader().getNumber();
     final String blockHash = block.getHash().toHexString();
-    final String shortHash =
-        String.format(
-            "%s..%s",
-            blockHash.substring(0, 6),
-            blockHash.substring(blockHash.length() - 4, blockHash.length()));
-    final BlockImporter<C> importer =
+    final BlockImporter importer =
         protocolSchedule.getByBlockNumber(blockNumber).getBlockImporter();
     if (!importer.importBlock(protocolContext, block, HeaderValidationMode.SKIP_DETACHED)) {
       throw new InvalidBlockException("Failed to import block", blockNumber, block.getHash());
     }
+    gasAccumulator += block.getHeader().getGasUsed();
     int peerCount = -1; // ethContext is not available in tests
     if (ethContext != null && ethContext.getEthPeers().peerCount() >= 0) {
       peerCount = ethContext.getEthPeers().peerCount();
     }
     if (blockNumber % 200 == 0) {
-      LOG.info("Import reached block {} ({}), Peers: {}", blockNumber, shortHash, peerCount);
+      final long nowMilli = Instant.now().toEpochMilli();
+      final long deltaMilli = nowMilli - lastReportMillis;
+      final String mgps =
+          (lastReportMillis == 0 || gasAccumulator == 0)
+              ? "-"
+              : String.format("%.3f", gasAccumulator / 1000.0 / deltaMilli);
+      LOG.info(
+          "Import reached block {} ({}), {} Mg/s, Peers: {}",
+          blockNumber,
+          blockHash,
+          mgps,
+          peerCount);
+      lastReportMillis = nowMilli;
+      gasAccumulator = 0;
     }
   }
 }

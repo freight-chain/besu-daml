@@ -16,7 +16,9 @@ package org.hyperledger.besu.ethereum.api.graphql;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import org.hyperledger.besu.enclave.GoQuorumEnclave;
 import org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter.AccountAdapter;
+import org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter.EmptyAccountAdapter;
 import org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter.LogAdapter;
 import org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter.NormalBlockAdapter;
 import org.hyperledger.besu.ethereum.api.graphql.internal.pojoadapter.PendingStateAdapter;
@@ -27,23 +29,23 @@ import org.hyperledger.besu.ethereum.api.query.BlockWithMetadata;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.api.query.LogsQuery;
 import org.hyperledger.besu.ethereum.api.query.TransactionWithMetadata;
-import org.hyperledger.besu.ethereum.blockcreation.MiningCoordinator;
 import org.hyperledger.besu.ethereum.core.Account;
 import org.hyperledger.besu.ethereum.core.Address;
+import org.hyperledger.besu.ethereum.core.GoQuorumPrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.LogTopic;
 import org.hyperledger.besu.ethereum.core.LogWithMetadata;
-import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
+import org.hyperledger.besu.ethereum.core.WorldState;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator.TransactionInvalidReason;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
+import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 import org.hyperledger.besu.plugin.data.SyncStatus;
 
 import java.util.ArrayList;
@@ -56,10 +58,24 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
 import graphql.schema.DataFetcher;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 
 public class GraphQLDataFetchers {
+
+  private static final Logger LOG = LogManager.getLogger();
+
+  private Optional<GoQuorumPrivacyParameters> goQuorumPrivacyParameters = Optional.empty();
+
+  public GraphQLDataFetchers(
+      final Set<Capability> supportedCapabilities,
+      final Optional<GoQuorumPrivacyParameters> goQuorumPrivacyParameters) {
+    this(supportedCapabilities);
+    this.goQuorumPrivacyParameters = goQuorumPrivacyParameters;
+  }
+
   public GraphQLDataFetchers(final Set<Capability> supportedCapabilities) {
     final OptionalInt version =
         supportedCapabilities.stream()
@@ -115,10 +131,13 @@ public class GraphQLDataFetchers {
 
   DataFetcher<Optional<Wei>> getGasPriceDataFetcher() {
     return dataFetchingEnvironment -> {
-      final MiningCoordinator miningCoordinator =
-          ((GraphQLDataFetcherContext) dataFetchingEnvironment.getContext()).getMiningCoordinator();
-
-      return Optional.of(miningCoordinator.getMinTransactionGasPrice());
+      final GraphQLDataFetcherContext context =
+          (GraphQLDataFetcherContext) dataFetchingEnvironment.getContext();
+      return (context)
+          .getBlockchainQueries()
+          .gasPrice()
+          .map(Wei::of)
+          .or(() -> Optional.of(context.getMiningCoordinator().getMinTransactionGasPrice()));
     };
   }
 
@@ -181,11 +200,12 @@ public class GraphQLDataFetchers {
       final Address addr = dataFetchingEnvironment.getArgument("address");
       final Long bn = dataFetchingEnvironment.getArgument("blockNumber");
       if (bn != null) {
-        final Optional<MutableWorldState> ws = blockchainQuery.getWorldState(bn);
+        final Optional<WorldState> ws = blockchainQuery.getWorldState(bn);
         if (ws.isPresent()) {
           final Account account = ws.get().get(addr);
-          Preconditions.checkArgument(
-              account != null, "Account with address %s does not exist", addr);
+          if (account == null) {
+            return Optional.of(new EmptyAccountAdapter(addr));
+          }
           return Optional.of(new AccountAdapter(account));
         } else if (bn > blockchainQuery.getBlockchain().getChainHeadBlockNumber()) {
           // block is past chainhead
@@ -197,23 +217,23 @@ public class GraphQLDataFetchers {
       } else {
         // return account on latest block
         final long latestBn = blockchainQuery.latestBlock().get().getHeader().getNumber();
-        final Optional<MutableWorldState> ows = blockchainQuery.getWorldState(latestBn);
+        final Optional<WorldState> ows = blockchainQuery.getWorldState(latestBn);
         return ows.flatMap(
-                ws -> {
-                  Account account = ws.get(addr);
-                  Preconditions.checkArgument(
-                      account != null, "Account with address %s does not exist", addr);
-                  return Optional.ofNullable(account);
-                })
-            .map(AccountAdapter::new);
+            ws -> {
+              Account account = ws.get(addr);
+              if (account == null) {
+                return Optional.of(new EmptyAccountAdapter(addr));
+              }
+              return Optional.of(new AccountAdapter(account));
+            });
       }
     };
   }
 
   DataFetcher<Optional<List<LogAdapter>>> getLogsDataFetcher() {
     return dataFetchingEnvironment -> {
-      final BlockchainQueries blockchainQuery =
-          ((GraphQLDataFetcherContext) dataFetchingEnvironment.getContext()).getBlockchainQueries();
+      final GraphQLDataFetcherContext dataFetcherContext = dataFetchingEnvironment.getContext();
+      final BlockchainQueries blockchainQuery = dataFetcherContext.getBlockchainQueries();
 
       final Map<String, Object> filter = dataFetchingEnvironment.getArgument("filter");
 
@@ -238,7 +258,9 @@ public class GraphQLDataFetchers {
       final LogsQuery query =
           new LogsQuery.Builder().addresses(addrs).topics(transformedTopics).build();
 
-      final List<LogWithMetadata> logs = blockchainQuery.matchingLogs(fromBlock, toBlock, query);
+      final List<LogWithMetadata> logs =
+          blockchainQuery.matchingLogs(
+              fromBlock, toBlock, query, dataFetcherContext.getIsAliveHandler());
       final List<LogAdapter> results = new ArrayList<>();
       for (final LogWithMetadata log : logs) {
         results.add(new LogAdapter(log));
@@ -253,7 +275,46 @@ public class GraphQLDataFetchers {
           ((GraphQLDataFetcherContext) dataFetchingEnvironment.getContext()).getBlockchainQueries();
       final Bytes32 hash = dataFetchingEnvironment.getArgument("hash");
       final Optional<TransactionWithMetadata> tran = blockchain.transactionByHash(Hash.wrap(hash));
-      return tran.map(TransactionAdapter::new);
+      return tran.map(this::getTransactionAdapter);
     };
+  }
+
+  private TransactionAdapter getTransactionAdapter(
+      final TransactionWithMetadata transactionWithMetadata) {
+    final Transaction transaction = transactionWithMetadata.getTransaction();
+    return goQuorumPrivacyParameters.isPresent() && transaction.isGoQuorumPrivateTransaction()
+        ? updatePrivatePayload(transaction)
+        : new TransactionAdapter(transactionWithMetadata);
+  }
+
+  private TransactionAdapter updatePrivatePayload(final Transaction transaction) {
+    final GoQuorumEnclave enclave = goQuorumPrivacyParameters.get().enclave();
+    Bytes enclavePayload;
+
+    try {
+      // Retrieve the payload from the enclave
+      enclavePayload =
+          Bytes.wrap(enclave.receive(transaction.getPayload().toBase64String()).getPayload());
+    } catch (final Exception ex) {
+      LOG.debug("An error occurred while retrieving the GoQuorum transaction payload: ", ex);
+      enclavePayload = Bytes.EMPTY;
+    }
+
+    // Return a new transaction containing the retrieved payload
+    return new TransactionAdapter(
+        new TransactionWithMetadata(
+            new Transaction(
+                transaction.getNonce(),
+                transaction.getGasPrice(),
+                transaction.getMaxPriorityFeePerGas(),
+                transaction.getMaxFeePerGas(),
+                transaction.getGasLimit(),
+                transaction.getTo(),
+                transaction.getValue(),
+                transaction.getSignature(),
+                enclavePayload,
+                transaction.getSender(),
+                transaction.getChainId(),
+                Optional.ofNullable(transaction.getV()))));
   }
 }

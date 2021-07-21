@@ -31,6 +31,7 @@ import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer.Responder;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
@@ -49,8 +50,8 @@ public class CheckpointHeaderFetcherTest {
 
   private static final int SEGMENT_SIZE = 5;
   private static Blockchain blockchain;
-  private static ProtocolSchedule<Void> protocolSchedule;
-  private static ProtocolContext<Void> protocolContext;
+  private static ProtocolSchedule protocolSchedule;
+  private static ProtocolContext protocolContext;
   private static final MetricsSystem metricsSystem = new NoOpMetricsSystem();
   private static TransactionPool transactionPool;
   private EthProtocolManager ethProtocolManager;
@@ -59,7 +60,8 @@ public class CheckpointHeaderFetcherTest {
 
   @BeforeClass
   public static void setUpClass() {
-    final BlockchainSetupUtil<Void> blockchainSetupUtil = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil blockchainSetupUtil =
+        BlockchainSetupUtil.forTesting(DataStorageFormat.FOREST);
     blockchainSetupUtil.importAllBlocks();
     blockchain = blockchainSetupUtil.getBlockchain();
     transactionPool = blockchainSetupUtil.getTransactionPool();

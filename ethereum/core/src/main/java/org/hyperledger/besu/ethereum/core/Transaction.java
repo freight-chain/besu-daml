@@ -14,20 +14,29 @@
  */
 package org.hyperledger.besu.ethereum.core;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
-import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SECPPublicKey;
+import org.hyperledger.besu.crypto.SECPSignature;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
+import org.hyperledger.besu.ethereum.core.encoding.TransactionDecoder;
+import org.hyperledger.besu.ethereum.core.encoding.TransactionEncoder;
 import org.hyperledger.besu.ethereum.rlp.RLP;
-import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.rlp.RLPInput;
 import org.hyperledger.besu.ethereum.rlp.RLPOutput;
 import org.hyperledger.besu.plugin.data.Quantity;
+import org.hyperledger.besu.plugin.data.TransactionType;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -38,24 +47,27 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
 
   // Used for transactions that are not tied to a specific chain
   // (e.g. does not have a chain id associated with it).
-  private static final BigInteger REPLAY_UNPROTECTED_V_BASE = BigInteger.valueOf(27);
-  private static final BigInteger REPLAY_UNPROTECTED_V_BASE_PLUS_1 = BigInteger.valueOf(28);
+  public static final BigInteger REPLAY_UNPROTECTED_V_BASE = BigInteger.valueOf(27);
+  public static final BigInteger REPLAY_UNPROTECTED_V_BASE_PLUS_1 = BigInteger.valueOf(28);
 
-  private static final BigInteger REPLAY_PROTECTED_V_BASE = BigInteger.valueOf(35);
+  public static final BigInteger REPLAY_PROTECTED_V_BASE = BigInteger.valueOf(35);
+
+  public static final BigInteger GO_QUORUM_PRIVATE_TRANSACTION_V_VALUE_MIN = BigInteger.valueOf(37);
+  public static final BigInteger GO_QUORUM_PRIVATE_TRANSACTION_V_VALUE_MAX = BigInteger.valueOf(38);
 
   // The v signature parameter starts at 36 because 1 is the first valid chainId so:
   // chainId > 1 implies that 2 * chainId + V_BASE > 36.
-  private static final BigInteger REPLAY_PROTECTED_V_MIN = BigInteger.valueOf(36);
+  public static final BigInteger REPLAY_PROTECTED_V_MIN = BigInteger.valueOf(36);
 
-  private static final BigInteger TWO = BigInteger.valueOf(2);
+  public static final BigInteger TWO = BigInteger.valueOf(2);
 
   private final long nonce;
 
-  private final Wei gasPrice;
+  private final Optional<Wei> gasPrice;
 
-  private final Wei gasPremium;
+  private final Optional<Wei> maxPriorityFeePerGas;
 
-  private final Wei feeCap;
+  private final Optional<Wei> maxFeePerGas;
 
   private final long gasLimit;
 
@@ -63,11 +75,15 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
 
   private final Wei value;
 
-  private final SECP256K1.Signature signature;
+  private final SECPSignature signature;
 
   private final Bytes payload;
 
+  private final Optional<List<AccessListEntry>> maybeAccessList;
+
   private final Optional<BigInteger> chainId;
+
+  private final Optional<BigInteger> v;
 
   // Caches a "hash" of a portion of the transaction used for sender recovery.
   // Note that this hash does not include the transaction signature so it does not
@@ -80,92 +96,123 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
 
   // Caches the hash used to uniquely identify the transaction.
   protected volatile Hash hash;
+  private final TransactionType transactionType;
+
+  private final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithmFactory.getInstance();
 
   public static Builder builder() {
     return new Builder();
   }
 
-  public static Transaction readFrom(final RLPInput input) throws RLPException {
-    if (ExperimentalEIPs.eip1559Enabled) {
-      return readFromExperimental(input);
-    }
-    input.enterList();
-    final Builder builder =
-        builder()
-            .nonce(input.readLongScalar())
-            .gasPrice(Wei.of(input.readUInt256Scalar()))
-            .gasLimit(input.readLongScalar())
-            .to(input.readBytes(v -> v.size() == 0 ? null : Address.wrap(v)))
-            .value(Wei.of(input.readUInt256Scalar()))
-            .payload(input.readBytes());
-
-    final BigInteger v = input.readBigIntegerScalar();
-    final byte recId;
-    Optional<BigInteger> chainId = Optional.empty();
-    if (v.equals(REPLAY_UNPROTECTED_V_BASE) || v.equals(REPLAY_UNPROTECTED_V_BASE_PLUS_1)) {
-      recId = v.subtract(REPLAY_UNPROTECTED_V_BASE).byteValueExact();
-    } else if (v.compareTo(REPLAY_PROTECTED_V_MIN) > 0) {
-      chainId = Optional.of(v.subtract(REPLAY_PROTECTED_V_BASE).divide(TWO));
-      recId = v.subtract(TWO.multiply(chainId.get()).add(REPLAY_PROTECTED_V_BASE)).byteValueExact();
-    } else {
-      throw new RuntimeException(
-          String.format("An unsupported encoded `v` value of %s was found", v));
-    }
-    final BigInteger r = input.readUInt256Scalar().toBytes().toUnsignedBigInteger();
-    final BigInteger s = input.readUInt256Scalar().toBytes().toUnsignedBigInteger();
-    final SECP256K1.Signature signature = SECP256K1.Signature.create(r, s, recId);
-
-    input.leaveList();
-
-    chainId.ifPresent(builder::chainId);
-    return builder.signature(signature).build();
+  public static Transaction readFrom(final RLPInput rlpInput) {
+    return TransactionDecoder.decodeForWire(rlpInput);
   }
 
-  public static Transaction readFromExperimental(final RLPInput input) throws RLPException {
-    input.enterList();
-
-    final Builder builder =
-        builder()
-            .nonce(input.readLongScalar())
-            .gasPrice(Wei.of(input.readUInt256Scalar()))
-            .gasLimit(input.readLongScalar())
-            .to(input.readBytes(v -> v.size() == 0 ? null : Address.wrap(v)))
-            .value(Wei.of(input.readUInt256Scalar()))
-            .payload(input.readBytes());
-
-    final Bytes maybeGasPremiumOrV = input.readBytes();
-    final Bytes maybeFeeCapOrR = input.readBytes();
-    final Bytes maybeVOrS = input.readBytes();
-    final BigInteger v, r, s;
-    // if this is the end of the list we are processing a legacy transaction
-    if (input.isEndOfCurrentList()) {
-      v = maybeGasPremiumOrV.toUnsignedBigInteger();
-      r = maybeFeeCapOrR.toUnsignedBigInteger();
-      s = maybeVOrS.toUnsignedBigInteger();
-    } else {
-      // otherwise this is an EIP-1559 transaction
-      builder
-          .gasPremium(Wei.of(maybeGasPremiumOrV.toBigInteger()))
-          .feeCap(Wei.of(maybeFeeCapOrR.toBigInteger()));
-      v = maybeVOrS.toBigInteger();
-      r = input.readUInt256Scalar().toBytes().toUnsignedBigInteger();
-      s = input.readUInt256Scalar().toBytes().toUnsignedBigInteger();
+  /**
+   * Instantiates a transaction instance.
+   *
+   * @param transactionType the transaction type
+   * @param nonce the nonce
+   * @param gasPrice the gas price
+   * @param maxPriorityFeePerGas the max priorty fee per gas
+   * @param maxFeePerGas the max fee per gas
+   * @param gasLimit the gas limit
+   * @param to the transaction recipient
+   * @param value the value being transferred to the recipient
+   * @param signature the signature
+   * @param payload the payload
+   * @param maybeAccessList the optional list of addresses/storage slots this transaction intends to
+   *     preload
+   * @param sender the transaction sender
+   * @param chainId the chain id to apply the transaction to
+   * @param v the v value. This is only passed in directly for GoQuorum private transactions
+   *     (v=37|38). For all other transactions, the v value is derived from the signature. If v is
+   *     provided here, the chain id must be empty.
+   *     <p>The {@code to} will be an {@code Optional.empty()} for a contract creation transaction;
+   *     otherwise it should contain an address.
+   *     <p>The {@code chainId} must be greater than 0 to be applied to a specific chain; otherwise
+   *     it will default to any chain.
+   */
+  public Transaction(
+      final TransactionType transactionType,
+      final long nonce,
+      final Optional<Wei> gasPrice,
+      final Optional<Wei> maxPriorityFeePerGas,
+      final Optional<Wei> maxFeePerGas,
+      final long gasLimit,
+      final Optional<Address> to,
+      final Wei value,
+      final SECPSignature signature,
+      final Bytes payload,
+      final Optional<List<AccessListEntry>> maybeAccessList,
+      final Address sender,
+      final Optional<BigInteger> chainId,
+      final Optional<BigInteger> v) {
+    if (v.isPresent() && chainId.isPresent()) {
+      throw new IllegalArgumentException(
+          String.format("chainId '%s' and v '%s' cannot both be provided", chainId.get(), v.get()));
     }
-    final byte recId;
-    Optional<BigInteger> chainId = Optional.empty();
-    if (v.equals(REPLAY_UNPROTECTED_V_BASE) || v.equals(REPLAY_UNPROTECTED_V_BASE_PLUS_1)) {
-      recId = v.subtract(REPLAY_UNPROTECTED_V_BASE).byteValueExact();
-    } else if (v.compareTo(REPLAY_PROTECTED_V_MIN) > 0) {
-      chainId = Optional.of(v.subtract(REPLAY_PROTECTED_V_BASE).divide(TWO));
-      recId = v.subtract(TWO.multiply(chainId.get()).add(REPLAY_PROTECTED_V_BASE)).byteValueExact();
-    } else {
-      throw new RuntimeException(
-          String.format("An unsupported encoded `v` value of %s was found", v));
+
+    if (transactionType.requiresChainId()) {
+      checkArgument(
+          chainId.isPresent(), "Chain id must be present for transaction type %s", transactionType);
     }
-    final SECP256K1.Signature signature = SECP256K1.Signature.create(r, s, recId);
-    input.leaveList();
-    chainId.ifPresent(builder::chainId);
-    return builder.signature(signature).build();
+
+    if (maybeAccessList.isPresent()) {
+      checkArgument(
+          transactionType.supportsAccessList(),
+          "Must not specify access list for transaction not supporting it");
+    }
+
+    if (Objects.equals(transactionType, TransactionType.ACCESS_LIST)) {
+      checkArgument(
+          maybeAccessList.isPresent(), "Must specify access list for access list transaction");
+    }
+
+    this.transactionType = transactionType;
+    this.nonce = nonce;
+    this.gasPrice = gasPrice;
+    this.maxPriorityFeePerGas = maxPriorityFeePerGas;
+    this.maxFeePerGas = maxFeePerGas;
+    this.gasLimit = gasLimit;
+    this.to = to;
+    this.value = value;
+    this.signature = signature;
+    this.payload = payload;
+    this.maybeAccessList = maybeAccessList;
+    this.sender = sender;
+    this.chainId = chainId;
+    this.v = v;
+  }
+
+  public Transaction(
+      final long nonce,
+      final Optional<Wei> gasPrice,
+      final Optional<Wei> maxPriorityFeePerGas,
+      final Optional<Wei> maxFeePerGas,
+      final long gasLimit,
+      final Optional<Address> to,
+      final Wei value,
+      final SECPSignature signature,
+      final Bytes payload,
+      final Address sender,
+      final Optional<BigInteger> chainId,
+      final Optional<BigInteger> v) {
+    this(
+        TransactionType.FRONTIER,
+        nonce,
+        gasPrice,
+        maxPriorityFeePerGas,
+        maxFeePerGas,
+        gasLimit,
+        to,
+        value,
+        signature,
+        payload,
+        Optional.empty(),
+        sender,
+        chainId,
+        v);
   }
 
   /**
@@ -173,8 +220,6 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    *
    * @param nonce the nonce
    * @param gasPrice the gas price
-   * @param gasPremium the gas premium
-   * @param feeCap the fee cap
    * @param gasLimit the gas limit
    * @param to the transaction recipient
    * @param value the value being transferred to the recipient
@@ -190,26 +235,26 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
   public Transaction(
       final long nonce,
       final Wei gasPrice,
-      final Wei gasPremium,
-      final Wei feeCap,
       final long gasLimit,
       final Optional<Address> to,
       final Wei value,
-      final SECP256K1.Signature signature,
+      final SECPSignature signature,
       final Bytes payload,
       final Address sender,
       final Optional<BigInteger> chainId) {
-    this.nonce = nonce;
-    this.gasPrice = gasPrice;
-    this.gasPremium = gasPremium;
-    this.feeCap = feeCap;
-    this.gasLimit = gasLimit;
-    this.to = to;
-    this.value = value;
-    this.signature = signature;
-    this.payload = payload;
-    this.sender = sender;
-    this.chainId = chainId;
+    this(
+        nonce,
+        Optional.of(gasPrice),
+        Optional.empty(),
+        Optional.empty(),
+        gasLimit,
+        to,
+        value,
+        signature,
+        payload,
+        sender,
+        chainId,
+        Optional.empty());
   }
 
   /**
@@ -224,9 +269,11 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    * @param payload the payload
    * @param sender the transaction sender
    * @param chainId the chain id to apply the transaction to
+   * @param v the v value (only passed in directly for GoQuorum private transactions)
    *     <p>The {@code to} will be an {@code Optional.empty()} for a contract creation transaction;
    *     otherwise it should contain an address.
    *     <p>The {@code chainId} must be greater than 0 to be applied to a specific chain; otherwise
+   *     it will default to any chain.
    */
   public Transaction(
       final long nonce,
@@ -234,11 +281,24 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
       final long gasLimit,
       final Optional<Address> to,
       final Wei value,
-      final SECP256K1.Signature signature,
+      final SECPSignature signature,
       final Bytes payload,
       final Address sender,
-      final Optional<BigInteger> chainId) {
-    this(nonce, gasPrice, null, null, gasLimit, to, value, signature, payload, sender, chainId);
+      final Optional<BigInteger> chainId,
+      final Optional<BigInteger> v) {
+    this(
+        nonce,
+        Optional.of(gasPrice),
+        Optional.empty(),
+        Optional.empty(),
+        gasLimit,
+        to,
+        value,
+        signature,
+        payload,
+        sender,
+        chainId,
+        v);
   }
 
   /**
@@ -257,30 +317,60 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    * @return the transaction gas price
    */
   @Override
-  public Wei getGasPrice() {
+  public Optional<Wei> getGasPrice() {
     return gasPrice;
   }
 
   /**
-   * Return the transaction gas premium.
+   * Return the transaction max priority per gas.
    *
-   * @return the transaction gas premium
+   * @return the transaction max priority per gas
    */
   @Override
-  public Optional<Quantity> getGasPremium() {
-    return Optional.ofNullable(gasPremium);
+  public Optional<Wei> getMaxPriorityFeePerGas() {
+    return maxPriorityFeePerGas;
   }
 
   /**
-   * Return the transaction fee cap.
+   * Return the transaction max fee per gas.
    *
-   * @return the transaction fee cap
+   * @return the transaction max fee per gas
    */
   @Override
-  public Optional<Quantity> getFeeCap() {
-    return Optional.ofNullable(feeCap);
+  public Optional<Wei> getMaxFeePerGas() {
+    return maxFeePerGas;
   }
 
+  /**
+   * Boolean which indicates the transaction has associated cost data, whether gas price or 1559 fee
+   * market parameters.
+   *
+   * @return whether cost params are presetn
+   */
+  public boolean hasCostParams() {
+    return Arrays.asList(getGasPrice(), getMaxFeePerGas(), getMaxPriorityFeePerGas()).stream()
+        .flatMap(Optional::stream)
+        .map(Quantity::getAsBigInteger)
+        .anyMatch(q -> q.longValue() > 0L);
+  }
+
+  public long getEffectivePriorityFeePerGas(final Optional<Long> maybeBaseFee) {
+    return maybeBaseFee
+        .map(
+            baseFee -> {
+              if (getType().supports1559FeeMarket()) {
+                return Math.min(
+                    getMaxPriorityFeePerGas().get().getAsBigInteger().longValue(),
+                    getMaxFeePerGas().get().getAsBigInteger().longValue() - baseFee);
+              } else {
+                return getGasPrice().get().getValue().longValue() - baseFee;
+              }
+            })
+        .map(
+            maybeNegativeEffectivePriorityFeePerGas ->
+                Math.max(0, maybeNegativeEffectivePriorityFeePerGas))
+        .orElseGet(() -> getGasPrice().get().getValue().longValue());
+  }
   /**
    * Returns the transaction gas limit.
    *
@@ -319,7 +409,7 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    *
    * @return the signature used to sign the transaction
    */
-  public SECP256K1.Signature getSignature() {
+  public SECPSignature getSignature() {
     return signature;
   }
 
@@ -353,6 +443,10 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
     return getTo().isPresent() ? Optional.of(payload) : Optional.empty();
   }
 
+  public Optional<List<AccessListEntry>> getAccessList() {
+    return maybeAccessList;
+  }
+
   /**
    * Return the transaction chain id (if it exists)
    *
@@ -374,29 +468,43 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
   @Override
   public Address getSender() {
     if (sender == null) {
-      final SECP256K1.PublicKey publicKey =
-          SECP256K1.PublicKey.recoverFromSignature(getOrComputeSenderRecoveryHash(), signature)
+      final SECPPublicKey publicKey =
+          signatureAlgorithm
+              .recoverPublicKeyFromSignature(getOrComputeSenderRecoveryHash(), signature)
               .orElseThrow(
                   () ->
                       new IllegalStateException(
-                          "Cannot recover public key from " + "signature for " + this));
+                          "Cannot recover public key from signature for " + this));
       sender = Address.extract(Hash.hash(publicKey.getEncodedBytes()));
     }
     return sender;
+  }
+
+  /**
+   * Returns the public key extracted from the signature.
+   *
+   * @return the public key
+   */
+  public Optional<String> getPublicKey() {
+    return signatureAlgorithm
+        .recoverPublicKeyFromSignature(getOrComputeSenderRecoveryHash(), signature)
+        .map(SECPPublicKey::toString);
   }
 
   private Bytes32 getOrComputeSenderRecoveryHash() {
     if (hashNoSignature == null) {
       hashNoSignature =
           computeSenderRecoveryHash(
+              transactionType,
               nonce,
-              gasPrice,
-              gasPremium,
-              feeCap,
+              gasPrice.orElse(null),
+              maxPriorityFeePerGas.orElse(null),
+              maxFeePerGas.orElse(null),
               gasLimit,
-              to.orElse(null),
+              to,
               value,
               payload,
+              maybeAccessList,
               chainId);
     }
     return hashNoSignature;
@@ -408,36 +516,7 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    * @param out the output to write the transaction to
    */
   public void writeTo(final RLPOutput out) {
-    out.startList();
-
-    out.writeLongScalar(getNonce());
-    final boolean asEIP1559 =
-        ExperimentalEIPs.eip1559Enabled
-            && (gasPrice == null || gasPrice.isZero())
-            && gasPremium != null
-            && feeCap != null;
-    if (asEIP1559) {
-      out.writeNull();
-    } else {
-      out.writeUInt256Scalar(getGasPrice());
-    }
-    out.writeLongScalar(getGasLimit());
-    out.writeBytes(getTo().isPresent() ? getTo().get() : Bytes.EMPTY);
-    out.writeUInt256Scalar(getValue());
-    out.writeBytes(getPayload());
-    if (ExperimentalEIPs.eip1559Enabled && gasPremium != null && feeCap != null) {
-      out.writeUInt256Scalar(gasPremium);
-      out.writeUInt256Scalar(feeCap);
-    }
-    writeSignature(out);
-
-    out.endList();
-  }
-
-  private void writeSignature(final RLPOutput out) {
-    out.writeBigIntegerScalar(getV());
-    out.writeBigIntegerScalar(getSignature().getR());
-    out.writeBigIntegerScalar(getSignature().getS());
+    TransactionEncoder.encodeForWire(this, out);
   }
 
   @Override
@@ -452,14 +531,22 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
 
   @Override
   public BigInteger getV() {
-    final BigInteger v;
-    final BigInteger recId = BigInteger.valueOf(signature.getRecId());
-    if (chainId.isEmpty()) {
-      v = recId.add(REPLAY_UNPROTECTED_V_BASE);
-    } else {
-      v = recId.add(REPLAY_PROTECTED_V_BASE).add(TWO.multiply(chainId.get()));
+    if (this.v.isPresent()) {
+      return this.v.get();
     }
-    return v;
+
+    final BigInteger recId = BigInteger.valueOf(signature.getRecId());
+
+    if (transactionType != null && transactionType != TransactionType.FRONTIER) {
+      // EIP-2718 typed transaction, return yParity:
+      return recId;
+    } else {
+      if (chainId.isEmpty()) {
+        return recId.add(REPLAY_UNPROTECTED_V_BASE);
+      } else {
+        return recId.add(REPLAY_PROTECTED_V_BASE).add(TWO.multiply(chainId.get()));
+      }
+    }
   }
 
   /**
@@ -470,8 +557,7 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
   @Override
   public Hash getHash() {
     if (hash == null) {
-      final Bytes rlp = RLP.encode(this::writeTo);
-      hash = Hash.hash(rlp);
+      hash = Hash.hash(TransactionEncoder.encodeOpaqueBytes(this));
     }
     return hash;
   }
@@ -491,7 +577,13 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    * @return the up-front cost for the gas the transaction can use.
    */
   public Wei getUpfrontGasCost() {
-    return getUpfrontGasCost(getGasPrice());
+    return getUpfrontGasCost(
+        Stream.concat(maxFeePerGas.stream(), gasPrice.stream())
+            .findFirst()
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        String.format("Transaction requires either gasPrice or maxFeePerGas"))));
   }
 
   /**
@@ -501,6 +593,9 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
    * @return the up-front cost for the gas the transaction can use.
    */
   public Wei getUpfrontGasCost(final Wei gasPrice) {
+    if (gasPrice == null || gasPrice.isZero()) {
+      return Wei.ZERO;
+    }
     return Wei.of(getGasLimit()).multiply(gasPrice);
   }
 
@@ -517,57 +612,153 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
     return getUpfrontGasCost().add(getValue());
   }
 
-  /**
-   * Returns whether or not the transaction is a legacy transaction.
-   *
-   * @return true if legacy transaction, false otherwise
-   */
   @Override
-  public boolean isFrontierTransaction() {
-    return getGasPrice() != null && (getGasPremium().isEmpty() && getFeeCap().isEmpty());
+  public TransactionType getType() {
+    return this.transactionType;
   }
 
   /**
-   * Returns whether or not the transaction is an EIP-1559 transaction.
+   * Returns whether or not the transaction is a GoQuorum private transaction. <br>
+   * <br>
+   * A GoQuorum private transaction has its <i>v</i> value equal to 37 or 38.
    *
-   * @return true if EIP-1559 transaction, false otherwise
+   * @return true if GoQuorum private transaction, false otherwise
    */
-  @Override
-  public boolean isEIP1559Transaction() {
-    return getGasPremium().isPresent() && getFeeCap().isPresent();
+  public boolean isGoQuorumPrivateTransaction() {
+    return v.map(
+            value ->
+                GO_QUORUM_PRIVATE_TRANSACTION_V_VALUE_MIN.equals(value)
+                    || GO_QUORUM_PRIVATE_TRANSACTION_V_VALUE_MAX.equals(value))
+        .orElse(false);
   }
 
   private static Bytes32 computeSenderRecoveryHash(
+      final TransactionType transactionType,
       final long nonce,
       final Wei gasPrice,
-      final Wei gasPremium,
-      final Wei feeCap,
+      final Wei maxPriorityFeePerGas,
+      final Wei maxFeePerGas,
       final long gasLimit,
-      final Address to,
+      final Optional<Address> to,
+      final Wei value,
+      final Bytes payload,
+      final Optional<List<AccessListEntry>> accessList,
+      final Optional<BigInteger> chainId) {
+    if (transactionType.requiresChainId()) {
+      checkArgument(chainId.isPresent(), "Transaction type %s requires chainId", transactionType);
+    }
+    final Bytes preimage;
+    switch (transactionType) {
+      case FRONTIER:
+        preimage = frontierPreimage(nonce, gasPrice, gasLimit, to, value, payload, chainId);
+        break;
+      case EIP1559:
+        preimage =
+            eip1559Preimage(
+                nonce,
+                maxPriorityFeePerGas,
+                maxFeePerGas,
+                gasLimit,
+                to,
+                value,
+                payload,
+                chainId,
+                accessList);
+        break;
+      case ACCESS_LIST:
+        preimage =
+            accessListPreimage(
+                nonce,
+                gasPrice,
+                gasLimit,
+                to,
+                value,
+                payload,
+                accessList.orElseThrow(
+                    () ->
+                        new IllegalStateException(
+                            "Developer error: the transaction should be guaranteed to have an access list here")),
+                chainId);
+        break;
+      default:
+        throw new IllegalStateException(
+            "Developer error. Didn't specify signing hash preimage computation");
+    }
+    return keccak256(preimage);
+  }
+
+  private static Bytes frontierPreimage(
+      final long nonce,
+      final Wei gasPrice,
+      final long gasLimit,
+      final Optional<Address> to,
       final Wei value,
       final Bytes payload,
       final Optional<BigInteger> chainId) {
-    return keccak256(
+    return RLP.encode(
+        rlpOutput -> {
+          rlpOutput.startList();
+          rlpOutput.writeLongScalar(nonce);
+          rlpOutput.writeUInt256Scalar(gasPrice);
+          rlpOutput.writeLongScalar(gasLimit);
+          rlpOutput.writeBytes(to.map(Bytes::copy).orElse(Bytes.EMPTY));
+          rlpOutput.writeUInt256Scalar(value);
+          rlpOutput.writeBytes(payload);
+          if (chainId.isPresent()) {
+            rlpOutput.writeBigIntegerScalar(chainId.get());
+            rlpOutput.writeUInt256Scalar(UInt256.ZERO);
+            rlpOutput.writeUInt256Scalar(UInt256.ZERO);
+          }
+          rlpOutput.endList();
+        });
+  }
+
+  private static Bytes eip1559Preimage(
+      final long nonce,
+      final Wei maxPriorityFeePerGas,
+      final Wei maxFeePerGas,
+      final long gasLimit,
+      final Optional<Address> to,
+      final Wei value,
+      final Bytes payload,
+      final Optional<BigInteger> chainId,
+      final Optional<List<AccessListEntry>> accessList) {
+    final Bytes encoded =
         RLP.encode(
-            out -> {
-              out.startList();
-              out.writeLongScalar(nonce);
-              out.writeUInt256Scalar(gasPrice);
-              out.writeLongScalar(gasLimit);
-              out.writeBytes(to == null ? Bytes.EMPTY : to);
-              out.writeUInt256Scalar(value);
-              out.writeBytes(payload);
-              if (ExperimentalEIPs.eip1559Enabled && gasPremium != null && feeCap != null) {
-                out.writeUInt256Scalar(gasPremium);
-                out.writeUInt256Scalar(feeCap);
-              }
-              if (chainId.isPresent()) {
-                out.writeBigIntegerScalar(chainId.get());
-                out.writeUInt256Scalar(UInt256.ZERO);
-                out.writeUInt256Scalar(UInt256.ZERO);
-              }
-              out.endList();
-            }));
+            rlpOutput -> {
+              rlpOutput.startList();
+              rlpOutput.writeBigIntegerScalar(chainId.orElseThrow());
+              rlpOutput.writeLongScalar(nonce);
+              rlpOutput.writeUInt256Scalar(maxPriorityFeePerGas);
+              rlpOutput.writeUInt256Scalar(maxFeePerGas);
+              rlpOutput.writeLongScalar(gasLimit);
+              rlpOutput.writeBytes(to.map(Bytes::copy).orElse(Bytes.EMPTY));
+              rlpOutput.writeUInt256Scalar(value);
+              rlpOutput.writeBytes(payload);
+              TransactionEncoder.writeAccessList(rlpOutput, accessList);
+              rlpOutput.endList();
+            });
+    return Bytes.concatenate(Bytes.of(TransactionType.EIP1559.getSerializedType()), encoded);
+  }
+
+  private static Bytes accessListPreimage(
+      final long nonce,
+      final Wei gasPrice,
+      final long gasLimit,
+      final Optional<Address> to,
+      final Wei value,
+      final Bytes payload,
+      final List<AccessListEntry> accessList,
+      final Optional<BigInteger> chainId) {
+    final Bytes encode =
+        RLP.encode(
+            rlpOutput -> {
+              rlpOutput.startList();
+              TransactionEncoder.encodeAccessListInner(
+                  chainId, nonce, gasPrice, gasLimit, to, value, payload, accessList, rlpOutput);
+              rlpOutput.endList();
+            });
+    return Bytes.concatenate(Bytes.of(TransactionType.ACCESS_LIST.getSerializedType()), encode);
   }
 
   @Override
@@ -576,40 +767,62 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
       return false;
     }
     final Transaction that = (Transaction) other;
-    return this.chainId.equals(that.chainId)
-        && this.gasLimit == that.gasLimit
+    return Objects.equals(this.chainId, that.chainId)
+        && Objects.equals(this.gasLimit, that.gasLimit)
         && Objects.equals(this.gasPrice, that.gasPrice)
-        && Objects.equals(this.gasPremium, that.gasPremium)
-        && Objects.equals(this.feeCap, that.feeCap)
-        && this.nonce == that.nonce
-        && this.payload.equals(that.payload)
-        && this.signature.equals(that.signature)
-        && this.to.equals(that.to)
-        && this.value.equals(that.value);
+        && Objects.equals(this.maxPriorityFeePerGas, that.maxPriorityFeePerGas)
+        && Objects.equals(this.maxFeePerGas, that.maxFeePerGas)
+        && Objects.equals(this.nonce, that.nonce)
+        && Objects.equals(this.payload, that.payload)
+        && Objects.equals(this.signature, that.signature)
+        && Objects.equals(this.to, that.to)
+        && Objects.equals(this.value, that.value)
+        && Objects.equals(this.getV(), that.getV());
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        nonce, gasPrice, gasPremium, feeCap, gasLimit, to, value, payload, signature, chainId);
+        nonce,
+        gasPrice,
+        maxPriorityFeePerGas,
+        maxFeePerGas,
+        gasLimit,
+        to,
+        value,
+        payload,
+        signature,
+        chainId,
+        v);
   }
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
     sb.append(isContractCreation() ? "ContractCreation" : "MessageCall").append("{");
+    sb.append("type=").append(getType()).append(", ");
     sb.append("nonce=").append(getNonce()).append(", ");
-    sb.append("gasPrice=").append(getGasPrice()).append(", ");
-    if (getGasPremium().isPresent() && getFeeCap().isPresent()) {
-      sb.append("gasPremium=").append(getGasPremium()).append(", ");
-      sb.append("feeCap=").append(getFeeCap()).append(", ");
+    getGasPrice()
+        .ifPresent(
+            gasPrice -> sb.append("gasPrice=").append(gasPrice.toShortHexString()).append(", "));
+    if (getMaxPriorityFeePerGas().isPresent() && getMaxFeePerGas().isPresent()) {
+      sb.append("maxPriorityFeePerGas=")
+          .append(getMaxPriorityFeePerGas().map(Wei::toShortHexString).get())
+          .append(", ");
+      sb.append("maxFeePerGas=")
+          .append(getMaxFeePerGas().map(Wei::toShortHexString).get())
+          .append(", ");
     }
     sb.append("gasLimit=").append(getGasLimit()).append(", ");
     if (getTo().isPresent()) sb.append("to=").append(getTo().get()).append(", ");
     sb.append("value=").append(getValue()).append(", ");
     sb.append("sig=").append(getSignature()).append(", ");
     if (chainId.isPresent()) sb.append("chainId=").append(getChainId().get()).append(", ");
+    if (v.isPresent()) sb.append("v=").append(v.get()).append(", ");
     sb.append("payload=").append(getPayload());
+    if (transactionType.equals(TransactionType.ACCESS_LIST)) {
+      sb.append(", ").append("accessList=").append(maybeAccessList);
+    }
     return sb.append("}").toString();
   }
 
@@ -622,30 +835,46 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
 
   public static class Builder {
 
+    protected TransactionType transactionType;
+
     protected long nonce = -1L;
 
     protected Wei gasPrice;
 
-    protected Wei gasPremium;
+    protected Wei maxPriorityFeePerGas;
 
-    protected Wei feeCap;
+    protected Wei maxFeePerGas;
 
     protected long gasLimit = -1L;
 
-    protected Address to;
+    protected Optional<Address> to = Optional.empty();
 
     protected Wei value;
 
-    protected SECP256K1.Signature signature;
+    protected SECPSignature signature;
 
     protected Bytes payload;
+
+    protected Optional<List<AccessListEntry>> accessList = Optional.empty();
 
     protected Address sender;
 
     protected Optional<BigInteger> chainId = Optional.empty();
 
+    protected Optional<BigInteger> v = Optional.empty();
+
+    public Builder type(final TransactionType transactionType) {
+      this.transactionType = transactionType;
+      return this;
+    }
+
     public Builder chainId(final BigInteger chainId) {
       this.chainId = Optional.of(chainId);
+      return this;
+    }
+
+    public Builder v(final BigInteger v) {
+      this.v = Optional.of(v);
       return this;
     }
 
@@ -654,13 +883,13 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
       return this;
     }
 
-    public Builder gasPremium(final Wei gasPremium) {
-      this.gasPremium = gasPremium;
+    public Builder maxPriorityFeePerGas(final Wei maxPriorityFeePerGas) {
+      this.maxPriorityFeePerGas = maxPriorityFeePerGas;
       return this;
     }
 
-    public Builder feeCap(final Wei feeCap) {
-      this.feeCap = feeCap;
+    public Builder maxFeePerGas(final Wei maxFeePerGas) {
+      this.maxFeePerGas = maxFeePerGas;
       return this;
     }
 
@@ -680,7 +909,7 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
     }
 
     public Builder to(final Address to) {
-      this.to = to;
+      this.to = Optional.ofNullable(to);
       return this;
     }
 
@@ -689,32 +918,56 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
       return this;
     }
 
+    public Builder accessList(final List<AccessListEntry> accessList) {
+      this.accessList = Optional.ofNullable(accessList);
+      return this;
+    }
+
     public Builder sender(final Address sender) {
       this.sender = sender;
       return this;
     }
 
-    public Builder signature(final SECP256K1.Signature signature) {
+    public Builder signature(final SECPSignature signature) {
       this.signature = signature;
       return this;
     }
 
+    public Builder guessType() {
+      if (maxPriorityFeePerGas != null || maxFeePerGas != null) {
+        transactionType = TransactionType.EIP1559;
+      } else if (accessList.isPresent()) {
+        transactionType = TransactionType.ACCESS_LIST;
+      } else {
+        transactionType = TransactionType.FRONTIER;
+      }
+      return this;
+    }
+
+    public TransactionType getTransactionType() {
+      return transactionType;
+    }
+
     public Transaction build() {
+      if (transactionType == null) guessType();
       return new Transaction(
+          transactionType,
           nonce,
-          gasPrice,
-          gasPremium,
-          feeCap,
+          Optional.ofNullable(gasPrice),
+          Optional.ofNullable(maxPriorityFeePerGas),
+          Optional.ofNullable(maxFeePerGas),
           gasLimit,
-          Optional.ofNullable(to),
+          to,
           value,
           signature,
           payload,
+          accessList,
           sender,
-          chainId);
+          chainId,
+          v);
     }
 
-    public Transaction signAndBuild(final SECP256K1.KeyPair keys) {
+    public Transaction signAndBuild(final KeyPair keys) {
       checkState(
           signature == null, "The transaction signature has already been provided to this builder");
       signature(computeSignature(keys));
@@ -722,11 +975,38 @@ public class Transaction implements org.hyperledger.besu.plugin.data.Transaction
       return build();
     }
 
-    SECP256K1.Signature computeSignature(final SECP256K1.KeyPair keys) {
-      final Bytes32 hash =
-          computeSenderRecoveryHash(
-              nonce, gasPrice, gasPremium, feeCap, gasLimit, to, value, payload, chainId);
-      return SECP256K1.sign(hash, keys);
+    SECPSignature computeSignature(final KeyPair keys) {
+      return SignatureAlgorithmFactory.getInstance()
+          .sign(
+              computeSenderRecoveryHash(
+                  transactionType,
+                  nonce,
+                  gasPrice,
+                  maxPriorityFeePerGas,
+                  maxFeePerGas,
+                  gasLimit,
+                  to,
+                  value,
+                  payload,
+                  accessList,
+                  chainId),
+              keys);
     }
+  }
+
+  /**
+   * Calculates the effectiveGasPrice of a transaction on the basis of an {@code Optional<Long>}
+   * baseFee and handles unwrapping Optional fee parameters. If baseFee is present, effective gas is
+   * calculated as:
+   *
+   * <p>min((baseFeePerGas + maxPriorityFeePerGas), maxFeePerGas)
+   *
+   * <p>Otherwise, return gasPrice for legacy transactions.
+   *
+   * @param baseFeePerGas optional baseFee from the block header, if we are post-london
+   * @return the effective gas price.
+   */
+  public final Wei getEffectiveGasPrice(final Optional<Long> baseFeePerGas) {
+    return Wei.of(getEffectivePriorityFeePerGas(baseFeePerGas) + baseFeePerGas.orElse(0L));
   }
 }

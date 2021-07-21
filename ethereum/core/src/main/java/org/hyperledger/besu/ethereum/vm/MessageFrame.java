@@ -16,6 +16,7 @@ package org.hyperledger.besu.ethereum.vm;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Collections.emptySet;
 
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -27,12 +28,12 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.mainnet.AbstractMessageProcessor;
+import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
+import org.hyperledger.besu.ethereum.vm.FixedStack.UnderflowException;
 import org.hyperledger.besu.ethereum.vm.internal.MemoryEntry;
-import org.hyperledger.besu.ethereum.vm.operations.ReturnStack;
 
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +42,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
@@ -188,9 +191,6 @@ public class MessageFrame {
 
   public static final int DEFAULT_MAX_STACK_SIZE = 1024;
 
-  // as defined on https://eips.ethereum.org/EIPS/eip-2315
-  public static final int DEFAULT_MAX_RETURN_STACK_SIZE = 1023;
-
   // Global data fields.
   private final WorldUpdater worldState;
   private final Blockchain blockchain;
@@ -215,6 +215,8 @@ public class MessageFrame {
   private Gas gasRefund;
   private final Set<Address> selfDestructs;
   private final Map<Address, Wei> refunds;
+  private Set<Address> warmedUpAddresses;
+  private Multimap<Address, Bytes32> warmedUpStorage;
 
   // Execution Environment fields.
   private final Address recipient;
@@ -232,18 +234,17 @@ public class MessageFrame {
   private final Deque<MessageFrame> messageFrameStack;
   private final Address miningBeneficiary;
   private final Boolean isPersistingPrivateState;
+  private final PrivateMetadataUpdater privateMetadataUpdater;
   private Optional<Bytes> revertReason;
-
-  // as defined on https://eips.ethereum.org/EIPS/eip-2315
-  private final ReturnStack returnStack;
 
   // Privacy Execution Environment fields.
   private final Hash transactionHash;
+  private final Transaction transaction;
 
   // Miscellaneous fields.
-  private final EnumSet<ExceptionalHaltReason> exceptionalHaltReasons =
-      EnumSet.noneOf(ExceptionalHaltReason.class);
+  private Optional<ExceptionalHaltReason> exceptionalHaltReason = Optional.empty();
   private Operation currentOperation;
+  private Optional<Gas> gasCost = Optional.empty();
   private final Consumer<MessageFrame> completer;
   private Optional<MemoryEntry> maybeUpdatedMemory = Optional.empty();
   private Optional<MemoryEntry> maybeUpdatedStorage = Optional.empty();
@@ -256,7 +257,6 @@ public class MessageFrame {
       final Type type,
       final Blockchain blockchain,
       final Deque<MessageFrame> messageFrameStack,
-      final ReturnStack returnStack,
       final WorldUpdater worldState,
       final Gas initialGas,
       final Address recipient,
@@ -276,20 +276,23 @@ public class MessageFrame {
       final Address miningBeneficiary,
       final BlockHashLookup blockHashLookup,
       final Boolean isPersistingPrivateState,
+      final PrivateMetadataUpdater privateMetadataUpdater,
       final Hash transactionHash,
+      final Transaction transaction,
       final Optional<Bytes> revertReason,
-      final int maxStackSize) {
+      final int maxStackSize,
+      final Set<Address> accessListWarmAddresses,
+      final Multimap<Address, Bytes32> accessListWarmStorage) {
     this.type = type;
     this.blockchain = blockchain;
     this.messageFrameStack = messageFrameStack;
-    this.returnStack = returnStack;
     this.worldState = worldState;
     this.gasRemaining = initialGas;
     this.blockHashLookup = blockHashLookup;
     this.maxStackSize = maxStackSize;
     this.pc = 0;
     this.memory = new Memory();
-    this.stack = new PreAllocatedOperandStack(maxStackSize);
+    this.stack = new OperandStack(maxStackSize);
     this.output = Bytes.EMPTY;
     this.returnData = Bytes.EMPTY;
     this.logs = new ArrayList<>();
@@ -313,8 +316,32 @@ public class MessageFrame {
     this.completer = completer;
     this.miningBeneficiary = miningBeneficiary;
     this.isPersistingPrivateState = isPersistingPrivateState;
+    this.privateMetadataUpdater = privateMetadataUpdater;
     this.transactionHash = transactionHash;
+    this.transaction = transaction;
     this.revertReason = revertReason;
+
+    this.warmedUpAddresses = new HashSet<>(accessListWarmAddresses);
+    this.warmedUpAddresses.add(sender);
+    this.warmedUpAddresses.add(contract);
+    this.warmedUpStorage = HashMultimap.create(accessListWarmStorage);
+
+    // the warmed up addresses will always be a superset of the address keys in the warmed up
+    // storage so we can do both warm ups in one pass
+    accessListWarmAddresses
+        .parallelStream()
+        .forEach(
+            address ->
+                Optional.ofNullable(worldState.get(address))
+                    .ifPresent(
+                        account ->
+                            warmedUpStorage
+                                .get(address)
+                                .parallelStream()
+                                .forEach(
+                                    storageKeyBytes ->
+                                        account.getStorageValue(
+                                            UInt256.fromBytes(storageKeyBytes)))));
   }
 
   /**
@@ -427,9 +454,9 @@ public class MessageFrame {
    *
    * @param offset The item's position relative to the top of the stack
    * @return The item at the specified offset in the stack
-   * @throws IndexOutOfBoundsException if the offset is out of range
+   * @throws UnderflowException if the offset is out of range
    */
-  public Bytes32 getStackItem(final int offset) {
+  public UInt256 getStackItem(final int offset) {
     return stack.get(offset);
   }
 
@@ -437,9 +464,9 @@ public class MessageFrame {
    * Removes the item at the top of the stack.
    *
    * @return the item at the top of the stack
-   * @throws IllegalStateException if the stack is empty
+   * @throws UnderflowException if the stack is empty
    */
-  public Bytes32 popStackItem() {
+  public UInt256 popStackItem() {
     return stack.pop();
   }
 
@@ -447,7 +474,6 @@ public class MessageFrame {
    * Removes the corresponding number of items from the top of the stack.
    *
    * @param n The number of items to pop off the stack
-   * @throws IllegalStateException if the stack does not contain enough items
    */
   public void popStackItems(final int n) {
     stack.bulkPop(n);
@@ -457,9 +483,8 @@ public class MessageFrame {
    * Pushes the corresponding item onto the top of the stack
    *
    * @param value The value to push onto the stack.
-   * @throws IllegalStateException if the stack is full
    */
-  public void pushStackItem(final Bytes32 value) {
+  public void pushStackItem(final UInt256 value) {
     stack.push(value);
   }
 
@@ -470,7 +495,7 @@ public class MessageFrame {
    * @param value The value to set the stack item to
    * @throws IllegalStateException if the stack is too small
    */
-  public void setStackItem(final int offset, final Bytes32 value) {
+  public void setStackItem(final int offset, final UInt256 value) {
     stack.set(offset, value);
   }
 
@@ -481,53 +506,6 @@ public class MessageFrame {
    */
   public int stackSize() {
     return stack.size();
-  }
-
-  /**
-   * Tests if the return stack is full
-   *
-   * @return true is the return stack is full, else false
-   */
-  public boolean isReturnStackFull() {
-    return returnStack.isFull();
-  }
-
-  /**
-   * Tests if the return stack is empty
-   *
-   * @return true is the return stack is empty, else false
-   */
-  public boolean isReturnStackEmpty() {
-    return returnStack.isEmpty();
-  }
-
-  /**
-   * Removes the item at the top of the return stack.
-   *
-   * @return the item at the top of the return stack
-   * @throws IllegalStateException if the return stack is empty
-   */
-  public int popReturnStackItem() {
-    return returnStack.pop();
-  }
-
-  /**
-   * Return the return stack.
-   *
-   * @return the return stack
-   */
-  public ReturnStack getReturnStack() {
-    return returnStack;
-  }
-
-  /**
-   * Pushes the corresponding item onto the top of the return stack
-   *
-   * @param value The value to push onto the return stack.
-   * @throws IllegalStateException if the stack is full
-   */
-  public void pushReturnStackItem(final int value) {
-    returnStack.push(value);
   }
 
   /**
@@ -556,7 +534,7 @@ public class MessageFrame {
    * @param offset The offset in memory
    * @param length The length of the memory access
    */
-  public void expandMemory(final long offset, final int length) {
+  public void expandMemory(final UInt256 offset, final UInt256 length) {
     memory.ensureCapacityForBytes(offset, length);
   }
 
@@ -704,7 +682,7 @@ public class MessageFrame {
     final int len = length.fitsInt() ? length.intValue() : Integer.MAX_VALUE;
     final int endIndex = srcOff + len;
     if (srcOff >= 0 && endIndex > 0) {
-      int srcSize = value.size();
+      final int srcSize = value.size();
       if (endIndex > srcSize) {
         final MutableBytes paddedAnswer = MutableBytes.create(len);
         if (srcOff < srcSize) {
@@ -826,8 +804,47 @@ public class MessageFrame {
    *
    * @return the refunds map
    */
-  public Map<Address, Wei> getRefunds() {
+  Map<Address, Wei> getRefunds() {
     return refunds;
+  }
+
+  /**
+   * "Warms up" the address as per EIP-2929
+   *
+   * @param address the address to warm up
+   * @return true if the address was already warmed up
+   */
+  public boolean warmUpAddress(final Address address) {
+    return !warmedUpAddresses.add(address);
+  }
+
+  /**
+   * "Warms up" the storage slot as per EIP-2929
+   *
+   * @param address the address whose storage is being warmed up
+   * @param slot the slot being warmed up
+   * @return true if the storage slot was already warmed up
+   */
+  public boolean warmUpStorage(final Address address, final Bytes32 slot) {
+    return !warmedUpStorage.put(address, slot);
+  }
+
+  public void copyWarmedUpFields(final MessageFrame parentFrame) {
+    if (parentFrame == this) {
+      return;
+    }
+
+    warmedUpAddresses = new HashSet<>(parentFrame.warmedUpAddresses);
+    warmedUpStorage = HashMultimap.create(parentFrame.warmedUpStorage);
+  }
+
+  public void mergeWarmedUpFields(final MessageFrame childFrame) {
+    if (childFrame == this) {
+      return;
+    }
+
+    warmedUpAddresses = childFrame.warmedUpAddresses;
+    warmedUpStorage = childFrame.warmedUpStorage;
   }
 
   /**
@@ -988,8 +1005,12 @@ public class MessageFrame {
     return messageFrameStack;
   }
 
-  public EnumSet<ExceptionalHaltReason> getExceptionalHaltReasons() {
-    return exceptionalHaltReasons;
+  void setExceptionalHaltReason(final Optional<ExceptionalHaltReason> exceptionalHaltReason) {
+    this.exceptionalHaltReason = exceptionalHaltReason;
+  }
+
+  public Optional<ExceptionalHaltReason> getExceptionalHaltReason() {
+    return exceptionalHaltReason;
   }
 
   /**
@@ -1009,6 +1030,10 @@ public class MessageFrame {
     return currentOperation;
   }
 
+  public Optional<Gas> getGasCost() {
+    return gasCost;
+  }
+
   public int getMaxStackSize() {
     return maxStackSize;
   }
@@ -1022,6 +1047,10 @@ public class MessageFrame {
     return isPersistingPrivateState;
   }
 
+  public PrivateMetadataUpdater getPrivateMetadataUpdater() {
+    return privateMetadataUpdater;
+  }
+
   /**
    * Returns the transaction hash of the transaction being processed
    *
@@ -1031,8 +1060,16 @@ public class MessageFrame {
     return transactionHash;
   }
 
+  public Transaction getTransaction() {
+    return transaction;
+  }
+
   public void setCurrentOperation(final Operation currentOperation) {
     this.currentOperation = currentOperation;
+  }
+
+  public void setGasCost(final Optional<Gas> gasCost) {
+    this.gasCost = gasCost;
   }
 
   public int getContractAccountVersion() {
@@ -1043,7 +1080,7 @@ public class MessageFrame {
     return maybeUpdatedMemory;
   }
 
-  public Optional<MemoryEntry> getMaybeUpdatedStorage() {
+  Optional<MemoryEntry> getMaybeUpdatedStorage() {
     return maybeUpdatedStorage;
   }
 
@@ -1077,17 +1114,15 @@ public class MessageFrame {
     private Address miningBeneficiary;
     private BlockHashLookup blockHashLookup;
     private Boolean isPersistingPrivateState = false;
+    private PrivateMetadataUpdater privateMetadataUpdater = null;
     private Hash transactionHash;
+    private Transaction transaction;
     private Optional<Bytes> reason = Optional.empty();
-    private ReturnStack returnStack = new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
+    private Set<Address> accessListWarmAddresses = emptySet();
+    private Multimap<Address, Bytes32> accessListWarmStorage = HashMultimap.create();
 
     public Builder type(final Type type) {
       this.type = type;
-      return this;
-    }
-
-    public Builder returnStack(final ReturnStack returnStack) {
-      this.returnStack = returnStack;
       return this;
     }
 
@@ -1202,8 +1237,18 @@ public class MessageFrame {
       return this;
     }
 
+    public Builder privateMetadataUpdater(final PrivateMetadataUpdater privateMetadataUpdater) {
+      this.privateMetadataUpdater = privateMetadataUpdater;
+      return this;
+    }
+
     public Builder transactionHash(final Hash transactionHash) {
       this.transactionHash = transactionHash;
+      return this;
+    }
+
+    public Builder transaction(final Transaction transaction) {
+      this.transaction = transaction;
       return this;
     }
 
@@ -1212,11 +1257,20 @@ public class MessageFrame {
       return this;
     }
 
+    public Builder accessListWarmAddresses(final Set<Address> accessListWarmAddresses) {
+      this.accessListWarmAddresses = accessListWarmAddresses;
+      return this;
+    }
+
+    public Builder accessListWarmStorage(final Multimap<Address, Bytes32> accessListWarmStorage) {
+      this.accessListWarmStorage = accessListWarmStorage;
+      return this;
+    }
+
     private void validate() {
       checkState(type != null, "Missing message frame type");
       checkState(blockchain != null, "Missing message frame blockchain");
       checkState(messageFrameStack != null, "Missing message frame message frame stack");
-      checkState(returnStack != null, "Missing return stack");
       checkState(worldState != null, "Missing message frame world state");
       checkState(initialGas != null, "Missing message frame initial getGasRemaining");
       checkState(address != null, "Missing message frame recipient");
@@ -1244,7 +1298,6 @@ public class MessageFrame {
           type,
           blockchain,
           messageFrameStack,
-          returnStack,
           worldState,
           initialGas,
           address,
@@ -1264,9 +1317,13 @@ public class MessageFrame {
           miningBeneficiary,
           blockHashLookup,
           isPersistingPrivateState,
+          privateMetadataUpdater,
           transactionHash,
+          transaction,
           reason,
-          maxStackSize);
+          maxStackSize,
+          accessListWarmAddresses,
+          accessListWarmStorage);
     }
   }
 }

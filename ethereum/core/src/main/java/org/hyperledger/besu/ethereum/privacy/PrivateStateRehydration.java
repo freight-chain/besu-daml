@@ -43,7 +43,7 @@ public class PrivateStateRehydration {
 
   private final PrivateStateStorage privateStateStorage;
   private final Blockchain blockchain;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final WorldStateArchive publicWorldStateArchive;
   private final WorldStateArchive privateWorldStateArchive;
   private final PrivateStateRootResolver privateStateRootResolver;
@@ -51,7 +51,7 @@ public class PrivateStateRehydration {
   public PrivateStateRehydration(
       final PrivateStateStorage privateStateStorage,
       final Blockchain blockchain,
-      final ProtocolSchedule<?> protocolSchedule,
+      final ProtocolSchedule protocolSchedule,
       final WorldStateArchive publicWorldStateArchive,
       final WorldStateArchive privateWorldStateArchive,
       final PrivateStateRootResolver privateStateRootResolver) {
@@ -70,7 +70,7 @@ public class PrivateStateRehydration {
     final Optional<Bytes> maybeGroupId =
         privateTransactionWithMetadataList.get(0).getPrivateTransaction().getPrivacyGroupId();
     if (maybeGroupId.isEmpty()) {
-      LOG.debug("On-chain groups must have a group id.");
+      LOG.debug("Onchain groups must have a group id.");
       return;
     }
     final Bytes32 privacyGroupId = Bytes32.wrap(maybeGroupId.get());
@@ -88,16 +88,26 @@ public class PrivateStateRehydration {
           .updater()
           .putPrivacyGroupHeadBlockMap(
               getBlockHashForIndex(0, privateTransactionWithMetadataList),
-              PrivacyGroupHeadBlockMap.EMPTY)
+              PrivacyGroupHeadBlockMap.empty())
           .commit();
+    }
+
+    final LinkedHashMap<Hash, PrivateTransaction> pmtHashToPrivateTransactionMap =
+        new LinkedHashMap<>();
+    for (int j = 0; j < privateTransactionWithMetadataList.size(); j++) {
+      final PrivateTransactionWithMetadata transactionWithMetadata =
+          privateTransactionWithMetadataList.get(j);
+      pmtHashToPrivateTransactionMap.put(
+          transactionWithMetadata.getPrivateTransactionMetadata().getPrivateMarkerTransactionHash(),
+          transactionWithMetadata.getPrivateTransaction());
     }
 
     for (int i = 0; i < privateTransactionWithMetadataList.size(); i++) {
       // find out which block this transaction is in
       final Hash blockHash = getBlockHashForIndex(i, privateTransactionWithMetadataList);
 
-      // if there are multiple pmts in the list we can increment our index i. At the end of the
-      // while loop i will be the index of the last PMT (for this group) that is in this block.
+      // At the end of the while loop i will be the index of the last PMT (for this group) that is
+      // in this block.
       while (i + 1 < privateTransactionWithMetadataList.size()
           && blockHash.equals(getBlockHashForIndex(i + 1, privateTransactionWithMetadataList))) {
         i++;
@@ -107,7 +117,7 @@ public class PrivateStateRehydration {
           privateTransactionWithMetadataList
               .get(i)
               .getPrivateTransactionMetadata()
-              .getPrivacyMarkerTransactionHash();
+              .getPrivateMarkerTransactionHash();
 
       final Optional<TransactionLocation> transactionLocationOfLastPmtInBlock =
           blockchain.getTransactionLocation(lastPmtHash);
@@ -127,8 +137,7 @@ public class PrivateStateRehydration {
               .map(Transaction::getHash)
               .collect(Collectors.toList()));
 
-      final ProtocolSpec<?> protocolSpec =
-          protocolSchedule.getByBlockNumber(blockchain.getBlockHeader(blockHash).get().getNumber());
+      final ProtocolSpec protocolSpec = protocolSchedule.getByBlockNumber(blockHeader.getNumber());
       final PrivateGroupRehydrationBlockProcessor privateGroupRehydrationBlockProcessor =
           new PrivateGroupRehydrationBlockProcessor(
               protocolSpec.getTransactionProcessor(),
@@ -141,21 +150,10 @@ public class PrivateStateRehydration {
       final MutableWorldState publicWorldState =
           blockchain
               .getBlockHeader(blockHeader.getParentHash())
-              .map(BlockHeader::getStateRoot)
-              .flatMap(publicWorldStateArchive::getMutable)
+              .flatMap(
+                  header ->
+                      publicWorldStateArchive.getMutable(header.getStateRoot(), header.getHash()))
               .orElseThrow(RuntimeException::new);
-
-      // enclave cache for private block rehydration
-      final LinkedHashMap<Hash, PrivateTransaction> enclaveMap = new LinkedHashMap<>();
-      for (int j = 0; j < privateTransactionWithMetadataList.size(); j++) {
-        final PrivateTransactionWithMetadata transactionWithMetadata =
-            privateTransactionWithMetadataList.get(j);
-        enclaveMap.put(
-            transactionWithMetadata
-                .getPrivateTransactionMetadata()
-                .getPrivacyMarkerTransactionHash(),
-            transactionWithMetadata.getPrivateTransaction());
-      }
 
       privateGroupRehydrationBlockProcessor.processBlock(
           blockchain,
@@ -164,7 +162,7 @@ public class PrivateStateRehydration {
           privateStateStorage,
           privateStateRootResolver,
           block,
-          enclaveMap,
+          pmtHashToPrivateTransactionMap,
           block.getBody().getOmmers());
 
       // check the resulting private state against the state in the meta data
@@ -217,7 +215,7 @@ public class PrivateStateRehydration {
       final PrivacyGroupHeadBlockMap thePrivacyGroupHeadBlockMap =
           privateStateStorage
               .getPrivacyGroupHeadBlockMap(theBlockHeader.getHash())
-              .orElse(PrivacyGroupHeadBlockMap.EMPTY);
+              .orElse(PrivacyGroupHeadBlockMap.empty());
       final PrivateStateStorage.Updater privateStateUpdater = privateStateStorage.updater();
       thePrivacyGroupHeadBlockMap.put(privacyGroupId, hashOfLastBlockWithPmt);
       privateStateUpdater.putPrivacyGroupHeadBlockMap(
@@ -243,7 +241,7 @@ public class PrivateStateRehydration {
             privateTransactionWithMetadataList
                 .get(index)
                 .getPrivateTransactionMetadata()
-                .getPrivacyMarkerTransactionHash())
+                .getPrivateMarkerTransactionHash())
         .orElseThrow()
         .getBlockHash();
   }

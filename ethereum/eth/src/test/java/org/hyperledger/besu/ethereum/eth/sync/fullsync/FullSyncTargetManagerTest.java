@@ -21,8 +21,10 @@ import static org.mockito.Mockito.when;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockchainSetupUtil;
 import org.hyperledger.besu.ethereum.core.Difficulty;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManager;
@@ -31,18 +33,23 @@ import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncTarget;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageFormat;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class FullSyncTargetManagerTest {
 
   private EthProtocolManager ethProtocolManager;
@@ -50,20 +57,31 @@ public class FullSyncTargetManagerTest {
   private MutableBlockchain localBlockchain;
   private final WorldStateArchive localWorldState = mock(WorldStateArchive.class);
   private RespondingEthPeer.Responder responder;
-  private FullSyncTargetManager<Void> syncTargetManager;
+  private FullSyncTargetManager syncTargetManager;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[][] {{DataStorageFormat.BONSAI}, {DataStorageFormat.FOREST}});
+  }
+
+  private final DataStorageFormat storageFormat;
+
+  public FullSyncTargetManagerTest(final DataStorageFormat storageFormat) {
+    this.storageFormat = storageFormat;
+  }
 
   @Before
   public void setup() {
-    final BlockchainSetupUtil<Void> otherBlockchainSetup = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil otherBlockchainSetup = BlockchainSetupUtil.forTesting(storageFormat);
     final Blockchain otherBlockchain = otherBlockchainSetup.getBlockchain();
     responder = RespondingEthPeer.blockchainResponder(otherBlockchain);
 
-    final BlockchainSetupUtil<Void> localBlockchainSetup = BlockchainSetupUtil.forTesting();
+    final BlockchainSetupUtil localBlockchainSetup = BlockchainSetupUtil.forTesting(storageFormat);
     localBlockchain = localBlockchainSetup.getBlockchain();
 
-    final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
-    final ProtocolContext<Void> protocolContext =
-        new ProtocolContext<>(localBlockchain, localWorldState, null);
+    final ProtocolSchedule protocolSchedule = ProtocolScheduleFixture.MAINNET;
+    final ProtocolContext protocolContext =
+        new ProtocolContext(localBlockchain, localWorldState, null);
     ethProtocolManager =
         EthProtocolManagerTestUtil.create(
             localBlockchain,
@@ -75,7 +93,7 @@ public class FullSyncTargetManagerTest {
     localBlockchainSetup.importFirstBlocks(5);
     otherBlockchainSetup.importFirstBlocks(20);
     syncTargetManager =
-        new FullSyncTargetManager<>(
+        new FullSyncTargetManager(
             SynchronizerConfiguration.builder().build(),
             protocolSchedule,
             protocolContext,
@@ -90,10 +108,12 @@ public class FullSyncTargetManagerTest {
 
   @Test
   public void findSyncTarget_withHeightEstimates() {
-    when(localWorldState.isWorldStateAvailable(localBlockchain.getChainHeadHeader().getStateRoot()))
+    final BlockHeader chainHeadHeader = localBlockchain.getChainHeadHeader();
+    when(localWorldState.isWorldStateAvailable(
+            chainHeadHeader.getStateRoot(), chainHeadHeader.getHash()))
         .thenReturn(true);
     final RespondingEthPeer bestPeer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.MAX_VALUE, 1);
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.MAX_VALUE, 4);
 
     final CompletableFuture<SyncTarget> result = syncTargetManager.findSyncTarget(Optional.empty());
     bestPeer.respond(responder);
@@ -105,7 +125,9 @@ public class FullSyncTargetManagerTest {
 
   @Test
   public void findSyncTarget_noHeightEstimates() {
-    when(localWorldState.isWorldStateAvailable(localBlockchain.getChainHeadHeader().getStateRoot()))
+    final BlockHeader chainHeadHeader = localBlockchain.getChainHeadHeader();
+    when(localWorldState.isWorldStateAvailable(
+            chainHeadHeader.getStateRoot(), chainHeadHeader.getHash()))
         .thenReturn(true);
     final RespondingEthPeer bestPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, Difficulty.MAX_VALUE, 0);
@@ -118,7 +140,9 @@ public class FullSyncTargetManagerTest {
 
   @Test
   public void shouldDisconnectPeerIfWorldStateIsUnavailableForCommonAncestor() {
-    when(localWorldState.isWorldStateAvailable(localBlockchain.getChainHeadHeader().getStateRoot()))
+    final BlockHeader chainHeadHeader = localBlockchain.getChainHeadHeader();
+    when(localWorldState.isWorldStateAvailable(
+            chainHeadHeader.getStateRoot(), chainHeadHeader.getHash()))
         .thenReturn(false);
     final RespondingEthPeer bestPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 20);
@@ -133,7 +157,9 @@ public class FullSyncTargetManagerTest {
 
   @Test
   public void shouldAllowSyncTargetWhenIfWorldStateIsAvailableForCommonAncestor() {
-    when(localWorldState.isWorldStateAvailable(localBlockchain.getChainHeadHeader().getStateRoot()))
+    final BlockHeader chainHeadHeader = localBlockchain.getChainHeadHeader();
+    when(localWorldState.isWorldStateAvailable(
+            chainHeadHeader.getStateRoot(), chainHeadHeader.getHash()))
         .thenReturn(true);
     final RespondingEthPeer bestPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 20);

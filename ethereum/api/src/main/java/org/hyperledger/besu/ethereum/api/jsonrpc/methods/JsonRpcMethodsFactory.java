@@ -25,6 +25,7 @@ import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.blockcreation.MiningCoordinator;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
+import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
@@ -37,6 +38,7 @@ import org.hyperledger.besu.nat.NatService;
 import org.hyperledger.besu.plugin.BesuPlugin;
 
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +55,7 @@ public class JsonRpcMethodsFactory {
       final P2PNetwork p2pNetwork,
       final BlockchainQueries blockchainQueries,
       final Synchronizer synchronizer,
-      final ProtocolSchedule<?> protocolSchedule,
+      final ProtocolSchedule protocolSchedule,
       final FilterManager filterManager,
       final TransactionPool transactionPool,
       final MiningCoordinator miningCoordinator,
@@ -67,7 +69,9 @@ public class JsonRpcMethodsFactory {
       final WebSocketConfiguration webSocketConfiguration,
       final MetricsConfiguration metricsConfiguration,
       final NatService natService,
-      final Map<String, BesuPlugin> namedPlugins) {
+      final Map<String, BesuPlugin> namedPlugins,
+      final Path dataDir,
+      final EthPeers ethPeers) {
     final Map<String, JsonRpcMethod> enabled = new HashMap<>();
 
     if (!rpcApis.isEmpty()) {
@@ -83,9 +87,13 @@ public class JsonRpcMethodsFactory {
                   p2pNetwork,
                   blockchainQueries,
                   namedPlugins,
-                  natService),
-              new DebugJsonRpcMethods(blockchainQueries, protocolSchedule, metricsSystem),
+                  natService,
+                  ethPeers),
+              new DebugJsonRpcMethods(
+                  blockchainQueries, protocolSchedule, metricsSystem, transactionPool, dataDir),
               new EeaJsonRpcMethods(
+                  blockchainQueries, protocolSchedule, transactionPool, privacyParameters),
+              new GoQuorumJsonRpcPrivacyMethods(
                   blockchainQueries, protocolSchedule, transactionPool, privacyParameters),
               new EthJsonRpcMethods(
                   blockchainQueries,
@@ -94,10 +102,11 @@ public class JsonRpcMethodsFactory {
                   filterManager,
                   transactionPool,
                   miningCoordinator,
-                  supportedCapabilities),
+                  supportedCapabilities,
+                  privacyParameters),
               new NetJsonRpcMethods(
                   p2pNetwork,
-                  protocolSchedule,
+                  networkId,
                   jsonRpcConfiguration,
                   webSocketConfiguration,
                   metricsConfiguration),

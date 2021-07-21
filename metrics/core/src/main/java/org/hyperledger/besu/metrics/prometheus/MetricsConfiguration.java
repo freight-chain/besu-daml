@@ -16,6 +16,7 @@ package org.hyperledger.besu.metrics.prometheus;
 
 import static org.hyperledger.besu.metrics.BesuMetricCategory.DEFAULT_METRIC_CATEGORIES;
 
+import org.hyperledger.besu.metrics.MetricsProtocol;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 
 import java.util.Arrays;
@@ -30,12 +31,13 @@ import com.google.common.base.MoreObjects;
 public class MetricsConfiguration {
   private static final String DEFAULT_METRICS_HOST = "127.0.0.1";
   public static final int DEFAULT_METRICS_PORT = 9545;
-
+  private static final MetricsProtocol DEFAULT_METRICS_PROTOCOL = MetricsProtocol.PROMETHEUS;
   private static final String DEFAULT_METRICS_PUSH_HOST = "127.0.0.1";
   public static final int DEFAULT_METRICS_PUSH_PORT = 9001;
   public static final Boolean DEFAULT_TIMERS_ENABLED = true;
 
   private final boolean enabled;
+  private final MetricsProtocol protocol;
   private final int port;
   private int actualPort;
   private final String host;
@@ -45,7 +47,7 @@ public class MetricsConfiguration {
   private final String pushHost;
   private final int pushInterval;
   private final String prometheusJob;
-  private final List<String> hostsWhitelist;
+  private final List<String> hostsAllowlist;
   private final boolean timersEnabled;
 
   public static Builder builder() {
@@ -55,6 +57,7 @@ public class MetricsConfiguration {
   private MetricsConfiguration(
       final boolean enabled,
       final int port,
+      final MetricsProtocol protocol,
       final String host,
       final Set<MetricCategory> metricCategories,
       final boolean pushEnabled,
@@ -62,10 +65,11 @@ public class MetricsConfiguration {
       final String pushHost,
       final int pushInterval,
       final String prometheusJob,
-      final List<String> hostsWhitelist,
+      final List<String> hostsAllowlist,
       final boolean timersEnabled) {
     this.enabled = enabled;
     this.port = port;
+    this.protocol = protocol;
     this.host = host;
     this.metricCategories = metricCategories;
     this.pushEnabled = pushEnabled;
@@ -73,12 +77,16 @@ public class MetricsConfiguration {
     this.pushHost = pushHost;
     this.pushInterval = pushInterval;
     this.prometheusJob = prometheusJob;
-    this.hostsWhitelist = hostsWhitelist;
+    this.hostsAllowlist = hostsAllowlist;
     this.timersEnabled = timersEnabled;
   }
 
   public boolean isEnabled() {
     return enabled;
+  }
+
+  public MetricsProtocol getProtocol() {
+    return protocol;
   }
 
   public String getHost() {
@@ -121,8 +129,14 @@ public class MetricsConfiguration {
     return prometheusJob;
   }
 
+  // use getHostsAllowlist instead
+  @Deprecated
   Collection<String> getHostsWhitelist() {
-    return Collections.unmodifiableCollection(this.hostsWhitelist);
+    return Collections.unmodifiableCollection(this.hostsAllowlist);
+  }
+
+  Collection<String> getHostsAllowlist() {
+    return Collections.unmodifiableCollection(this.hostsAllowlist);
   }
 
   public boolean isTimersEnabled() {
@@ -133,6 +147,7 @@ public class MetricsConfiguration {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("enabled", enabled)
+        .add("protocol", protocol)
         .add("port", port)
         .add("host", host)
         .add("metricCategories", metricCategories)
@@ -141,7 +156,7 @@ public class MetricsConfiguration {
         .add("pushHost", pushHost)
         .add("pushInterval", pushInterval)
         .add("prometheusJob", prometheusJob)
-        .add("hostsWhitelist", hostsWhitelist)
+        .add("hostsAllowlist", hostsAllowlist)
         .toString();
   }
 
@@ -155,6 +170,7 @@ public class MetricsConfiguration {
     }
     final MetricsConfiguration that = (MetricsConfiguration) o;
     return enabled == that.enabled
+        && Objects.equals(protocol, that.protocol)
         && port == that.port
         && pushEnabled == that.pushEnabled
         && pushPort == that.pushPort
@@ -163,13 +179,14 @@ public class MetricsConfiguration {
         && Objects.equals(metricCategories, that.metricCategories)
         && Objects.equals(pushHost, that.pushHost)
         && Objects.equals(prometheusJob, that.prometheusJob)
-        && Objects.equals(hostsWhitelist, that.hostsWhitelist);
+        && Objects.equals(hostsAllowlist, that.hostsAllowlist);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
         enabled,
+        protocol,
         port,
         host,
         metricCategories,
@@ -178,11 +195,12 @@ public class MetricsConfiguration {
         pushHost,
         pushInterval,
         prometheusJob,
-        hostsWhitelist);
+        hostsAllowlist);
   }
 
   public static class Builder {
     private boolean enabled = false;
+    private MetricsProtocol protocol = DEFAULT_METRICS_PROTOCOL;
     private int port = DEFAULT_METRICS_PORT;
     private String host = DEFAULT_METRICS_HOST;
     private Set<MetricCategory> metricCategories = DEFAULT_METRIC_CATEGORIES;
@@ -191,13 +209,18 @@ public class MetricsConfiguration {
     private String pushHost = DEFAULT_METRICS_PUSH_HOST;
     private int pushInterval = 15;
     private String prometheusJob = "besu-client";
-    private List<String> hostsWhitelist = Arrays.asList("localhost", "127.0.0.1");
+    private List<String> hostsAllowlist = Arrays.asList("localhost", "127.0.0.1");
     private boolean timersEnabled = DEFAULT_TIMERS_ENABLED;
 
     private Builder() {}
 
     public Builder enabled(final boolean enabled) {
       this.enabled = enabled;
+      return this;
+    }
+
+    public Builder protocol(final MetricsProtocol protocol) {
+      this.protocol = protocol;
       return this;
     }
 
@@ -241,8 +264,15 @@ public class MetricsConfiguration {
       return this;
     }
 
-    public Builder hostsWhitelist(final List<String> hostsWhitelist) {
-      this.hostsWhitelist = hostsWhitelist;
+    // use hostsAllowlist instead
+    @Deprecated
+    public Builder hostsWhitelist(final List<String> hostsAllowlist) {
+      this.hostsAllowlist = hostsAllowlist;
+      return this;
+    }
+
+    public Builder hostsAllowlist(final List<String> hostsAllowlist) {
+      this.hostsAllowlist = hostsAllowlist;
       return this;
     }
 
@@ -255,6 +285,7 @@ public class MetricsConfiguration {
       return new MetricsConfiguration(
           enabled,
           port,
+          protocol,
           host,
           metricCategories,
           pushEnabled,
@@ -262,7 +293,7 @@ public class MetricsConfiguration {
           pushHost,
           pushInterval,
           prometheusJob,
-          hostsWhitelist,
+          hostsAllowlist,
           timersEnabled);
     }
   }

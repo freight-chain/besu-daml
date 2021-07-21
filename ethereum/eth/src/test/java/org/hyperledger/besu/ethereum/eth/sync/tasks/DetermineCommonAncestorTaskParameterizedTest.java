@@ -15,8 +15,8 @@
 package org.hyperledger.besu.ethereum.eth.sync.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
 import org.hyperledger.besu.ethereum.ProtocolContext;
@@ -26,6 +26,7 @@ import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Difficulty;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
@@ -35,7 +36,6 @@ import org.hyperledger.besu.ethereum.eth.manager.RespondingEthPeer;
 import org.hyperledger.besu.ethereum.eth.manager.task.EthTask;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
@@ -58,7 +58,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class DetermineCommonAncestorTaskParameterizedTest {
-  private final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
+  private final ProtocolSchedule protocolSchedule = ProtocolScheduleFixture.MAINNET;
   private static final BlockDataGenerator blockDataGenerator = new BlockDataGenerator();
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
 
@@ -158,8 +158,8 @@ public class DetermineCommonAncestorTaskParameterizedTest {
     final AtomicBoolean done = new AtomicBoolean(false);
 
     final EthContext ethContext = ethProtocolManager.ethContext();
-    final ProtocolContext<Void> protocolContext =
-        new ProtocolContext<>(localBlockchain, worldStateArchive, null);
+    final ProtocolContext protocolContext =
+        new ProtocolContext(localBlockchain, worldStateArchive, null);
 
     final EthTask<BlockHeader> task =
         DetermineCommonAncestorTask.create(

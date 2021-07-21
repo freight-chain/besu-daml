@@ -15,13 +15,14 @@
 package org.hyperledger.besu.tests.acceptance.dsl;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Blockchain;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.admin.AdminConditions;
+import org.hyperledger.besu.tests.acceptance.dsl.condition.bft.BftConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.clique.CliqueConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.eth.EthConditions;
-import org.hyperledger.besu.tests.acceptance.dsl.condition.ibft2.Ibft2Conditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.login.LoginConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.net.NetConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.perm.PermissioningConditions;
@@ -30,15 +31,16 @@ import org.hyperledger.besu.tests.acceptance.dsl.condition.process.ExitedWithCod
 import org.hyperledger.besu.tests.acceptance.dsl.condition.txpool.TxPoolConditions;
 import org.hyperledger.besu.tests.acceptance.dsl.condition.web3.Web3Conditions;
 import org.hyperledger.besu.tests.acceptance.dsl.contract.ContractVerifier;
+import org.hyperledger.besu.tests.acceptance.dsl.node.Node;
 import org.hyperledger.besu.tests.acceptance.dsl.node.cluster.Cluster;
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.BesuNodeFactory;
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.permissioning.PermissionedNodeBuilder;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.AccountTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.admin.AdminTransactions;
+import org.hyperledger.besu.tests.acceptance.dsl.transaction.bft.BftTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.clique.CliqueTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.contract.ContractTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.eth.EthTransactions;
-import org.hyperledger.besu.tests.acceptance.dsl.transaction.ibft2.Ibft2Transactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.miner.MinerTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.net.NetTransactions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.perm.PermissioningTransactions;
@@ -51,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
+import java.math.BigInteger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -79,8 +82,8 @@ public class AcceptanceTestBase {
   protected final ContractTransactions contractTransactions;
   protected final EthConditions eth;
   protected final EthTransactions ethTransactions;
-  protected final Ibft2Transactions ibftTwoTransactions;
-  protected final Ibft2Conditions ibftTwo;
+  protected final BftTransactions bftTransactions;
+  protected final BftConditions bft;
   protected final LoginConditions login;
   protected final NetConditions net;
   protected final BesuNodeFactory besu;
@@ -102,7 +105,7 @@ public class AcceptanceTestBase {
     accounts = new Accounts(ethTransactions);
     adminTransactions = new AdminTransactions();
     cliqueTransactions = new CliqueTransactions();
-    ibftTwoTransactions = new Ibft2Transactions();
+    bftTransactions = new BftTransactions();
     accountTransactions = new AccountTransactions(accounts);
     permissioningTransactions = new PermissioningTransactions();
     privacyTransactions = new PrivacyTransactions();
@@ -112,7 +115,7 @@ public class AcceptanceTestBase {
     blockchain = new Blockchain(ethTransactions);
     clique = new CliqueConditions(ethTransactions, cliqueTransactions);
     eth = new EthConditions(ethTransactions);
-    ibftTwo = new Ibft2Conditions(ibftTwoTransactions);
+    bft = new BftConditions(bftTransactions);
     login = new LoginConditions();
     net = new NetConditions(new NetTransactions());
     cluster = new Cluster(net);
@@ -132,8 +135,8 @@ public class AcceptanceTestBase {
 
   @After
   public void tearDownAcceptanceTestBase() {
-    cluster.close();
     reportMemory();
+    cluster.close();
   }
 
   public void reportMemory() {
@@ -216,4 +219,12 @@ public class AcceptanceTestBase {
           }
         }
       };
+
+  protected void waitForBlockHeight(final Node node, final long blockchainHeight) {
+    WaitUtils.waitFor(
+        120,
+        () ->
+            assertThat(node.execute(ethTransactions.blockNumber()))
+                .isGreaterThanOrEqualTo(BigInteger.valueOf(blockchainHeight)));
+  }
 }

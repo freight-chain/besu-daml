@@ -21,6 +21,7 @@ import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.Wei;
+import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
 
 import java.util.List;
 
@@ -35,9 +36,19 @@ public interface BlockProcessor {
      *
      * <p>This is only valid when {@code BlockProcessor#isSuccessful} returns {@code true}.
      *
-     * @return the receipts generated for the transactions the a block
+     * @return the receipts generated for the transactions in a block
      */
     List<TransactionReceipt> getReceipts();
+
+    /**
+     * The private receipts generated for the private transactions in a block when in
+     * goQuorumCompatibilityMode
+     *
+     * <p>This is only valid when {@code BlockProcessor#isSuccessful} returns {@code true}.
+     *
+     * @return the receipts generated for the private transactions in a block
+     */
+    List<TransactionReceipt> getPrivateReceipts();
 
     /**
      * Returns whether the block was successfully processed.
@@ -45,6 +56,10 @@ public interface BlockProcessor {
      * @return {@code true} if the block was processed successfully; otherwise {@code false}
      */
     boolean isSuccessful();
+
+    default boolean isFailed() {
+      return !isSuccessful();
+    }
   }
 
   /**
@@ -62,7 +77,8 @@ public interface BlockProcessor {
         worldState,
         block.getHeader(),
         block.getBody().getTransactions(),
-        block.getBody().getOmmers());
+        block.getBody().getOmmers(),
+        null);
   }
 
   /**
@@ -75,12 +91,53 @@ public interface BlockProcessor {
    * @param ommers the block ommers
    * @return the block processing result
    */
+  default Result processBlock(
+      final Blockchain blockchain,
+      final MutableWorldState worldState,
+      final BlockHeader blockHeader,
+      final List<Transaction> transactions,
+      final List<BlockHeader> ommers) {
+    return processBlock(blockchain, worldState, blockHeader, transactions, ommers, null);
+  }
+
+  /**
+   * Processes the block.
+   *
+   * @param blockchain the blockchain to append the block to
+   * @param worldState the world state to apply changes to
+   * @param blockHeader the block header for the block
+   * @param transactions the transactions in the block
+   * @param ommers the block ommers
+   * @param privateMetadataUpdater the updater used to update the private metadata for the block
+   * @return the block processing result
+   */
   Result processBlock(
       Blockchain blockchain,
       MutableWorldState worldState,
       BlockHeader blockHeader,
       List<Transaction> transactions,
-      List<BlockHeader> ommers);
+      List<BlockHeader> ommers,
+      PrivateMetadataUpdater privateMetadataUpdater);
+
+  /**
+   * Processes the block when running Besu in GoQuorum-compatible mode
+   *
+   * @param blockchain the blockchain to append the block to
+   * @param worldState the world state to apply public transactions to
+   * @param privateWorldState the private world state to apply private transaction to
+   * @param block the block to process
+   * @return the block processing result
+   */
+  default Result processBlock(
+      final Blockchain blockchain,
+      final MutableWorldState worldState,
+      final MutableWorldState privateWorldState,
+      final Block block) {
+    /*
+     This method should never be executed. All GoQuorum processing must happen in the GoQuorumBlockProcessor.
+    */
+    throw new IllegalStateException("Tried to process GoQuorum block on AbstractBlockProcessor");
+  }
 
   /**
    * Get ommer reward in ${@link Wei}

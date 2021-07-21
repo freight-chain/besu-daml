@@ -46,23 +46,23 @@ public class PrivateStorageMigration {
 
   private final Blockchain blockchain;
   private final Address privacyPrecompileAddress;
-  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolSchedule protocolSchedule;
   private final WorldStateArchive publicWorldStateArchive;
   private final PrivateStateStorage privateStateStorage;
   private final PrivateStateRootResolver privateStateRootResolver;
   private final LegacyPrivateStateStorage legacyPrivateStateStorage;
-  private final Function<ProtocolSpec<?>, PrivateMigrationBlockProcessor>
+  private final Function<ProtocolSpec, PrivateMigrationBlockProcessor>
       privateMigrationBlockProcessorBuilder;
 
   public PrivateStorageMigration(
       final Blockchain blockchain,
       final Address privacyPrecompileAddress,
-      final ProtocolSchedule<?> protocolSchedule,
+      final ProtocolSchedule protocolSchedule,
       final WorldStateArchive publicWorldStateArchive,
       final PrivateStateStorage privateStateStorage,
       final PrivateStateRootResolver privateStateRootResolver,
       final LegacyPrivateStateStorage legacyPrivateStateStorage,
-      final Function<ProtocolSpec<?>, PrivateMigrationBlockProcessor>
+      final Function<ProtocolSpec, PrivateMigrationBlockProcessor>
           privateMigrationBlockProcessorBuilder) {
     this.privateStateStorage = privateStateStorage;
     this.blockchain = blockchain;
@@ -93,15 +93,16 @@ public class PrivateStorageMigration {
 
       final int lastPmtIndex = findLastPMTIndexInBlock(block);
       if (lastPmtIndex >= 0) {
-        final ProtocolSpec<?> protocolSpec = protocolSchedule.getByBlockNumber(blockNumber);
+        final ProtocolSpec protocolSpec = protocolSchedule.getByBlockNumber(blockNumber);
         final PrivateMigrationBlockProcessor privateMigrationBlockProcessor =
             privateMigrationBlockProcessorBuilder.apply(protocolSpec);
 
         final MutableWorldState publicWorldState =
             blockchain
                 .getBlockHeader(blockHeader.getParentHash())
-                .map(BlockHeader::getStateRoot)
-                .flatMap(publicWorldStateArchive::getMutable)
+                .flatMap(
+                    header ->
+                        publicWorldStateArchive.getMutable(header.getStateRoot(), header.getHash()))
                 .orElseThrow(PrivateStorageMigrationException::new);
 
         final List<Transaction> transactionsToProcess =
@@ -130,14 +131,14 @@ public class PrivateStorageMigration {
     final List<Transaction> txs = block.getBody().getTransactions();
     int lastPmtIndex = -1;
     for (int i = 0; i < txs.size(); i++) {
-      if (isPrivacyMarkerTransaction(txs.get(i))) {
+      if (isPrivateMarkerTransaction(txs.get(i))) {
         lastPmtIndex = i;
       }
     }
     return lastPmtIndex;
   }
 
-  private boolean isPrivacyMarkerTransaction(final Transaction tx) {
+  private boolean isPrivateMarkerTransaction(final Transaction tx) {
     return tx.getTo().isPresent() && tx.getTo().get().equals(privacyPrecompileAddress);
   }
 
@@ -166,7 +167,7 @@ public class PrivateStorageMigration {
         new PrivacyGroupHeadBlockMap(
             privateStateStorage
                 .getPrivacyGroupHeadBlockMap(blockHeader.getParentHash())
-                .orElse(PrivacyGroupHeadBlockMap.EMPTY));
+                .orElse(PrivacyGroupHeadBlockMap.empty()));
 
     privateStateStorage
         .updater()

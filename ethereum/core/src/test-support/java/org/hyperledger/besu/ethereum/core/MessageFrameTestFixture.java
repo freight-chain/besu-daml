@@ -20,8 +20,6 @@ import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.vm.BlockHashLookup;
 import org.hyperledger.besu.ethereum.vm.Code;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
-import org.hyperledger.besu.ethereum.vm.MessageFrame.Type;
-import org.hyperledger.besu.ethereum.vm.operations.ReturnStack;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -30,14 +28,14 @@ import java.util.List;
 import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 
 public class MessageFrameTestFixture {
 
   public static final Address DEFAUT_ADDRESS = AddressHelpers.ofValue(244259721);
   private final int maxStackSize = DEFAULT_MAX_STACK_SIZE;
 
-  private Type type = Type.MESSAGE_CALL;
+  private MessageFrame.Type type = MessageFrame.Type.MESSAGE_CALL;
   private Deque<MessageFrame> messageFrameStack = new ArrayDeque<>();
   private Optional<Blockchain> blockchain = Optional.empty();
   private Optional<WorldUpdater> worldState = Optional.empty();
@@ -51,14 +49,13 @@ public class MessageFrameTestFixture {
   private Wei value = Wei.ZERO;
   private Bytes inputData = Bytes.EMPTY;
   private Code code = new Code(Bytes.EMPTY);
-  private final List<Bytes32> stackItems = new ArrayList<>();
+  private final List<UInt256> stackItems = new ArrayList<>();
   private Optional<BlockHeader> blockHeader = Optional.empty();
   private int depth = 0;
   private Optional<BlockHashLookup> blockHashLookup = Optional.empty();
-  private ReturnStack returnStack = new ReturnStack(MessageFrame.DEFAULT_MAX_RETURN_STACK_SIZE);
   private ExecutionContextTestFixture executionContextTestFixture;
 
-  public MessageFrameTestFixture type(final Type type) {
+  public MessageFrameTestFixture type(final MessageFrame.Type type) {
     this.type = type;
     return this;
   }
@@ -149,18 +146,13 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture pushStackItem(final Bytes32 item) {
+  public MessageFrameTestFixture pushStackItem(final UInt256 item) {
     stackItems.add(item);
     return this;
   }
 
   public MessageFrameTestFixture blockHashLookup(final BlockHashLookup blockHashLookup) {
     this.blockHashLookup = Optional.of(blockHashLookup);
-    return this;
-  }
-
-  public MessageFrameTestFixture returnStack(final ReturnStack returnStack) {
-    this.returnStack = returnStack;
     return this;
   }
 
@@ -192,7 +184,6 @@ public class MessageFrameTestFixture {
             .blockHashLookup(
                 blockHashLookup.orElseGet(() -> new BlockHashLookup(blockHeader, blockchain)))
             .maxStackSize(maxStackSize)
-            .returnStack(returnStack)
             .build();
     stackItems.forEach(frame::pushStackItem);
     return frame;

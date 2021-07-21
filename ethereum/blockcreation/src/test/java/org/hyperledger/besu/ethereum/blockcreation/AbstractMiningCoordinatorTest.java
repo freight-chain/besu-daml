@@ -44,9 +44,9 @@ public class AbstractMiningCoordinatorTest {
           new BlockHeaderTestFixture().buildHeader(),
           new BlockBody(Collections.emptyList(), Collections.emptyList()));
   private final Blockchain blockchain = mock(Blockchain.class);
-  private final EthHashMinerExecutor minerExecutor = mock(EthHashMinerExecutor.class);
+  private final PoWMinerExecutor minerExecutor = mock(PoWMinerExecutor.class);
   private final SyncState syncState = mock(SyncState.class);
-  private final EthHashBlockMiner blockMiner = mock(EthHashBlockMiner.class);
+  private final PoWBlockMiner blockMiner = mock(PoWBlockMiner.class);
   private final TestMiningCoordinator miningCoordinator =
       new TestMiningCoordinator(blockchain, minerExecutor, syncState);
 
@@ -167,7 +167,6 @@ public class AbstractMiningCoordinatorTest {
 
     when(syncState.isInSync()).thenReturn(true);
     miningCoordinator.inSyncChanged(true);
-
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
 
@@ -223,12 +222,11 @@ public class AbstractMiningCoordinatorTest {
     verifyNoMoreInteractions(minerExecutor, blockMiner);
   }
 
-  public static class TestMiningCoordinator
-      extends AbstractMiningCoordinator<Void, EthHashBlockMiner> {
+  public static class TestMiningCoordinator extends AbstractMiningCoordinator<PoWBlockMiner> {
 
     public TestMiningCoordinator(
         final Blockchain blockchain,
-        final AbstractMinerExecutor<Void, EthHashBlockMiner> executor,
+        final AbstractMinerExecutor<PoWBlockMiner> executor,
         final SyncState syncState) {
       super(blockchain, executor, syncState);
     }

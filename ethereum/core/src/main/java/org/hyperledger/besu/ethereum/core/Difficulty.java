@@ -31,7 +31,7 @@ public final class Difficulty extends BaseUInt256Value<Difficulty> implements Qu
 
   public static final Difficulty MAX_VALUE = wrap(Bytes32.ZERO.not());
 
-  protected Difficulty(final UInt256 value) {
+  Difficulty(final UInt256 value) {
     super(value, Difficulty::new);
   }
 
@@ -69,12 +69,22 @@ public final class Difficulty extends BaseUInt256Value<Difficulty> implements Qu
 
   @Override
   public Number getValue() {
+    return getAsBigInteger();
+  }
+
+  @Override
+  public BigInteger getAsBigInteger() {
     return toBigInteger();
   }
 
   @Override
   public String toHexString() {
     return super.toHexString();
+  }
+
+  @Override
+  public String toShortHexString() {
+    return super.isZero() ? "0x0" : super.toShortHexString();
   }
 
   @Override

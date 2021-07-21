@@ -14,34 +14,30 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
-import org.hyperledger.besu.ethereum.core.Gas;
-import org.hyperledger.besu.ethereum.vm.AbstractOperation;
+import org.hyperledger.besu.ethereum.vm.EVM;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 
 import org.apache.tuweni.bytes.MutableBytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 
-public class SignExtendOperation extends AbstractOperation {
+public class SignExtendOperation extends AbstractFixedCostOperation {
 
   public SignExtendOperation(final GasCalculator gasCalculator) {
-    super(0x0B, "SIGNEXTEND", 2, 1, false, 1, gasCalculator);
+    super(0x0B, "SIGNEXTEND", 2, 1, false, 1, gasCalculator, gasCalculator.getLowTierGasCost());
   }
 
   @Override
-  public Gas cost(final MessageFrame frame) {
-    return gasCalculator().getLowTierGasCost();
-  }
-
-  @Override
-  public void execute(final MessageFrame frame) {
-    final UInt256 value0 = UInt256.fromBytes(frame.popStackItem());
-    final UInt256 value1 = UInt256.fromBytes(frame.popStackItem());
+  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
+    final UInt256 value0 = frame.popStackItem();
+    final UInt256 value1 = frame.popStackItem();
 
     // Stack items are reversed for the SIGNEXTEND operation.
     final UInt256 result = signExtend(value1, value0);
 
-    frame.pushStackItem(result.toBytes());
+    frame.pushStackItem(result);
+
+    return successResponse;
   }
 
   private static UInt256 signExtend(final UInt256 v1, final UInt256 v2) {
@@ -50,15 +46,15 @@ public class SignExtendOperation extends AbstractOperation {
     // Any value >= 31 imply an index <= 0, so no work to do (note that 0 itself is a valid index,
     // but copying the 0th byte to itself is only so useful).
     if (!v2.fitsInt() || v2.intValue() >= 31) {
-      v1.toBytes().copyTo(result);
+      v1.copyTo(result);
       return UInt256.fromBytes(result);
     }
 
     // This is safe, since other < 31.
-    final int byteIndex = 32 - 1 - v2.toBytes().getInt(32 - 4);
-    final byte toSet = v1.toBytes().get(byteIndex) < 0 ? (byte) 0xFF : 0x00;
+    final int byteIndex = 32 - 1 - v2.getInt(32 - 4);
+    final byte toSet = v1.get(byteIndex) < 0 ? (byte) 0xFF : 0x00;
     result.mutableSlice(0, byteIndex).fill(toSet);
-    v1.toBytes().slice(byteIndex).copyTo(result, byteIndex);
+    v1.slice(byteIndex).copyTo(result, byteIndex);
     return UInt256.fromBytes(result);
   }
 }

@@ -20,17 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.config.experimental.ExperimentalEIPs;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Wei;
 import org.hyperledger.besu.ethereum.eth.transactions.PendingTransactions.TransactionInfo;
+import org.hyperledger.besu.plugin.data.TransactionType;
 import org.hyperledger.besu.util.number.Percentage;
 
 import java.util.Collection;
 import java.util.Optional;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -81,16 +79,6 @@ public class TransactionReplacementByPriceRuleTest {
     this.expected = expected;
   }
 
-  @Before
-  public void enableEIP1559() {
-    ExperimentalEIPs.eip1559Enabled = true;
-  }
-
-  @After
-  public void resetEIP1559() {
-    ExperimentalEIPs.eip1559Enabled = ExperimentalEIPs.EIP1559_ENABLED_DEFAULT_VALUE;
-  }
-
   @Test
   public void shouldReplace() {
     assertThat(
@@ -102,17 +90,20 @@ public class TransactionReplacementByPriceRuleTest {
   private static TransactionInfo frontierTx(final long price) {
     final TransactionInfo transactionInfo = mock(TransactionInfo.class);
     final Transaction transaction = mock(Transaction.class);
-    when(transaction.getGasPrice()).thenReturn(Wei.of(price));
+    when(transaction.getType()).thenReturn(TransactionType.FRONTIER);
+    when(transaction.getGasPrice()).thenReturn(Optional.of(Wei.of(price)));
     when(transactionInfo.getTransaction()).thenReturn(transaction);
     return transactionInfo;
   }
 
-  private static TransactionInfo eip1559Tx(final long gasPremium, final long feeCap) {
+  private static TransactionInfo eip1559Tx(
+      final long maxPriorityFeePerGas, final long maxFeePerGas) {
     final TransactionInfo transactionInfo = mock(TransactionInfo.class);
     final Transaction transaction = mock(Transaction.class);
-    when(transaction.getGasPremium()).thenReturn(Optional.of(Wei.of(gasPremium)));
-    when(transaction.getFeeCap()).thenReturn(Optional.of(Wei.of(feeCap)));
-    when(transaction.isEIP1559Transaction()).thenReturn(true);
+    when(transaction.getType()).thenReturn(TransactionType.EIP1559);
+    when(transaction.getMaxPriorityFeePerGas())
+        .thenReturn(Optional.of(Wei.of(maxPriorityFeePerGas)));
+    when(transaction.getMaxFeePerGas()).thenReturn(Optional.of(Wei.of(maxFeePerGas)));
     when(transactionInfo.getTransaction()).thenReturn(transaction);
     return transactionInfo;
   }

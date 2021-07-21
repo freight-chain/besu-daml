@@ -15,9 +15,10 @@
 package org.hyperledger.besu.ethereum.api.graphql;
 
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
-import org.hyperledger.besu.ethereum.blockcreation.EthHashMiningCoordinator;
+import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.EthProtocol;
+import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.Capability;
 
@@ -70,11 +71,10 @@ public class GraphQLHttpServiceHostWhitelistTest {
     final BlockchainQueries blockchainQueries = Mockito.mock(BlockchainQueries.class);
     final Synchronizer synchronizer = Mockito.mock(Synchronizer.class);
 
-    final EthHashMiningCoordinator miningCoordinatorMock =
-        Mockito.mock(EthHashMiningCoordinator.class);
+    final PoWMiningCoordinator miningCoordinatorMock = Mockito.mock(PoWMiningCoordinator.class);
 
-    final GraphQLDataFetcherContext dataFetcherContext =
-        Mockito.mock(GraphQLDataFetcherContext.class);
+    final GraphQLDataFetcherContextImpl dataFetcherContext =
+        Mockito.mock(GraphQLDataFetcherContextImpl.class);
     Mockito.when(dataFetcherContext.getBlockchainQueries()).thenReturn(blockchainQueries);
     Mockito.when(dataFetcherContext.getMiningCoordinator()).thenReturn(miningCoordinatorMock);
 
@@ -89,7 +89,12 @@ public class GraphQLHttpServiceHostWhitelistTest {
     final GraphQL graphQL = GraphQLProvider.buildGraphQL(dataFetchers);
 
     return new GraphQLHttpService(
-        vertx, folder.newFolder().toPath(), graphQLConfig, graphQL, dataFetcherContext);
+        vertx,
+        folder.newFolder().toPath(),
+        graphQLConfig,
+        graphQL,
+        dataFetcherContext,
+        Mockito.mock(EthScheduler.class));
   }
 
   private static GraphQLConfiguration createGraphQLConfig() {
@@ -118,14 +123,14 @@ public class GraphQLHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithAnyHostnameAndWildcardConfigIsAccepted() throws IOException {
-    graphQLConfig.setHostsWhitelist(Collections.singletonList("*"));
+    graphQLConfig.setHostsAllowlist(Collections.singletonList("*"));
     Assertions.assertThat(doRequest("ally")).isEqualTo(200);
     Assertions.assertThat(doRequest("foe")).isEqualTo(200);
   }
 
   @Test
   public void requestWithWhitelistedHostIsAccepted() throws IOException {
-    graphQLConfig.setHostsWhitelist(hostsWhitelist);
+    graphQLConfig.setHostsAllowlist(hostsWhitelist);
     Assertions.assertThat(doRequest("ally")).isEqualTo(200);
     Assertions.assertThat(doRequest("ally:12345")).isEqualTo(200);
     Assertions.assertThat(doRequest("friend")).isEqualTo(200);
@@ -133,7 +138,7 @@ public class GraphQLHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithUnknownHostIsRejected() throws IOException {
-    graphQLConfig.setHostsWhitelist(hostsWhitelist);
+    graphQLConfig.setHostsAllowlist(hostsWhitelist);
     Assertions.assertThat(doRequest("foe")).isEqualTo(403);
   }
 
@@ -151,7 +156,7 @@ public class GraphQLHttpServiceHostWhitelistTest {
 
   @Test
   public void requestWithMalformedHostIsRejected() throws IOException {
-    graphQLConfig.setHostsWhitelist(hostsWhitelist);
+    graphQLConfig.setHostsAllowlist(hostsWhitelist);
     Assertions.assertThat(doRequest("ally:friend")).isEqualTo(403);
     Assertions.assertThat(doRequest("ally:123456")).isEqualTo(403);
     Assertions.assertThat(doRequest("ally:friend:1234")).isEqualTo(403);

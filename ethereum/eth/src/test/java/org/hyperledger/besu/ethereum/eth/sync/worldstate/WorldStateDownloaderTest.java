@@ -16,7 +16,7 @@ package org.hyperledger.besu.ethereum.eth.sync.worldstate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -35,6 +35,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.core.Hash;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
+import org.hyperledger.besu.ethereum.core.ProtocolScheduleFixture;
 import org.hyperledger.besu.ethereum.core.WorldState;
 import org.hyperledger.besu.ethereum.eth.manager.DeterministicEthScheduler;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
@@ -46,7 +47,6 @@ import org.hyperledger.besu.ethereum.eth.messages.EthPV63;
 import org.hyperledger.besu.ethereum.eth.messages.GetNodeDataMessage;
 import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.p2p.rlpx.wire.MessageData;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
@@ -55,6 +55,7 @@ import org.hyperledger.besu.ethereum.trie.MerklePatriciaTrie;
 import org.hyperledger.besu.ethereum.trie.Node;
 import org.hyperledger.besu.ethereum.trie.StoredMerklePatriciaTrie;
 import org.hyperledger.besu.ethereum.trie.TrieNodeDecoder;
+import org.hyperledger.besu.ethereum.worldstate.DefaultWorldStateArchive;
 import org.hyperledger.besu.ethereum.worldstate.StateTrieAccountValue;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.ethereum.worldstate.WorldStatePreimageStorage;
@@ -73,8 +74,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -184,7 +185,7 @@ public class WorldStateDownloaderTest {
   @Test
   public void downloadAlreadyAvailableWorldState() {
     // Setup existing state
-    final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
+    final DefaultWorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
     final MutableWorldState worldState = worldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -265,8 +266,8 @@ public class WorldStateDownloaderTest {
 
     // Check that all expected account data was downloaded
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
   }
@@ -305,7 +306,7 @@ public class WorldStateDownloaderTest {
     final Map<Bytes32, Bytes> knownCode = new HashMap<>();
     accounts.subList(0, 5).forEach(a -> knownCode.put(a.getCodeHash(), a.getCode()));
     final Updater localStorageUpdater = localStorage.updater();
-    knownCode.forEach(localStorageUpdater::putCode);
+    knownCode.forEach((bytes32, code) -> localStorageUpdater.putCode(null, code));
     localStorageUpdater.commit();
 
     final WorldStateDownloader downloader =
@@ -334,8 +335,8 @@ public class WorldStateDownloaderTest {
 
     // Check that all expected account data was downloaded
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
   }
@@ -422,7 +423,8 @@ public class WorldStateDownloaderTest {
     verify(taskCollection, never()).remove();
     verify(taskCollection, never()).add(any(NodeDataRequest.class));
     // Target world state should not be available
-    assertThat(localStorage.isWorldStateAvailable(header.getStateRoot())).isFalse();
+    assertThat(localStorage.isWorldStateAvailable(header.getStateRoot(), header.getHash()))
+        .isFalse();
   }
 
   @Test
@@ -431,7 +433,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage remoteStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive remoteWorldStateArchive =
-        new WorldStateArchive(remoteStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(remoteStorage, createPreimageStorage());
     final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -464,7 +466,7 @@ public class WorldStateDownloaderTest {
     allNodes.forEach(
         (nodeHash, node) -> {
           if (storeNode.get()) {
-            localStorageUpdater.putAccountStateTrieNode(nodeHash, node);
+            localStorageUpdater.putAccountStateTrieNode(null, nodeHash, node);
             knownNodes.add(nodeHash);
           } else {
             unknownNodes.add(nodeHash);
@@ -500,8 +502,8 @@ public class WorldStateDownloaderTest {
 
     // Check that all expected account data was downloaded
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
   }
@@ -512,7 +514,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage remoteStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive remoteWorldStateArchive =
-        new WorldStateArchive(remoteStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(remoteStorage, createPreimageStorage());
     final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -556,11 +558,11 @@ public class WorldStateDownloaderTest {
     assertThat(allTrieNodes.size()).isGreaterThan(0); // Sanity check
     final Updater localStorageUpdater = localStorage.updater();
     boolean storeNode = true;
-    for (final Entry<Bytes32, Bytes> entry : allTrieNodes.entrySet()) {
+    for (final Map.Entry<Bytes32, Bytes> entry : allTrieNodes.entrySet()) {
       final Bytes32 hash = entry.getKey();
       final Bytes data = entry.getValue();
       if (storeNode) {
-        localStorageUpdater.putAccountStorageTrieNode(hash, data);
+        localStorageUpdater.putAccountStorageTrieNode(null, null, hash, data);
         knownNodes.add(hash);
       } else {
         unknownNodes.add(hash);
@@ -584,7 +586,7 @@ public class WorldStateDownloaderTest {
 
     respondUntilDone(peers, responder, result);
     // World state should be available by the time the result is complete
-    assertThat(localStorage.isWorldStateAvailable(stateRoot)).isTrue();
+    assertThat(localStorage.isWorldStateAvailable(stateRoot, header.getHash())).isTrue();
 
     // Check that unknown trie nodes were requested
     final List<Bytes32> requestedHashes =
@@ -599,8 +601,8 @@ public class WorldStateDownloaderTest {
 
     // Check that all expected account data was downloaded
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
   }
@@ -614,7 +616,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage remoteStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive remoteWorldStateArchive =
-        new WorldStateArchive(remoteStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(remoteStorage, createPreimageStorage());
     final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -666,7 +668,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage remoteStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive remoteWorldStateArchive =
-        new WorldStateArchive(remoteStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(remoteStorage, createPreimageStorage());
     final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -682,7 +684,7 @@ public class WorldStateDownloaderTest {
     List<Bytes32> queuedHashes = getFirstSetOfChildNodeRequests(remoteStorage, stateRoot);
     assertThat(queuedHashes.size()).isGreaterThan(0); // Sanity check
     for (Bytes32 bytes32 : queuedHashes) {
-      taskCollection.add(new AccountTrieNodeDataRequest(Hash.wrap(bytes32)));
+      taskCollection.add(new AccountTrieNodeDataRequest(Hash.wrap(bytes32), Optional.empty()));
     }
     // Sanity check
     for (final Bytes32 bytes32 : queuedHashes) {
@@ -710,7 +712,7 @@ public class WorldStateDownloaderTest {
 
     CompletableFuture<Void> result = downloader.run(header);
     peer.respondWhileOtherThreadsWork(responder, () -> !result.isDone());
-    assertThat(localStorage.isWorldStateAvailable(stateRoot)).isTrue();
+    assertThat(localStorage.isWorldStateAvailable(stateRoot, header.getHash())).isTrue();
 
     // Check that already enqueued trie nodes were requested
     final List<Bytes32> requestedHashes =
@@ -731,8 +733,8 @@ public class WorldStateDownloaderTest {
     // Check that all expected account data was downloaded
     assertThat(result).isDone();
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertAccountsMatch(localWorldState, accounts);
   }
 
@@ -774,8 +776,8 @@ public class WorldStateDownloaderTest {
       final WorldStateStorage storage, final Bytes32 rootHash) {
     final List<Bytes32> hashesToRequest = new ArrayList<>();
 
-    Bytes rootNodeRlp = storage.getNodeData(rootHash).get();
-    TrieNodeDecoder.decodeNodes(rootNodeRlp).stream()
+    final Bytes rootNodeRlp = storage.getNodeData(Bytes.EMPTY, rootHash).get();
+    TrieNodeDecoder.decodeNodes(Bytes.EMPTY, rootNodeRlp).stream()
         .filter(n -> !Objects.equals(n.getHash(), rootHash))
         .filter(Node::isReferencedByHash)
         .forEach((n) -> hashesToRequest.add(n.getHash()));
@@ -804,7 +806,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage remoteStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive remoteWorldStateArchive =
-        new WorldStateArchive(remoteStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(remoteStorage, createPreimageStorage());
     final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
 
     // Generate accounts and save corresponding state root
@@ -828,7 +830,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage localStorage =
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
     final WorldStateArchive localWorldStateArchive =
-        new WorldStateArchive(localStorage, createPreimageStorage());
+        new DefaultWorldStateArchive(localStorage, createPreimageStorage());
     final SynchronizerConfiguration syncConfig =
         SynchronizerConfiguration.builder()
             .worldStateHashCountPerRequest(hashesPerRequest)
@@ -875,7 +877,7 @@ public class WorldStateDownloaderTest {
     }
 
     // Check that all expected account data was downloaded
-    final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot, null).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
 
@@ -907,7 +909,7 @@ public class WorldStateDownloaderTest {
             mock(Blockchain.class),
             remoteWorldStateArchive,
             mock(TransactionPool.class),
-            MainnetProtocolSchedule.create(),
+            ProtocolScheduleFixture.MAINNET,
             .5f);
     final RespondingEthPeer.Responder emptyResponder = RespondingEthPeer.emptyResponder();
 

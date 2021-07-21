@@ -16,11 +16,14 @@ package org.hyperledger.besu.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.crypto.SECP256K1.KeyPair;
+import org.hyperledger.besu.crypto.KeyPair;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.chain.DefaultBlockchain;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
@@ -29,10 +32,11 @@ import org.hyperledger.besu.ethereum.core.BlockBody;
 import org.hyperledger.besu.ethereum.core.BlockDataGenerator;
 import org.hyperledger.besu.ethereum.core.BlockHeaderTestFixture;
 import org.hyperledger.besu.ethereum.core.Difficulty;
+import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.ethereum.core.Wei;
-import org.hyperledger.besu.ethereum.core.WorldState;
+import org.hyperledger.besu.ethereum.core.fees.EIP1559;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.EthMessages;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
@@ -40,13 +44,14 @@ import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
 import org.hyperledger.besu.ethereum.eth.sync.BlockBroadcaster;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
+import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolFactory;
 import org.hyperledger.besu.ethereum.mainnet.MainnetBlockHeaderFunctions;
+import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionValidator;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
-import org.hyperledger.besu.ethereum.mainnet.TransactionValidator;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStoragePrefixedKeyBlockchainStorage;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
@@ -67,30 +72,35 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+@SuppressWarnings("unchecked")
 @RunWith(MockitoJUnitRunner.class)
 public class BesuEventsImplTest {
 
-  private static final KeyPair KEY_PAIR1 = KeyPair.generate();
+  private static final Supplier<SignatureAlgorithm> SIGNATURE_ALGORITHM =
+      Suppliers.memoize(SignatureAlgorithmFactory::getInstance);
+  private static final KeyPair KEY_PAIR1 = SIGNATURE_ALGORITHM.get().generateKeyPair();
   private static final org.hyperledger.besu.ethereum.core.Transaction TX1 = createTransaction(1);
   private static final org.hyperledger.besu.ethereum.core.Transaction TX2 = createTransaction(2);
 
-  @Mock private ProtocolSchedule<Void> mockProtocolSchedule;
-  @Mock private ProtocolContext<Void> mockProtocolContext;
+  @Mock private ProtocolSchedule mockProtocolSchedule;
+  @Mock private ProtocolContext mockProtocolContext;
   private SyncState syncState;
   @Mock private EthPeers mockEthPeers;
   @Mock private EthContext mockEthContext;
   @Mock private EthMessages mockEthMessages;
   @Mock private EthScheduler mockEthScheduler;
-  @Mock private TransactionValidator mockTransactionValidator;
-  @Mock private ProtocolSpec<Void> mockProtocolSpec;
+  @Mock private MainnetTransactionValidator mockTransactionValidator;
+  @Mock private ProtocolSpec mockProtocolSpec;
   @Mock private WorldStateArchive mockWorldStateArchive;
-  @Mock private WorldState mockWorldState;
+  @Mock private MutableWorldState mockWorldState;
   private TransactionPool transactionPool;
   private BlockBroadcaster blockBroadcaster;
   private BesuEventsImpl serviceImpl;
@@ -104,7 +114,8 @@ public class BesuEventsImplTest {
             gen.genesisBlock(),
             new KeyValueStoragePrefixedKeyBlockchainStorage(
                 new InMemoryKeyValueStorage(), new MainnetBlockHeaderFunctions()),
-            new NoOpMetricsSystem());
+            new NoOpMetricsSystem(),
+            0);
 
     when(mockEthContext.getEthMessages()).thenReturn(mockEthMessages);
     when(mockEthContext.getEthPeers()).thenReturn(mockEthPeers);
@@ -118,15 +129,17 @@ public class BesuEventsImplTest {
     when(mockProtocolContext.getWorldStateArchive()).thenReturn(mockWorldStateArchive);
     when(mockProtocolSchedule.getByBlockNumber(anyLong())).thenReturn(mockProtocolSpec);
     when(mockProtocolSpec.getTransactionValidator()).thenReturn(mockTransactionValidator);
-    when(mockTransactionValidator.validate(any())).thenReturn(ValidationResult.valid());
+    when(mockTransactionValidator.validate(any(), any(Optional.class), any()))
+        .thenReturn(ValidationResult.valid());
     when(mockTransactionValidator.validateForSender(any(), any(), any()))
         .thenReturn(ValidationResult.valid());
-    when(mockWorldStateArchive.get(any())).thenReturn(Optional.of(mockWorldState));
+    when(mockWorldStateArchive.getMutable(any(), any(), anyBoolean()))
+        .thenReturn(Optional.of(mockWorldState));
 
     blockBroadcaster = new BlockBroadcaster(mockEthContext);
     syncState = new SyncState(blockchain, mockEthPeers);
     TransactionPoolConfiguration txPoolConfig =
-        TransactionPoolConfiguration.builder().txPoolMaxSize(1).build();
+        ImmutableTransactionPoolConfiguration.builder().txPoolMaxSize(1).build();
 
     transactionPool =
         TransactionPoolFactory.createTransactionPool(
@@ -138,8 +151,7 @@ public class BesuEventsImplTest {
             syncState,
             Wei.ZERO,
             txPoolConfig,
-            true,
-            Optional.empty());
+            Optional.of(new EIP1559(0)));
 
     serviceImpl = new BesuEventsImpl(blockchain, blockBroadcaster, transactionPool, syncState);
   }
@@ -295,11 +307,22 @@ public class BesuEventsImplTest {
     blockchain.appendBlock(block, gen.receipts(block));
     assertThat(result.get()).isNull();
 
-    final var reorgBlock =
+    final var forkBlock =
         gen.block(
             new BlockDataGenerator.BlockOptions()
                 .setParentHash(blockchain.getGenesisBlock().getHash())
-                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 2));
+                .setDifficulty(block.getHeader().getDifficulty().subtract(1))
+                .setBlockNumber(blockchain.getGenesisBlock().getHeader().getNumber() + 1));
+    blockchain.appendBlock(forkBlock, gen.receipts(forkBlock));
+    assertThat(result.get()).isNull();
+
+    final var reorgBlock =
+        gen.block(
+            new BlockDataGenerator.BlockOptions()
+                .setParentHash(forkBlock.getHash())
+                .setDifficulty(Difficulty.of(10000000))
+                .setBlockNumber(forkBlock.getHeader().getNumber() + 1));
+
     List<TransactionReceipt> transactionReceipts = gen.receipts(reorgBlock);
     blockchain.appendBlock(reorgBlock, transactionReceipts);
     assertThat(result.get()).isNotNull();

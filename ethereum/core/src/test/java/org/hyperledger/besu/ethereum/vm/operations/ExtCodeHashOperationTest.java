@@ -15,7 +15,7 @@
 package org.hyperledger.besu.ethereum.vm.operations;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hyperledger.besu.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
+import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
 import org.hyperledger.besu.ethereum.chain.Blockchain;
@@ -33,6 +33,7 @@ import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.mainnet.ConstantinopleGasCalculator;
 import org.hyperledger.besu.ethereum.mainnet.IstanbulGasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
+import org.hyperledger.besu.ethereum.vm.Operation.OperationResult;
 import org.hyperledger.besu.ethereum.vm.Words;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 
@@ -57,13 +58,15 @@ public class ExtCodeHashOperationTest {
 
   @Test
   public void shouldCharge400Gas() {
-    assertThat(operation.cost(createMessageFrame(REQUESTED_ADDRESS))).isEqualTo(Gas.of(400));
+    final OperationResult result = operation.execute(createMessageFrame(REQUESTED_ADDRESS), null);
+    assertThat(result.getGasCost()).contains(Gas.of(400));
   }
 
   @Test
   public void istanbulShouldCharge700Gas() {
-    assertThat(operationIstanbul.cost(createMessageFrame(REQUESTED_ADDRESS)))
-        .isEqualTo(Gas.of(700));
+    final OperationResult result =
+        operationIstanbul.execute(createMessageFrame(REQUESTED_ADDRESS), null);
+    assertThat(result.getGasCost()).contains(Gas.of(700));
   }
 
   @Test
@@ -112,27 +115,26 @@ public class ExtCodeHashOperationTest {
     final MutableAccount account = worldStateUpdater.getOrCreate(REQUESTED_ADDRESS).getMutable();
     account.setCode(code);
     account.setVersion(Account.DEFAULT_VERSION);
-    final Bytes32 value =
+    final UInt256 value =
         UInt256.fromBytes(Words.fromAddress(REQUESTED_ADDRESS))
-            .add(UInt256.valueOf(2).pow(UInt256.valueOf(160)))
-            .toBytes();
+            .add(UInt256.valueOf(2).pow(UInt256.valueOf(160)));
     final MessageFrame frame = createMessageFrame(value);
-    operation.execute(frame);
+    operation.execute(frame, null);
     assertThat(frame.getStackItem(0)).isEqualTo(Hash.hash(code));
   }
 
   private Bytes32 executeOperation(final Address requestedAddress) {
     final MessageFrame frame = createMessageFrame(requestedAddress);
-    operation.execute(frame);
+    operation.execute(frame, null);
     return frame.getStackItem(0);
   }
 
   private MessageFrame createMessageFrame(final Address requestedAddress) {
-    final Bytes32 stackItem = Words.fromAddress(requestedAddress);
+    final UInt256 stackItem = Words.fromAddress(requestedAddress);
     return createMessageFrame(stackItem);
   }
 
-  private MessageFrame createMessageFrame(final Bytes32 stackItem) {
+  private MessageFrame createMessageFrame(final UInt256 stackItem) {
     final BlockHeader blockHeader = new BlockHeaderTestFixture().buildHeader();
     final MessageFrame frame =
         new MessageFrameTestFixture()
